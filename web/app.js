@@ -34,7 +34,7 @@ function parseScore(text) {
     for (let r = 0; r < repeat; r++) {
       for (const e of events) {
         if (e.midi !== undefined) {
-          allEvents.push(e.midi); allDurations.push(e.dur); allVelocities.push(e.vel||100); allChannels.push(0)
+          allEvents.push(e.midi); allDurations.push(e.chord ? 0 : e.dur); allVelocities.push(e.vel||100); allChannels.push(0)
         } else if (e.rest) {
           allEvents.push(-1); allDurations.push(e.dur); allVelocities.push(0); allChannels.push(0)
         }
@@ -47,9 +47,9 @@ function parseScore(text) {
   const noteEvents = []
   for (let i = 0; i < allEvents.length; i++) {
     if (allEvents[i] >= 0) {
-      noteEvents.push({ start:cursor, duration:allDurations[i], midi:allEvents[i], velocity:allVelocities[i]/127, channel:allChannels[i] })
+      noteEvents.push({ start:cursor, duration:allDurations[i] || allDurations[i-1] || 1, midi:allEvents[i], velocity:allVelocities[i]/127, channel:allChannels[i] })
     }
-    cursor += allDurations[i]
+    if (allDurations[i] > 0) cursor += allDurations[i]
   }
   return { events: noteEvents, bpm, tsNum, tsDen }
 }
@@ -72,7 +72,11 @@ function parseLine(line) {
       if (cm) {
         const pitches = cm[1].split(/\s+/).map(parsePitch).filter(p => p >= 0)
         const dur = parseDur(cm[2])
-        for (const p of pitches) events.push({ midi:p, dur, vel:100 })
+        let first = true
+        for (const p of pitches) {
+          events.push({ midi:p, dur, vel:100, chord:!first })
+          first = false
+        }
       }
       continue
     }
