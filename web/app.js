@@ -1,89 +1,125 @@
-// moonsic v5 — mixer + level meter + time
+// moonsic v6 — live notation editor + playback
 
 let audioContext = null, activeNodes = [], playbackTimer = null, loopEnabled = false
-let currentBaseTime = 0, analyser = null, meterTimer = null
+let currentBaseTime = 0, analyser = null
 
 const VOICES = {
   sine_lead:   { type:'sine',     a:0.01,d:0.05,s:0.7,r:0.05,g:0.18 },
   triangle_bass:{ type:'triangle',a:0.005,d:0.03,s:0.8,r:0.03,g:0.22 },
-  square_lead: { type:'square',  a:0.01,d:0.04,s:0.6,r:0.04,g:0.12 },
   saw_pad:     { type:'sawtooth',a:0.08,d:0.1, s:0.5,r:0.15,g:0.08 },
-  soft_bell:   { type:'sine',    a:0.002,d:0.3, s:0.0,r:0.01,g:0.15 },
 }
 
+// --- v6 Notation Parser (JS) ---
+
+function parseScore(text) {
+  const lines = text.split('\n')
+  let bpm = 120, tsNum = 4, tsDen = 4
+  let allEvents = [], allDurations = [], allVelocities = []
+  let allChannels = []
+
+  for (let line of lines) {
+    line = line.trim()
+    if (!line || line.startsWith('#')) continue
+    if (line.startsWith('tempo ')) { bpm = parseInt(line.slice(6)) || 120; continue }
+    if (line.startsWith('time ')) {
+      const m = line.match(/time\s+(\d+)\s*\/\s*(\d+)/)
+      if (m) { tsNum = parseInt(m[1]); tsDen = parseInt(m[2]) }
+      continue
+    }
+    // parse events with repeats
+    let repeat = 1
+    const rx = line.match(/x(\d+)\s*$/)
+    if (rx) { repeat = parseInt(rx[1]); line = line.replace(/x\d+\s*$/, '').trim() }
+    const events = parseLine(line)
+    for (let r = 0; r < repeat; r++) {
+      for (const e of events) {
+        if (e.midi !== undefined) {
+          allEvents.push(e.midi); allDurations.push(e.dur); allVelocities.push(e.vel||100); allChannels.push(0)
+        } else if (e.rest) {
+          allEvents.push(-1); allDurations.push(e.dur); allVelocities.push(0); allChannels.push(0)
+        }
+      }
+    }
+  }
+
+  // build timed events
+  let cursor = 0
+  const noteEvents = []
+  for (let i = 0; i < allEvents.length; i++) {
+    if (allEvents[i] >= 0) {
+      noteEvents.push({ start:cursor, duration:allDurations[i], midi:allEvents[i], velocity:allVelocities[i]/127, channel:allChannels[i] })
+    }
+    cursor += allDurations[i]
+  }
+  return { events: noteEvents, bpm, tsNum, tsDen }
+}
+
+function parseLine(line) {
+  const events = []
+  const tokens = line.split(/\s+/).filter(t => t && t !== '|')
+  for (const tok of tokens) {
+    if (tok === '|' || !tok) continue
+    if (tok[0] === 'R') { events.push({ rest:true, dur:parseDur(tok.slice(1)) }); continue }
+    if (tok[0] === '[') {
+      const m = tok.match(/^\[(.+)\]([whqes]\.?)/)
+      if (m) {
+        const pitches = m[1].split(/\s+/).map(parsePitch).filter(p => p >= 0)
+        const dur = parseDur(m[2])
+        for (const p of pitches) events.push({ midi:p, dur, vel:100 })
+      }
+      continue
+    }
+    // note: C4q, C#4e:80, Bb3h.
+    const m = tok.match(/^([A-G][#b]?\d)([whqes]\.?)(?::(\d+))?$/)
+    if (m) {
+      events.push({ midi:parsePitch(m[1]), dur:parseDur(m[2]), vel:parseInt(m[3]||'100') })
+    }
+  }
+  return events
+}
+
+function parsePitch(s) {
+  const m = s.match(/^([A-G])([#b])?(\d)$/)
+  if (!m) return 60
+  const names = { C:0,D:2,E:4,F:5,G:7,A:9,B:11 }
+  const base = names[m[1]] || 0
+  const acc = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0
+  const oct = parseInt(m[3])
+  return (oct + 1) * 12 + base + acc
+}
+
+function parseDur(s) {
+  const beats = { w:4, h:2, q:1, e:0.5, s:0.25 }
+  let mult = 1
+  if (s.endsWith('.')) { mult = 1.5; s = s.slice(0,-1) }
+  return (beats[s] || 1) * mult
+}
+
+// --- Playback ---
+
 function playSynthNote(e, baseTime) {
-  const ctx = audioContext
-  const freq = 440 * Math.pow(2, (e.midi - 69) / 12)
+  const ctx = audioContext, freq = 440 * Math.pow(2, (e.midi - 69) / 12)
   const voice = VOICES.sine_lead
   const osc = ctx.createOscillator(); osc.type = voice.type
   osc.frequency.setValueAtTime(freq, baseTime + e.start)
-  const gain = ctx.createGain(); const t = baseTime + e.start; const d = e.duration
-  const g = gain.gain
+  const gain = ctx.createGain(); const t = baseTime + e.start; const d = e.duration; const g = gain.gain
   g.setValueAtTime(0, t)
   g.linearRampToValueAtTime(voice.g, t + voice.a)
   g.linearRampToValueAtTime(voice.g * voice.s, t + voice.a + voice.d)
   g.setValueAtTime(voice.g * voice.s, t + d - voice.r)
   g.linearRampToValueAtTime(0, t + d)
-  osc.connect(gain)
-  // pan
-  const pan = e.pan || 0
-  if (pan !== 0) {
-    const panner = ctx.createStereoPanner(); panner.pan.setValueAtTime(pan, t)
-    gain.connect(panner); panner.connect(ctx.destination)
-    if (analyser) panner.connect(analyser)
-    activeNodes.push(panner)
-  } else {
-    gain.connect(ctx.destination)
-    if (analyser) gain.connect(analyser)
-  }
-  osc.start(t); osc.stop(t + d + voice.r)
-  activeNodes.push(osc, gain)
-}
-
-function playDrumNote(e, baseTime) {
-  const ctx = audioContext, t = baseTime + e.start, midi = e.midi
-  if (midi === 36) {
-    const osc = ctx.createOscillator(); osc.type = 'sine'
-    osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(30, t + 0.12)
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.6 * (e.velocity||0.8), t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
-    osc.connect(g); g.connect(ctx.destination); if(analyser) g.connect(analyser)
-    osc.start(t); osc.stop(t + 0.15); activeNodes.push(osc, g)
-  } else if (midi === 38) {
-    const bs = ctx.sampleRate * 0.1, buf = ctx.createBuffer(1, bs, ctx.sampleRate)
-    const d = buf.getChannelData(0); for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1
-    const noise = ctx.createBufferSource(); noise.buffer = buf
-    const g1 = ctx.createGain(); g1.gain.setValueAtTime(0.3 * (e.velocity||0.8), t)
-    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
-    noise.connect(g1); g1.connect(ctx.destination); if(analyser) g1.connect(analyser)
-    const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(180, t)
-    const g2 = ctx.createGain(); g2.gain.setValueAtTime(0.15, t)
-    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.06)
-    osc.connect(g2); g2.connect(ctx.destination)
-    noise.start(t); osc.start(t); noise.stop(t + 0.1); osc.stop(t + 0.1)
-    activeNodes.push(noise, osc, g1, g2)
-  } else if (midi === 42 || midi === 46) {
-    const bs = ctx.sampleRate * 0.05, buf = ctx.createBuffer(1, bs, ctx.sampleRate)
-    const d = buf.getChannelData(0); for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1
-    const noise = ctx.createBufferSource(); noise.buffer = buf
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(5000, t)
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.12 * (e.velocity||0.8), t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
-    noise.connect(hp); hp.connect(g); g.connect(ctx.destination)
-    noise.start(t); noise.stop(t + 0.05); activeNodes.push(noise, g)
-  }
+  osc.connect(gain); gain.connect(ctx.destination)
+  if (analyser) gain.connect(analyser)
+  osc.start(t); osc.stop(t + d + voice.r); activeNodes.push(osc, gain)
 }
 
 function playEvents(events) {
   stopPlayback()
   const ctx = getAudioContext()
   if (!analyser) { analyser = ctx.createAnalyser(); analyser.fftSize = 256 }
-  const totalDuration = Math.max(...events.map(e => e.start + e.duration)) + 0.2
+  const totalDuration = Math.max(...events.map(e => e.start + e.duration), 0.1) + 0.2
   currentBaseTime = ctx.currentTime + 0.05
-  for (const e of events) {
-    if (e.channel === 9) playDrumNote(e, currentBaseTime)
-    else playSynthNote(e, currentBaseTime)
-  }
+  for (const e of events) { playSynthNote(e, currentBaseTime) }
   playbackTimer = setTimeout(() => {
     if (loopEnabled) playEvents(events); else { cleanupNodes(); updateUI() }
   }, totalDuration * 1000)
@@ -101,19 +137,18 @@ function getAudioContext() {
   return audioContext
 }
 
+// --- Meter ---
+
 function updateMeter() {
-  if (!playbackTimer) { document.getElementById('meter-bar').style.width = '0%'; meterTimer=null; return }
+  if (!playbackTimer) { document.getElementById('meter-bar').style.width='0%'; return }
   if (analyser) {
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteFrequencyData(data)
-    const avg = data.reduce((a, b) => a + b, 0) / data.length
-    document.getElementById('meter-bar').style.width = Math.min(100, avg / 2.5) + '%'
+    const data = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(data)
+    document.getElementById('meter-bar').style.width = Math.min(100, data.reduce((a,b)=>a+b,0)/data.length/2.5) + '%'
   }
   if (audioContext && currentBaseTime) {
-    const elapsed = audioContext.currentTime - currentBaseTime
-    document.getElementById('time-display').textContent = elapsed > 0 ? elapsed.toFixed(1) + 's' : '0.0s'
+    document.getElementById('time-display').textContent = Math.max(0, audioContext.currentTime - currentBaseTime).toFixed(1) + 's'
   }
-  meterTimer = setTimeout(updateMeter, 50)
+  setTimeout(updateMeter, 50)
 }
 
 function updateUI() {
@@ -124,7 +159,17 @@ function updateUI() {
   document.getElementById('status').textContent = playing ? 'playing...' : 'idle'
 }
 
-const demoEvents = window.MOONSIC_DEMO_EVENTS || [{ start:0,duration:0.5,midi:60,velocity:0.8,channel:0 }]
-document.getElementById('play-btn').addEventListener('click', () => playEvents(demoEvents))
+// --- Init ---
+
+document.getElementById('play-btn').addEventListener('click', () => {
+  const text = document.getElementById('score-input').value
+  try {
+    const result = parseScore(text)
+    document.getElementById('error-msg').textContent = ''
+    playEvents(result.events)
+  } catch(e) {
+    document.getElementById('error-msg').textContent = 'Parse error: ' + e.message
+  }
+})
 document.getElementById('stop-btn').addEventListener('click', () => stopPlayback())
 document.getElementById('loop-btn').addEventListener('click', () => toggleLoop())

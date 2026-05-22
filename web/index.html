@@ -3,24 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>moonsic — Browser Playback</title>
+  <title>moonsic v6 — Live Editor</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
-    <h1>moonsic</h1>
-    <p class="subtitle">MoonBit Music Library — Browser Demo</p>
+    <h1>moonsic v6</h1>
+    <p class="subtitle">type notation, click Play</p>
+    <textarea id="score-input" rows="8">
+tempo 120
+time 4/4
+| C4q D4q E4q G4q | [C4 E4 G4]h Rq G4q:90 |
+x2</textarea>
     <div id="controls">
       <button id="play-btn">Play</button>
       <button id="stop-btn" disabled>Stop</button>
-      <button id="loop-btn">Loop: OFF</button>
+      <button id="loop-btn">Loop:OFF</button>
       <span id="status">idle</span>
     </div>
     <div id="meter"><div id="meter-bar"></div></div>
     <div id="time-display">0.0s</div>
-    <div id="info"><p>苏打绿 — 他夏了夏天</p></div>
+    <div id="error-msg"></div>
   </div>
-  <script src="demo-events.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

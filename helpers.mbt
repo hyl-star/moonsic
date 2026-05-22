@@ -218,74 +218,166 @@ pub fn score_with(
   score_with_tempo(tracks, tempo(bpm), time_signature)
 }
 
-// --- 文本旋律解析 ---
+// --- 文本记谱解析器 (v6) ---
 
 ///|
-/// 从紧凑文本格式解析旋律：`melody_str("C4q D4q E4q G4q | A4h")`
-/// 格式：音名[变音][八度]时值[.]  休止：`r` + 时值   `|` 忽略
+/// 从文本解析旋律。支持：`C4q` `F#4e` `Rq` `[C4 E4 G4]h` `C4q:80` `x4` `#注释`
 pub fn melody_str(input : String) -> Track {
-  let events = []
-  let len = input.length()
-  let mut i = 0
-  while i < len {
-    let ch = input[i]
-    if ch == ' ' || ch == '|' || ch == '\n' {
-      i = i + 1
-      continue
-    }
-    if ch == 'r' {
-      // 休止：r + 时值码
-      i = i + 1
-      if i >= len {
-        break
-      }
-      let (dur, advance) = parse_dur(input, i)
-      events.push(Rest(rest(dur)))
-      i = advance
-    } else if ch >= 'A' && ch <= 'G' {
-      // 音名
-      let class = match ch {
-        'C' => C
-        'D' => D
-        'E' => E
-        'F' => F
-        'G' => G
-        'A' => A
-        'B' => B
-        _ => C
-      }
-      i = i + 1
-      // 可选变音记号
-      let mut acc = Natural
-      if i < len && (input[i] == '#' || input[i] == 'b') {
-        acc = if input[i] == '#' { Sharp } else { Flat }
-        i = i + 1
-      }
-      // 八度数字
-      if i >= len {
-        break
-      }
-      let octave = input[i].to_int() - '0'.to_int()
-      i = i + 1
-      // 时值码
-      let (dur, advance) = parse_dur(input, i)
-      let p = pitch(class, acc, octave)
-      events.push(Note(note(p, dur)))
-      i = advance
-    } else {
-      i = i + 1
+  let (events, repeat, _pos) = parse_line(input, 0)
+  let all = []
+  for _r = 0; _r < repeat; _r = _r + 1 {
+    for e in events {
+      all.push(e)
     }
   }
-  track(events)
+  track(all)
 }
 
 ///|
-/// 解析时值码：w=whole, h=half, q=quarter, e=eighth, s=sixteenth，可选 `.` 附点
-fn parse_dur(input : String, i : Int) -> (Duration, Int) {
-  if i >= input.length() {
-    return (Quarter, i)
+/// 从完整乐谱文本解析 Score。支持 `tempo N`、`time N/D` 指令。
+pub fn score_str(input : String) -> Score {
+  let mut bpm = 120
+  let mut ts = four_four()
+  let all_events = []
+  let len = input.length()
+  let mut pos = 0
+  while pos < len {
+    pos = skip_blank(pos, input, len)
+    if pos >= len {
+      break
+    }
+    if match_prefix(pos, input, "tempo ") {
+      pos = pos + 6
+      let (v, p) = read_int(pos, input, len)
+      bpm = v
+      pos = p
+    } else if match_prefix(pos, input, "time ") {
+      pos = pos + 5
+      let (num, p1) = read_int(pos, input, len)
+      pos = p1
+      if pos < len && input[pos] == '/' {
+        pos = pos + 1
+      }
+      let (den, p2) = read_int(pos, input, len)
+      pos = p2
+      ts = time_signature(num, den)
+    } else if input[pos] == '#' {
+      while pos < len && input[pos] != '\n' {
+        pos = pos + 1
+      }
+    } else if input[pos] == '\n' {
+      pos = pos + 1
+    } else {
+      let (evts, rep, p) = parse_line(input, pos)
+      pos = p
+      for _r = 0; _r < rep; _r = _r + 1 {
+        for e in evts {
+          all_events.push(e)
+        }
+      }
+    }
   }
-  let base = match input[i] {
+  score_with_tempo([track(all_events)], tempo(bpm), ts)
+}
+
+// --- 内部解析函数 ---
+
+///|
+fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
+  let events = []
+  let mut p = pos
+  let len = input.length()
+  let mut repeat = 1
+  while p < len && input[p] != '\n' && input[p] != '#' {
+    p = skip_blank(p, input, len)
+    if p >= len || input[p] == '\n' || input[p] == '#' {
+      break
+    }
+    if input[p] == '[' {
+      p = p + 1
+      let pitches = []
+      while p < len && input[p] != ']' {
+        p = skip_blank(p, input, len)
+        if p < len && input[p] >= 'A' && input[p] <= 'G' {
+          let (pitch_val, p2) = parse_pitch(input, p)
+          pitches.push(pitch_val)
+          p = p2
+        } else {
+          p = p + 1
+        }
+      }
+      if p < len {
+        p = p + 1
+      }
+      let (dur, p2) = parse_dur(input, p)
+      p = p2
+      let vel = parse_vel(input, p, 100)
+      p = vel.1
+      events.push(Chord(chord_with_velocity(pitches, dur, vel.0)))
+    } else if input[p] == 'R' {
+      p = p + 1
+      let (dur, p2) = parse_dur(input, p)
+      p = p2
+      events.push(Rest(rest(dur)))
+    } else if input[p] == 'x' {
+      p = p + 1
+      let (n, p2) = read_int(p, input, len)
+      repeat = n
+      p = p2
+      break
+    } else if input[p] >= 'A' && input[p] <= 'G' {
+      let (pitch_val, p2) = parse_pitch(input, p)
+      p = p2
+      let (dur, p3) = parse_dur(input, p)
+      p = p3
+      let vel = parse_vel(input, p, 100)
+      p = vel.1
+      events.push(Note(note_with_velocity(pitch_val, dur, vel.0)))
+    } else {
+      p = p + 1
+    }
+  }
+  while p < len && input[p] != '\n' {
+    p = p + 1
+  }
+  if p < len {
+    p = p + 1
+  }
+  (events, repeat, p)
+}
+
+///|
+fn parse_pitch(input : String, p : Int) -> (Pitch, Int) {
+  let class = match input[p] {
+    'C' => C
+    'D' => D
+    'E' => E
+    'F' => F
+    'G' => G
+    'A' => A
+    'B' => B
+    _ => C
+  }
+  let mut j = p + 1
+  let mut acc = Natural
+  if j < input.length() && (input[j] == '#' || input[j] == 'b') {
+    acc = if input[j] == '#' { Sharp } else { Flat }
+    j = j + 1
+  }
+  let octave = if j < input.length() {
+    input[j].to_int() - '0'.to_int()
+  } else {
+    4
+  }
+  (pitch(class, acc, octave), j + 1)
+}
+
+///|
+fn parse_dur(input : String, p : Int) -> (Duration, Int) {
+  if p >= input.length() {
+    return (Quarter, p)
+  }
+  let base = match input[p] {
     'w' => Whole
     'h' => Half
     'q' => Quarter
@@ -293,10 +385,53 @@ fn parse_dur(input : String, i : Int) -> (Duration, Int) {
     's' => Sixteenth
     _ => Quarter
   }
-  let next = i + 1
-  if next < input.length() && input[next] == '.' {
-    (dotted(base), next + 1)
+  let n = p + 1
+  if n < input.length() && input[n] == '.' {
+    (dotted(base), n + 1)
   } else {
-    (base, next)
+    (base, n)
   }
+}
+
+///|
+fn parse_vel(input : String, p : Int, default : Int) -> (Int, Int) {
+  if p < input.length() && input[p] == ':' {
+    let (v, p2) = read_int(p + 1, input, input.length())
+    (v, p2)
+  } else {
+    (default, p)
+  }
+}
+
+///|
+fn read_int(p : Int, input : String, len : Int) -> (Int, Int) {
+  let mut j = p
+  let mut val = 0
+  while j < len && input[j] >= '0' && input[j] <= '9' {
+    val = val * 10 + (input[j].to_int() - '0'.to_int())
+    j = j + 1
+  }
+  (val, j)
+}
+
+///|
+fn skip_blank(p : Int, input : String, len : Int) -> Int {
+  let mut j = p
+  while j < len && (input[j] == ' ' || input[j] == '|' || input[j] == '\t') {
+    j = j + 1
+  }
+  j
+}
+
+///|
+fn match_prefix(p : Int, input : String, prefix : String) -> Bool {
+  let pl = prefix.length()
+  if p + pl > input.length() {
+    return false
+  }
+  let mut j = 0
+  while j < pl && input[p + j] == prefix[j] {
+    j = j + 1
+  }
+  j == pl
 }

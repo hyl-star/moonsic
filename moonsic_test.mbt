@@ -828,3 +828,33 @@ test "wav_header_riff_wave" {
   assert_eq(wav[38], b't')
   assert_eq(wav[39], b'a')
 }
+
+///|
+test "melody_str_chord" {
+  let t = @moonsic.melody_str("[C4 E4 G4]h")
+  let events = t.to_note_events()
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[2].midi_note, 67)
+}
+
+///|
+test "melody_str_velocity" {
+  let t = @moonsic.melody_str("C4q:64 D4q:80")
+  let events = t.to_note_events()
+  assert_eq(events[0].velocity, 64)
+  assert_eq(events[1].velocity, 80)
+}
+
+///|
+test "melody_str_repeat" {
+  let t = @moonsic.melody_str("C4q x4")
+  assert_eq(t.event_count(), 4)
+}
+
+///|
+test "score_str_tempo_time" {
+  let s = @moonsic.score_str("tempo 140\ntime 3/4\nC4q D4q")
+  assert_eq(s.tempo.bpm, 140)
+  assert_eq(s.time_signature.numerator, 3)
+}
