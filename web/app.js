@@ -1,7 +1,7 @@
-// moonsic v5 — mixer (volume/pan) + level meter + time display
+// moonsic v5 — mixer + level meter + time
 
 let audioContext = null, activeNodes = [], playbackTimer = null, loopEnabled = false
-let currentEvents = [], currentBaseTime = 0, analyser = null
+let currentBaseTime = 0, analyser = null, meterTimer = null
 
 const VOICES = {
   sine_lead:   { type:'sine',     a:0.01,d:0.05,s:0.7,r:0.05,g:0.18 },
@@ -17,40 +17,43 @@ function playSynthNote(e, baseTime) {
   const voice = VOICES.sine_lead
   const osc = ctx.createOscillator(); osc.type = voice.type
   osc.frequency.setValueAtTime(freq, baseTime + e.start)
-  const gain = ctx.createGain(); const t = baseTime + e.start
-  const g = gain.gain, d = e.duration
+  const gain = ctx.createGain(); const t = baseTime + e.start; const d = e.duration
+  const g = gain.gain
   g.setValueAtTime(0, t)
-  g.linearRampToValueAtTime(voice.g * (e.volume || 1), t + voice.a)
-  g.linearRampToValueAtTime(voice.g * voice.s * (e.volume || 1), t + voice.a + voice.d)
-  g.setValueAtTime(voice.g * voice.s * (e.volume || 1), t + d - voice.r)
+  g.linearRampToValueAtTime(voice.g, t + voice.a)
+  g.linearRampToValueAtTime(voice.g * voice.s, t + voice.a + voice.d)
+  g.setValueAtTime(voice.g * voice.s, t + d - voice.r)
   g.linearRampToValueAtTime(0, t + d)
+  osc.connect(gain)
   // pan
   const pan = e.pan || 0
-  let out = gain
   if (pan !== 0) {
     const panner = ctx.createStereoPanner(); panner.pan.setValueAtTime(pan, t)
-    gain.connect(panner); out = panner
+    gain.connect(panner); panner.connect(ctx.destination)
+    if (analyser) panner.connect(analyser)
+    activeNodes.push(panner)
+  } else {
+    gain.connect(ctx.destination)
+    if (analyser) gain.connect(analyser)
   }
-  osc.connect(gain); out.connect(ctx.destination)
-  if (analyser) out.connect(analyser)
   osc.start(t); osc.stop(t + d + voice.r)
-  activeNodes.push(osc, gain, out)
+  activeNodes.push(osc, gain)
 }
 
 function playDrumNote(e, baseTime) {
   const ctx = audioContext, t = baseTime + e.start, midi = e.midi
-  if (midi === 36) { // Kick
+  if (midi === 36) {
     const osc = ctx.createOscillator(); osc.type = 'sine'
     osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(30, t + 0.12)
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.6 * e.velocity, t)
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.6 * (e.velocity||0.8), t)
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
     osc.connect(g); g.connect(ctx.destination); if(analyser) g.connect(analyser)
     osc.start(t); osc.stop(t + 0.15); activeNodes.push(osc, g)
-  } else if (midi === 38) { // Snare
+  } else if (midi === 38) {
     const bs = ctx.sampleRate * 0.1, buf = ctx.createBuffer(1, bs, ctx.sampleRate)
     const d = buf.getChannelData(0); for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1
     const noise = ctx.createBufferSource(); noise.buffer = buf
-    const g1 = ctx.createGain(); g1.gain.setValueAtTime(0.3 * e.velocity, t)
+    const g1 = ctx.createGain(); g1.gain.setValueAtTime(0.3 * (e.velocity||0.8), t)
     g1.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
     noise.connect(g1); g1.connect(ctx.destination); if(analyser) g1.connect(analyser)
     const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(180, t)
@@ -59,12 +62,12 @@ function playDrumNote(e, baseTime) {
     osc.connect(g2); g2.connect(ctx.destination)
     noise.start(t); osc.start(t); noise.stop(t + 0.1); osc.stop(t + 0.1)
     activeNodes.push(noise, osc, g1, g2)
-  } else if (midi === 42 || midi === 46) { // Hat
+  } else if (midi === 42 || midi === 46) {
     const bs = ctx.sampleRate * 0.05, buf = ctx.createBuffer(1, bs, ctx.sampleRate)
     const d = buf.getChannelData(0); for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1
     const noise = ctx.createBufferSource(); noise.buffer = buf
     const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(5000, t)
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.12 * e.velocity, t)
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.12 * (e.velocity||0.8), t)
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
     noise.connect(hp); hp.connect(g); g.connect(ctx.destination)
     noise.start(t); noise.stop(t + 0.05); activeNodes.push(noise, g)
@@ -74,8 +77,7 @@ function playDrumNote(e, baseTime) {
 function playEvents(events) {
   stopPlayback()
   const ctx = getAudioContext()
-  if (!analyser) { analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.connect(ctx.destination) }
-  currentEvents = events
+  if (!analyser) { analyser = ctx.createAnalyser(); analyser.fftSize = 256 }
   const totalDuration = Math.max(...events.map(e => e.start + e.duration)) + 0.2
   currentBaseTime = ctx.currentTime + 0.05
   for (const e of events) {
@@ -99,16 +101,14 @@ function getAudioContext() {
   return audioContext
 }
 
-// --- Level Meter ---
-let meterTimer = null
 function updateMeter() {
-  if (!playbackTimer) { document.getElementById('meter-bar').style.width = '0%'; return }
-  if (!analyser) { meterTimer = setTimeout(updateMeter, 50); return }
-  const data = new Uint8Array(analyser.frequencyBinCount)
-  analyser.getByteFrequencyData(data)
-  const avg = data.reduce((a, b) => a + b, 0) / data.length
-  document.getElementById('meter-bar').style.width = Math.min(100, avg / 2.5) + '%'
-  // time display
+  if (!playbackTimer) { document.getElementById('meter-bar').style.width = '0%'; meterTimer=null; return }
+  if (analyser) {
+    const data = new Uint8Array(analyser.frequencyBinCount)
+    analyser.getByteFrequencyData(data)
+    const avg = data.reduce((a, b) => a + b, 0) / data.length
+    document.getElementById('meter-bar').style.width = Math.min(100, avg / 2.5) + '%'
+  }
   if (audioContext && currentBaseTime) {
     const elapsed = audioContext.currentTime - currentBaseTime
     document.getElementById('time-display').textContent = elapsed > 0 ? elapsed.toFixed(1) + 's' : '0.0s'
@@ -124,9 +124,7 @@ function updateUI() {
   document.getElementById('status').textContent = playing ? 'playing...' : 'idle'
 }
 
-const demoEvents = window.MOONSIC_DEMO_EVENTS || [
-  { start:0,duration:0.5,midi:60,velocity:0.8,channel:0 },
-]
+const demoEvents = window.MOONSIC_DEMO_EVENTS || [{ start:0,duration:0.5,midi:60,velocity:0.8,channel:0 }]
 document.getElementById('play-btn').addEventListener('click', () => playEvents(demoEvents))
 document.getElementById('stop-btn').addEventListener('click', () => stopPlayback())
 document.getElementById('loop-btn').addEventListener('click', () => toggleLoop())
