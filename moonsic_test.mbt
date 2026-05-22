@@ -134,3 +134,31 @@ test "is_valid_channel" {
   assert_false(@moonsic.is_valid_channel(-1))
   assert_false(@moonsic.is_valid_channel(16))
 }
+
+///|
+test "note_default_velocity" {
+  let p = @moonsic.pitch
+  let n = @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter)
+  assert_eq(n.velocity, 100)
+}
+
+///|
+test "note_with_explicit_velocity" {
+  let p = @moonsic.pitch
+  let n = @moonsic.note_with_velocity(
+    p(@moonsic.C, @moonsic.Natural, 4),
+    @moonsic.Quarter,
+    64,
+  )
+  assert_eq(n.velocity, 64)
+}
+
+///|
+test "note_transpose" {
+  let p = @moonsic.pitch
+  let n = @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter)
+  let t = n.transpose(2)
+  assert_eq(t.pitch.to_midi(), 62)
+  assert_eq(t.duration.beats(), 1.0)
+  assert_eq(t.velocity, 100)
+}

@@ -328,3 +328,97 @@ pub fn is_valid_midi_note(n : Int) -> Bool {
 pub fn is_valid_channel(c : Int) -> Bool {
   c >= MIN_CHANNEL && c <= MAX_CHANNEL
 }
+
+// --- 音符 Note ---
+
+///|
+/// 音符 = 音高 + 时值 + 力度
+pub(all) struct Note {
+  pitch : Pitch
+  duration : Duration
+  velocity : Int
+}
+
+///|
+/// 创建音符（使用默认力度 100）
+pub fn note(pitch : Pitch, duration : Duration) -> Note {
+  { pitch, duration, velocity: DEFAULT_VELOCITY }
+}
+
+///|
+/// 创建音符（指定力度）
+pub fn note_with_velocity(
+  pitch : Pitch,
+  duration : Duration,
+  velocity : Int,
+) -> Note {
+  { pitch, duration, velocity }
+}
+
+///|
+/// 音符移调（仅改变音高，时值和力度不变）
+pub fn Note::transpose(self : Note, semitones : Int) -> Note {
+  {
+    pitch: self.pitch.transpose(semitones),
+    duration: self.duration,
+    velocity: self.velocity,
+  }
+}
+
+///|
+pub fn Note::to_string(self : Note) -> String {
+  "\{self.pitch.to_string()} \{self.duration.to_string()} v=\{self.velocity}"
+}
+
+// --- 休止 Rest ---
+
+///|
+/// 休止符，只有时值
+pub(all) struct Rest {
+  duration : Duration
+}
+
+///|
+pub fn rest(duration : Duration) -> Rest {
+  { duration, }
+}
+
+///|
+pub fn Rest::to_string(self : Rest) -> String {
+  "rest \{self.duration.to_string()}"
+}
+
+// --- 音乐事件 MusicEvent ---
+
+///|
+/// 轨道中的音乐事件：音符或休止
+pub(all) enum MusicEvent {
+  Note(Note)
+  Rest(Rest)
+}
+
+///|
+/// 获取事件的时值
+pub fn MusicEvent::duration(self : MusicEvent) -> Duration {
+  match self {
+    Note(n) => n.duration
+    Rest(r) => r.duration
+  }
+}
+
+///|
+pub fn MusicEvent::to_string(self : MusicEvent) -> String {
+  match self {
+    Note(n) => n.to_string()
+    Rest(r) => r.to_string()
+  }
+}
+
+///|
+/// 事件移调（休止不变，音符移调）
+pub fn MusicEvent::transpose(self : MusicEvent, semitones : Int) -> MusicEvent {
+  match self {
+    Note(n) => Note(n.transpose(semitones))
+    Rest(r) => Rest(r)
+  }
+}
