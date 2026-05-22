@@ -679,3 +679,48 @@ test "midi_export_with_instrument" {
   // meta track + 1 music track = 2
   assert_eq(file.tracks.length(), 2)
 }
+
+// --- v2 arpeggio + drum tests ---
+
+///|
+test "arpeggiate_chord" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate(chords, @moonsic.eighth())
+  let events = arp.to_note_events()
+  // C major chord: C3 E3 G3 → 3 sequential notes
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 48) // C3
+  assert_eq(events[1].midi_note, 52) // E3
+  assert_eq(events[2].midi_note, 55) // G3
+}
+
+///|
+test "drum_constants" {
+  assert_eq(@moonsic.KICK, 36)
+  assert_eq(@moonsic.SNARE, 38)
+  assert_eq(@moonsic.CLOSED_HAT, 42)
+  assert_eq(@moonsic.DRUM_CHANNEL, 9)
+}
+
+///|
+test "basic_beat_bars" {
+  let beat = @moonsic.basic_beat(1)
+  // 3 tracks: kick, snare, hat
+  assert_eq(beat.track_count(), 3)
+  let events = beat.to_note_events()
+  // kick(2) + snare(2) + hat(8) = 12 events per bar
+  assert_eq(events.length(), 12)
+}
+
+///|
+test "basic_beat_midi_export" {
+  let beat = @moonsic.basic_beat(1)
+  let song = @moonsic.score_with([beat.tracks[0]], 120, @moonsic.four_four())
+  let bytes = song.to_midi_bytes()
+  assert_true(bytes.length() > 0)
+}
