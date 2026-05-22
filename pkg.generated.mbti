@@ -220,6 +220,8 @@ pub fn score(Array[Track]) -> Score
 
 pub fn score1(Track) -> Score
 
+pub fn score_str(String) -> Score
+
 pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 
 pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
