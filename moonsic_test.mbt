@@ -602,3 +602,51 @@ test "progression_timing" {
   assert_eq(events[0].start, 0.0) // I tones
   assert_eq(events[3].start, 1.0) // IV tones
 }
+
+// --- v2 pattern tests ---
+
+///|
+test "track_concat" {
+  let a = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let b = @moonsic.melody([@moonsic.n(@moonsic.d(4), @moonsic.quarter())])
+  let ab = a.concat(b)
+  assert_eq(ab.event_count(), 2)
+  assert_eq(ab.duration_beats(), 2.0)
+}
+
+///|
+test "track_reverse" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ])
+  let rev = t.reverse()
+  assert_eq(rev.event_count(), 2)
+  assert_eq(rev.duration_beats(), t.duration_beats())
+}
+
+///|
+test "track_stretch" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = t.stretch(2.0)
+  assert_eq(t2.duration_beats(), 2.0)
+}
+
+///|
+test "track_map_velocity" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let louder = t.map_velocity(fn(v) { v + 20 })
+  let events = louder.to_note_events()
+  assert_eq(events[0].velocity, 120)
+}
+
+///|
+test "track_up_down_octave" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let up = t.up_octave()
+  let events = up.to_note_events()
+  assert_eq(events[0].midi_note, 72) // C5
+  let down = t.down_octave()
+  let down_events = down.to_note_events()
+  assert_eq(down_events[0].midi_note, 48) // C3
+}
