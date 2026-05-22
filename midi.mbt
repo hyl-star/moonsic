@@ -26,12 +26,11 @@ fn pow2(exp : Double) -> Double {
 
 // --- 导出前校验 ---
 
+///|
 /// 校验 Score 的所有值在合法范围内
 fn validate_score(score : Score, ppq : Int) -> Unit {
   if score.tempo.bpm <= 0 {
-    abort(
-      "MIDI 导出失败：BPM 必须 > 0，当前值：\{score.tempo.bpm}",
-    )
+    abort("MIDI 导出失败：BPM 必须 > 0，当前值：\{score.tempo.bpm}")
   }
   if ppq <= 0 {
     abort("MIDI 导出失败：PPQ 必须 > 0，当前值：\{ppq}")
@@ -122,6 +121,7 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
 
 // --- 内部辅助函数 ---
 
+///|
 /// 将 NoteEvent 序列转为 MIDI delta-tick 事件
 fn note_events_to_midi(
   events : Array[NoteEvent],
@@ -185,6 +185,7 @@ fn note_events_to_midi(
   midi_events
 }
 
+///|
 /// 内部绝对 MIDI 事件，用于排序
 priv struct AbsMidiEvent {
   tick : Int
@@ -194,6 +195,7 @@ priv struct AbsMidiEvent {
   channel : Int
 }
 
+///|
 /// 绝对 MIDI 事件排序：按 tick 升序，同一 tick 下 NoteOff 先于 NoteOn
 fn sort_abs_events(events : Array[AbsMidiEvent]) -> Unit {
   let n = events.length()
