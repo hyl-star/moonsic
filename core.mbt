@@ -562,19 +562,40 @@ pub fn empty_track() -> Track {
 ///|
 /// 设置轨道音量（0.0..，默认 1.0）
 pub fn Track::with_volume(self : Track, v : Double) -> Track {
-  { events: self.events, channel: self.channel, program: self.program, volume: v, pan: self.pan, mute: self.mute }
+  {
+    events: self.events,
+    channel: self.channel,
+    program: self.program,
+    volume: v,
+    pan: self.pan,
+    mute: self.mute,
+  }
 }
 
 ///|
 /// 设置轨道声像（-1.0 左 .. 1.0 右，默认 0.0 居中）
 pub fn Track::with_pan(self : Track, p : Double) -> Track {
-  { events: self.events, channel: self.channel, program: self.program, volume: self.volume, pan: p, mute: self.mute }
+  {
+    events: self.events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: p,
+    mute: self.mute,
+  }
 }
 
 ///|
 /// 设置轨道静音
 pub fn Track::with_mute(self : Track, m : Bool) -> Track {
-  { events: self.events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: m }
+  {
+    events: self.events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: self.pan,
+    mute: m,
+  }
 }
 
 ///|
@@ -585,7 +606,14 @@ pub fn Track::append(self : Track, event : MusicEvent) -> Track {
     new_events.push(e)
   }
   new_events.push(event)
-  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
+  {
+    events: new_events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: self.pan,
+    mute: self.mute,
+  }
 }
 
 ///|
@@ -611,7 +639,14 @@ pub fn Track::transpose(self : Track, semitones : Int) -> Track {
   for event in self.events {
     new_events.push(event.transpose(semitones))
   }
-  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
+  {
+    events: new_events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: self.pan,
+    mute: self.mute,
+  }
 }
 
 ///|
@@ -623,7 +658,14 @@ pub fn Track::repeat(self : Track, count : Int) -> Track {
       new_events.push(event)
     }
   }
-  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
+  {
+    events: new_events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: self.pan,
+    mute: self.mute,
+  }
 }
 
 ///|
@@ -652,7 +694,12 @@ pub(all) struct Score {
 ///|
 /// 创建乐谱（默认速度 120，拍号 4/4）
 pub fn score(tracks : Array[Track]) -> Score {
-  { tempo: default_tempo(), time_signature: four_four(), tracks, master_gain: 0.85 }
+  {
+    tempo: default_tempo(),
+    time_signature: four_four(),
+    tracks,
+    master_gain: 0.85,
+  }
 }
 
 ///|
@@ -691,7 +738,12 @@ pub fn Score::transpose(self : Score, semitones : Int) -> Score {
   for track in self.tracks {
     new_tracks.push(track.transpose(semitones))
   }
-  { tempo: self.tempo, time_signature: self.time_signature, tracks: new_tracks, master_gain: self.master_gain }
+  {
+    tempo: self.tempo,
+    time_signature: self.time_signature,
+    tracks: new_tracks,
+    master_gain: self.master_gain,
+  }
 }
 
 ///|

@@ -47,5 +47,12 @@ pub fn synth_pad_warm() -> Int {
 ///|
 /// 为轨道设置 MIDI 乐器（program 0-127）
 pub fn instrument(track : Track, program : Int) -> Track {
-  { events: track.events, channel: track.channel, program, volume: track.volume, pan: track.pan, mute: track.mute }
+  {
+    events: track.events,
+    channel: track.channel,
+    program,
+    volume: track.volume,
+    pan: track.pan,
+    mute: track.mute,
+  }
 }

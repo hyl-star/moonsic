@@ -40,14 +40,15 @@ pub fn Score::to_wav_bytes(self : Score) -> Bytes {
     }
   }
 
+  // normalize + master gain
+  normalize(samples, self.master_gain)
+
   // 转为 16-bit PCM
   let buf : Array[Byte] = []
-  // RIFF header placeholder
   for _i = 0; _i < 44; _i = _i + 1 {
     buf.push((0).to_byte())
   }
   write_wav_header_arr(buf, num_samples, sample_rate)
-
   for i = 0; i < num_samples; i = i + 1 {
     let scaled = samples[i] * 32767.0
     let val = if scaled > 32767.0 {
@@ -62,6 +63,21 @@ pub fn Score::to_wav_bytes(self : Score) -> Bytes {
   }
 
   Bytes::from_array(buf)
+}
+
+///|
+fn normalize(samples : Array[Double], mg : Double) -> Unit {
+  let mut peak = 0.0
+  for i = 0; i < samples.length(); i = i + 1 {
+    let a = if samples[i] < 0.0 { -samples[i] } else { samples[i] }
+    if a > peak {
+      peak = a
+    }
+  }
+  let scale = if peak > 0.0 && peak > 1.0 { mg / peak } else { mg }
+  for i = 0; i < samples.length(); i = i + 1 {
+    samples[i] = samples[i] * scale
+  }
 }
 
 ///|

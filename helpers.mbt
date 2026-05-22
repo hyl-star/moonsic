@@ -236,14 +236,22 @@ pub fn melody_str(input : String) -> Track {
     if ch == 'r' {
       // 休止：r + 时值码
       i = i + 1
-      if i >= len { break }
+      if i >= len {
+        break
+      }
       let (dur, advance) = parse_dur(input, i)
       events.push(Rest(rest(dur)))
       i = advance
     } else if ch >= 'A' && ch <= 'G' {
       // 音名
       let class = match ch {
-        'C' => C; 'D' => D; 'E' => E; 'F' => F; 'G' => G; 'A' => A; 'B' => B
+        'C' => C
+        'D' => D
+        'E' => E
+        'F' => F
+        'G' => G
+        'A' => A
+        'B' => B
         _ => C
       }
       i = i + 1
@@ -254,7 +262,9 @@ pub fn melody_str(input : String) -> Track {
         i = i + 1
       }
       // 八度数字
-      if i >= len { break }
+      if i >= len {
+        break
+      }
       let octave = input[i].to_int() - '0'.to_int()
       i = i + 1
       // 时值码
@@ -269,11 +279,18 @@ pub fn melody_str(input : String) -> Track {
   track(events)
 }
 
+///|
 /// 解析时值码：w=whole, h=half, q=quarter, e=eighth, s=sixteenth，可选 `.` 附点
 fn parse_dur(input : String, i : Int) -> (Duration, Int) {
-  if i >= input.length() { return (Quarter, i) }
+  if i >= input.length() {
+    return (Quarter, i)
+  }
   let base = match input[i] {
-    'w' => Whole; 'h' => Half; 'q' => Quarter; 'e' => Eighth; 's' => Sixteenth
+    'w' => Whole
+    'h' => Half
+    'q' => Quarter
+    'e' => Eighth
+    's' => Sixteenth
     _ => Quarter
   }
   let next = i + 1

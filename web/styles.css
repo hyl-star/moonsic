@@ -49,7 +49,7 @@ button {
   font-size: 0.85em;
   color: #aaa;
 }
-#info {
-  font-size: 0.85em;
-  color: #666;
-}
+#meter { height:6px; background:#333; border-radius:3px; margin:8px 0; overflow:hidden }
+#meter-bar { height:100%; width:0%; background:#7b68ee; transition:width 0.05s }
+#time-display { font-size:0.85em; color:#aaa; margin-bottom:8px }
+#info { font-size:0.85em; color:#666 }
