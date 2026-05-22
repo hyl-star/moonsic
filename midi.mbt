@@ -113,7 +113,7 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
   // 每条 Score 轨道对应一条 MIDI 轨道（保留用户轨道结构）
   for track in self.tracks {
     let track_events = track.to_note_events()
-    let midi_events = note_events_to_midi(track_events, ppq)
+    let midi_events = note_events_to_midi(track_events, track, ppq)
     all_tracks.push(@midi.Track::{ events: midi_events })
   }
 
@@ -131,8 +131,21 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
 /// 将 NoteEvent 序列转为 MIDI delta-tick 事件
 fn note_events_to_midi(
   events : Array[NoteEvent],
+  track : Track,
   ppq : Int,
 ) -> Array[@midi.Event] {
+  // 如果设置了乐器，先插入 ProgramChange
+  let midi_events : Array[@midi.Event] = []
+  if track.program >= 0 {
+    midi_events.push(
+      ProgramChange(
+        delta=0U,
+        channel=track.channel.to_byte(),
+        program=track.program.to_byte(),
+      ),
+    )
+  }
+
   // 第一步：创建绝对 tick 事件（NoteOn + NoteOff）
   let abs_events : Array[AbsMidiEvent] = []
   for e in events {

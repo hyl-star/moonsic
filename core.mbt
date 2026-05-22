@@ -496,23 +496,24 @@ pub fn MusicEvent::transpose(self : MusicEvent, semitones : Int) -> MusicEvent {
 pub(all) struct Track {
   events : Array[MusicEvent]
   channel : Int
+  program : Int // -1 = 未设置乐器
 }
 
 ///|
-/// 创建轨道（默认通道 0）
+/// 创建轨道（默认通道 0，无乐器）
 pub fn track(events : Array[MusicEvent]) -> Track {
-  { events, channel: 0 }
+  { events, channel: 0, program: -1 }
 }
 
 ///|
 /// 创建指定通道的轨道
 pub fn track_with_channel(events : Array[MusicEvent], channel : Int) -> Track {
-  { events, channel }
+  { events, channel, program: -1 }
 }
 
 ///|
 pub fn empty_track() -> Track {
-  { events: [], channel: 0 }
+  { events: [], channel: 0, program: -1 }
 }
 
 ///|
@@ -523,7 +524,7 @@ pub fn Track::append(self : Track, event : MusicEvent) -> Track {
     new_events.push(e)
   }
   new_events.push(event)
-  { events: new_events, channel: self.channel }
+  { events: new_events, channel: self.channel, program: self.program }
 }
 
 ///|
@@ -549,7 +550,7 @@ pub fn Track::transpose(self : Track, semitones : Int) -> Track {
   for event in self.events {
     new_events.push(event.transpose(semitones))
   }
-  { events: new_events, channel: self.channel }
+  { events: new_events, channel: self.channel, program: self.program }
 }
 
 ///|
@@ -561,7 +562,7 @@ pub fn Track::repeat(self : Track, count : Int) -> Track {
       new_events.push(event)
     }
   }
-  { events: new_events, channel: self.channel }
+  { events: new_events, channel: self.channel, program: self.program }
 }
 
 ///|

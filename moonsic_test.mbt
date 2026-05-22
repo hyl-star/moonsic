@@ -650,3 +650,32 @@ test "track_up_down_octave" {
   let down_events = down.to_note_events()
   assert_eq(down_events[0].midi_note, 48) // C3
 }
+
+// --- v2 instrument tests ---
+
+///|
+test "instrument_constants" {
+  assert_eq(@moonsic.acoustic_grand_piano(), 0)
+  assert_eq(@moonsic.violin(), 40)
+  assert_eq(@moonsic.synth_lead_square(), 80)
+}
+
+///|
+test "instrument_track" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.instrument(t, @moonsic.acoustic_grand_piano())
+  // program 被设置
+  let events = t2.to_note_events()
+  assert_eq(events.length(), 1)
+}
+
+///|
+test "midi_export_with_instrument" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.instrument(t, @moonsic.violin())
+  let score = @moonsic.score1(t2)
+  let bytes = score.to_midi_bytes()
+  let file = @midi.parse(bytes)
+  // meta track + 1 music track = 2
+  assert_eq(file.tracks.length(), 2)
+}
