@@ -771,3 +771,23 @@ test "minor_progression" {
   assert_eq(events[0].midi_note, 57) // A3
   assert_eq(events[3].midi_note, 62) // D4
 }
+
+// --- v3 key tests ---
+
+///|
+test "key_degree_f_major" {
+  let k = @moonsic.key(@moonsic.f(4), @moonsic.Major)
+  // F major degree 4 should be Bb, not A#
+  let p = k.degree(4, 4)
+  assert_eq(p.to_midi(), 70) // Bb4 = 70
+  assert_eq(p.to_string(), "Bb4")
+}
+
+///|
+test "key_scale_g_major" {
+  let k = @moonsic.key(@moonsic.g(4), @moonsic.Major)
+  let s = k.scale(4, 1)
+  assert_eq(s.length(), 7)
+  // G major: G A B C D E F#
+  assert_eq(s[6].to_string(), "F#4")
+}
