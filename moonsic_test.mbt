@@ -545,3 +545,60 @@ test "chord_midi_export" {
   // meta track + 1 music track
   assert_eq(file.tracks.length(), 2)
 }
+
+// --- v2 theory tests ---
+
+///|
+test "scale_major_c" {
+  let s = @moonsic.scale(@moonsic.c(4), @moonsic.Major, 1)
+  assert_eq(s.length(), 7)
+  assert_eq(s[0].to_midi(), 60) // C4
+  assert_eq(s[2].to_midi(), 64) // E4
+  assert_eq(s[4].to_midi(), 67) // G4
+}
+
+///|
+test "scale_minor_a" {
+  let s = @moonsic.scale(@moonsic.a(3), @moonsic.NaturalMinor, 1)
+  assert_eq(s.length(), 7)
+  assert_eq(s[0].to_midi(), 57) // A3
+  assert_eq(s[2].to_midi(), 60) // C4
+}
+
+///|
+test "degree_helper" {
+  assert_eq(@moonsic.degree(@moonsic.c(4), @moonsic.Major, 1).to_midi(), 60) // C4
+  assert_eq(@moonsic.degree(@moonsic.c(4), @moonsic.Major, 5).to_midi(), 67) // G4
+  assert_eq(@moonsic.degree(@moonsic.c(4), @moonsic.Major, 8).to_midi(), 72) // C5
+}
+
+///|
+test "progression_I_V_vi_IV" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I, @moonsic.V, @moonsic.VI, @moonsic.IV],
+    @moonsic.half(),
+  )
+  assert_eq(chords.event_count(), 4)
+  // 展平验证 MIDI 值
+  let events = chords.to_note_events()
+  // I = C major: C3(48) E3(52) G3(55)
+  assert_eq(events[0].midi_note, 48)
+  assert_eq(events[1].midi_note, 52)
+  assert_eq(events[2].midi_note, 55)
+}
+
+///|
+test "progression_timing" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I, @moonsic.IV],
+    @moonsic.quarter(),
+  )
+  let events = chords.to_note_events()
+  // I: 3 notes at start=0, IV: 3 notes at start=1
+  assert_eq(events[0].start, 0.0) // I tones
+  assert_eq(events[3].start, 1.0) // IV tones
+}
