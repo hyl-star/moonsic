@@ -14,7 +14,7 @@ pub fn Track::concat(self : Track, other : Track) -> Track {
   for e in other.events {
     new_events.push(e)
   }
-  { events: new_events, channel: self.channel, program: self.program }
+  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
 }
 
 // --- 反转 ---
@@ -27,7 +27,7 @@ pub fn Track::reverse(self : Track) -> Track {
   for i = 0; i < n; i = i + 1 {
     new_events.push(self.events[n - 1 - i])
   }
-  { events: new_events, channel: self.channel, program: self.program }
+  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
 }
 
 // --- 拉伸 ---
@@ -99,7 +99,7 @@ pub fn Track::stretch(self : Track, factor : Double) -> Track {
   for e in self.events {
     new_events.push(e.stretch(factor))
   }
-  { events: new_events, channel: self.channel, program: self.program }
+  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
 }
 
 // --- 力度映射 ---
@@ -136,7 +136,7 @@ pub fn Track::map_velocity(self : Track, f : (Int) -> Int) -> Track {
   for e in self.events {
     new_events.push(e.map_velocity(f))
   }
-  { events: new_events, channel: self.channel, program: self.program }
+  { events: new_events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
 }
 
 // --- 八度移调 ---

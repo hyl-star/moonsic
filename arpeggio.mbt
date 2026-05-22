@@ -23,5 +23,5 @@ pub fn arpeggiate(chords : Track, step_duration : Duration) -> Track {
       }
     }
   }
-  { events: new_events, channel: chords.channel, program: chords.program }
+  { events: new_events, channel: chords.channel, program: chords.program, volume: chords.volume, pan: chords.pan, mute: chords.mute }
 }

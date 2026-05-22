@@ -50,7 +50,7 @@ pub fn Track::pad_to(self : Track, target_beats : Double) -> Track {
       events.push(Rest(rest(Sixteenth))); gap = gap - 0.25
     }
   }
-  { events, channel: self.channel, program: self.program }
+  { events, channel: self.channel, program: self.program, volume: self.volume, pan: self.pan, mute: self.mute }
 }
 
 ///|
@@ -84,7 +84,7 @@ pub fn bass_roots(chords : Track, dur : Duration) -> Track {
       _ => events.push(Rest(rest(dur)))
     }
   }
-  { events, channel: chords.channel, program: chords.program }
+  { events, channel: chords.channel, program: chords.program, volume: chords.volume, pan: chords.pan, mute: chords.mute }
 }
 
 ///|
