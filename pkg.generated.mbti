@@ -1,0 +1,194 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic"
+
+// Values
+pub const A4_FREQ : Double = 440.0
+
+pub const A4_MIDI : Int = 69
+
+pub const DEFAULT_PPQ : Int = 480
+
+pub const DEFAULT_VELOCITY : Int = 100
+
+pub const MAX_CHANNEL : Int = 15
+
+pub const MAX_MIDI_NOTE : Int = 127
+
+pub const MAX_VELOCITY : Int = 127
+
+pub const MIN_CHANNEL : Int = 0
+
+pub const MIN_MIDI_NOTE : Int = 0
+
+pub const MIN_VELOCITY : Int = 0
+
+pub fn default_tempo() -> Tempo
+
+pub fn empty_track() -> Track
+
+pub fn four_four() -> TimeSignature
+
+pub fn is_valid_bpm(Int) -> Bool
+
+pub fn is_valid_channel(Int) -> Bool
+
+pub fn is_valid_midi_note(Int) -> Bool
+
+pub fn is_valid_time_signature(Int, Int) -> Bool
+
+pub fn is_valid_velocity(Int) -> Bool
+
+pub fn midi_to_frequency(Int) -> Double
+
+pub fn midi_to_pitch(Int) -> Pitch
+
+pub fn name() -> String
+
+pub fn natural(PitchClass, Int) -> Pitch
+
+pub fn note(Pitch, Duration) -> Note
+
+pub fn note_with_velocity(Pitch, Duration, Int) -> Note
+
+pub fn pitch(PitchClass, Accidental, Int) -> Pitch
+
+pub fn rest(Duration) -> Rest
+
+pub fn score(Array[Track]) -> Score
+
+pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
+
+pub fn tempo(Int) -> Tempo
+
+pub fn time_signature(Int, Int) -> TimeSignature
+
+pub fn track(Array[MusicEvent]) -> Track
+
+pub fn track_with_channel(Array[MusicEvent], Int) -> Track
+
+pub fn version() -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum Accidental {
+  Natural
+  Sharp
+  Flat
+}
+pub fn Accidental::semitone_offset(Self) -> Int
+pub fn Accidental::to_string(Self) -> String
+
+pub(all) enum Duration {
+  Whole
+  Half
+  Quarter
+  Eighth
+  Sixteenth
+}
+pub fn Duration::beats(Self) -> Double
+pub fn Duration::default_ticks(Self) -> Int
+pub fn Duration::seconds(Self, Int) -> Double
+pub fn Duration::ticks(Self, Int) -> Int
+pub fn Duration::to_string(Self) -> String
+
+pub(all) enum MusicEvent {
+  Note(Note)
+  Rest(Rest)
+}
+pub fn MusicEvent::duration(Self) -> Duration
+pub fn MusicEvent::to_string(Self) -> String
+pub fn MusicEvent::transpose(Self, Int) -> Self
+
+pub(all) struct Note {
+  pitch : Pitch
+  duration : Duration
+  velocity : Int
+}
+pub fn Note::to_string(Self) -> String
+pub fn Note::transpose(Self, Int) -> Self
+
+pub(all) struct NoteEvent {
+  start : Double
+  duration : Double
+  midi_note : Int
+  velocity : Int
+  channel : Int
+}
+pub fn NoteEvent::duration_seconds(Self, Int) -> Double
+pub fn NoteEvent::duration_ticks(Self, Int) -> Int
+pub fn NoteEvent::end(Self) -> Double
+pub fn NoteEvent::start_seconds(Self, Int) -> Double
+pub fn NoteEvent::start_ticks(Self, Int) -> Int
+pub fn NoteEvent::to_string(Self) -> String
+
+pub(all) struct Pitch {
+  class : PitchClass
+  accidental : Accidental
+  octave : Int
+}
+pub fn Pitch::frequency(Self) -> Double
+pub fn Pitch::is_valid_midi(Self) -> Bool
+pub fn Pitch::to_midi(Self) -> Int
+pub fn Pitch::to_string(Self) -> String
+pub fn Pitch::transpose(Self, Int) -> Self
+
+pub(all) enum PitchClass {
+  C
+  D
+  E
+  F
+  G
+  A
+  B
+}
+pub fn PitchClass::base_semitone(Self) -> Int
+pub fn PitchClass::to_string(Self) -> String
+
+pub(all) struct Rest {
+  duration : Duration
+}
+pub fn Rest::to_string(Self) -> String
+
+pub(all) struct Score {
+  tempo : Tempo
+  time_signature : TimeSignature
+  tracks : Array[Track]
+}
+pub fn Score::duration_beats(Self) -> Double
+pub fn Score::to_midi_bytes(Self) -> Bytes
+pub fn Score::to_midi_bytes_with_ppq(Self, Int) -> Bytes
+pub fn Score::to_note_events(Self) -> Array[NoteEvent]
+pub fn Score::to_string(Self) -> String
+pub fn Score::track_count(Self) -> Int
+pub fn Score::transpose(Self, Int) -> Self
+
+pub(all) struct Tempo {
+  bpm : Int
+}
+pub fn Tempo::quarter_seconds(Self) -> Double
+pub fn Tempo::to_string(Self) -> String
+
+pub(all) struct TimeSignature {
+  numerator : Int
+  denominator : Int
+}
+pub fn TimeSignature::measure_beats(Self) -> Double
+pub fn TimeSignature::to_string(Self) -> String
+
+pub(all) struct Track {
+  events : Array[MusicEvent]
+  channel : Int
+}
+pub fn Track::append(Self, MusicEvent) -> Self
+pub fn Track::duration_beats(Self) -> Double
+pub fn Track::event_count(Self) -> Int
+pub fn Track::repeat(Self, Int) -> Self
+pub fn Track::to_note_events(Self) -> Array[NoteEvent]
+pub fn Track::to_string(Self) -> String
+pub fn Track::transpose(Self, Int) -> Self
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,7 @@
+import {
+  "username/moonsic" @lib,
+}
+
+options(
+  "is-main": true,
+)
