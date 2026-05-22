@@ -76,21 +76,29 @@ py -m http.server 8000 -d web            # 启服务器
 
 demo 优先使用 moonsic 生成的数据，无数据时回退到硬编码旋律。v4 支持 Loop 循环播放、ADSR 合成音色、鼓组合成。
 
+## v5 Mixer
+
+```moonbit nocheck
+///|
+let lead = melody_str("C4q D4q E4q G4q").with_volume(0.9).with_pan(0.1) // 偏右
+
+///|
+let song = score_with([lead, bass, drums], 120, four_four())
+// Score 自带 master_gain=0.85，WAV 自动 normalize
+```
+
 ## WAV 导出
 
 ```moonbit nocheck
 ///|
-let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM
-
-///|
-let wav = song.to_wav_bytes_with(48000) // 指定采样率
+let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM + normalize + master_gain
 ```
 
 ## 命令行
 
 ```bash
 moon run cmd/main    # 生成浏览器 demo 数据
-moon test            # 75 tests
+moon test            # 75 tests（v5）
 moon fmt             # 格式化
 moon info            # 更新接口文件
 ```

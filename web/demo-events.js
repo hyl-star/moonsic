@@ -1,4 +1,3 @@
-Blocking waiting for file lock E:\project\moonbit\test\moonsic\_build\.moon-lock ...
 // moonsic v0.1.0 — 苏打绿 他夏了夏天
 window.MOONSIC_DEMO_EVENTS = [
   { start: 0, duration: 0.5, midi: 48, velocity: 0.78, channel: 0 },

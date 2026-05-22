@@ -174,6 +174,8 @@ pub fn melody(Array[MusicEvent]) -> Track
 
 pub fn melody_degrees(Key, Array[Int], Duration) -> Track
 
+pub fn melody_str(String) -> Track
+
 pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
 
 pub fn midi_to_frequency(Int) -> Double
@@ -223,8 +225,6 @@ pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
 
 pub fn section(String, Array[Track]) -> Section
-
-pub fn section_layer(String, Array[Track]) -> Section
 
 pub fn sixteenth() -> Duration
 
@@ -392,6 +392,7 @@ pub(all) struct Score {
   tempo : Tempo
   time_signature : TimeSignature
   tracks : Array[Track]
+  master_gain : Double
 }
 pub fn Score::duration_beats(Self) -> Double
 pub fn Score::to_midi_bytes(Self) -> Bytes
@@ -425,6 +426,9 @@ pub(all) struct Track {
   events : Array[MusicEvent]
   channel : Int
   program : Int
+  volume : Double
+  pan : Double
+  mute : Bool
 }
 pub fn Track::append(Self, MusicEvent) -> Self
 pub fn Track::concat(Self, Self) -> Self
@@ -440,6 +444,9 @@ pub fn Track::to_note_events(Self) -> Array[NoteEvent]
 pub fn Track::to_string(Self) -> String
 pub fn Track::transpose(Self, Int) -> Self
 pub fn Track::up_octave(Self) -> Self
+pub fn Track::with_mute(Self, Bool) -> Self
+pub fn Track::with_pan(Self, Double) -> Self
+pub fn Track::with_volume(Self, Double) -> Self
 
 // Type aliases
 
