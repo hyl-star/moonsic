@@ -34,14 +34,21 @@ function parseScore(text) {
     line = line.trim(); if (!line || line.startsWith('#')) continue
     if (line.startsWith('tempo ')) { bpm = parseInt(line.slice(6))||120; continue }
     if (line.startsWith('time ')) continue
-    if (line.startsWith('key ')) { continue }
+    if (line.startsWith('key ')) {
+      const km = line.match(/key\s+([A-G][#b]?)\s*(major|minor)?/i)
+      if (km) { v9Key = { tonic: km[1], accidental: km[1].length>1?km[1][1]:'', octave:4, kind: (km[2]||'major').toLowerCase() } }
+      continue
+    }
     if (line.startsWith('style ')) { continue }
     if (line.startsWith('progression ')) {
       // auto-generate chords from progression text
       const progText = line.slice(12).trim()
       const numerals = parseRomanText(progText)
-      const chordEvents = generateChordsFromRoman(numerals, currentTrack ? currentTrack.instrument : 'piano')
-      if (chordEvents.length > 0) { prevRaw = chordEvents; if(currentTrack) currentTrack.rawEvents.push(...chordEvents) }
+      const chordEvents = generateChordsFromRoman(numerals)
+      if (chordEvents.length > 0) {
+        const chordsTrack = ensureTrack('chords'); chordsTrack.instrument = 'pad'
+        chordsTrack.rawEvents.push(...chordEvents); prevRaw = chordEvents
+      }
       continue
     }
     if (line.startsWith('generate ')) {
@@ -49,11 +56,11 @@ function parseScore(text) {
       if (cmd === 'chords') continue // already handled by progression
       if (cmd.startsWith('bass ')) {
         const style = cmd.slice(5); const bassEvents = generateBass(style)
-        if (bassEvents.length > 0) { ensureTrack('bass').rawEvents.push(...bassEvents) }
+        if (bassEvents.length > 0) { const t = ensureTrack('bass'); t.instrument = 'bass'; t.rawEvents.push(...bassEvents) }
       }
       if (cmd.startsWith('arpeggio ')) {
         const style = cmd.slice(9); const arpEvents = generateArpeggio(style)
-        if (arpEvents.length > 0) { ensureTrack('arpeggio').rawEvents.push(...arpEvents) }
+        if (arpEvents.length > 0) { const t = ensureTrack('arpeggio'); t.instrument = 'bell'; t.rawEvents.push(...arpEvents) }
       }
       continue
     }
@@ -71,6 +78,7 @@ function parseScore(text) {
       const vm = attrs.match(/volume\s+([\d.]+)/); if(vm) currentTrack.volume = parseFloat(vm[1])
       const pm = attrs.match(/pan\s+([-\d.]+)/); if(pm) currentTrack.pan = parseFloat(pm[1])
       const mm = attrs.match(/mute\s+(\S+)/); if(mm) currentTrack.mute = mm[1]==='true'
+      const sm = attrs.match(/solo\s+(\S+)/); if(sm) currentTrack.solo = sm[1]==='true'
       continue
     }
     if (!currentTrack) { currentTrack = ensureTrack('main') }
@@ -256,9 +264,11 @@ function setupAudioGraph() {
   for (const id of Object.keys(trackChannels)) { const ch = trackChannels[id]; for (const n of ch.nodes) { try{n.disconnect()}catch(e){} try{n.stop()}catch(e){} } try{ch.gain.disconnect()}catch(e){}; try{ch.panner.disconnect()}catch(e){}; try{ch.analyser.disconnect()}catch(e){} }
   trackChannels = {}
   if (!parseResult) return
+  const anySolo = parseResult.tracks.some(t => t.solo)
   for (const track of parseResult.tracks) {
     const ch = { gain:null, panner:null, analyser:null, nodes:[] }
-    ch.gain = audioContext.createGain(); ch.gain.gain.setValueAtTime(track.volume, audioContext.currentTime)
+    const audible = anySolo ? track.solo : !track.mute
+    ch.gain = audioContext.createGain(); ch.gain.gain.setValueAtTime(audible ? track.volume : 0, audioContext.currentTime)
     ch.panner = audioContext.createStereoPanner(); ch.panner.pan.setValueAtTime(track.pan, audioContext.currentTime)
     ch.analyser = audioContext.createAnalyser(); ch.analyser.fftSize = 128
     ch.gain.connect(ch.panner); ch.panner.connect(masterGain); ch.panner.connect(ch.analyser)
@@ -268,7 +278,10 @@ function setupAudioGraph() {
 
 function playSynthNote(e, baseTime) {
   const ctx = audioContext; const freq = 440*Math.pow(2,(e.midi-69)/12)
-  const inst = INSTRUMENTS.piano; const ch = trackChannels[e.trackId]; if (!ch) return
+  const track = parseResult ? parseResult.tracks.find(t => t.id === e.trackId) : null
+  const instName = (track && track.instrument && INSTRUMENTS[track.instrument]) ? track.instrument : 'piano'
+  const inst = INSTRUMENTS[instName] || INSTRUMENTS.piano
+  const ch = trackChannels[e.trackId]; if (!ch) return
   if (e.isDrum) { playDrum(e, baseTime, ch); return }
   const osc = ctx.createOscillator(); osc.type = inst.type
   osc.frequency.setValueAtTime(freq, baseTime+e.start)

@@ -64,11 +64,15 @@ pub fn a(Int) -> Pitch
 
 pub fn ab(Int) -> Pitch
 
+pub fn accompany(Key, String, AccompanimentStyle, Duration) -> Array[Track]
+
 pub fn acoustic_grand_piano() -> Int
 
 pub fn acoustic_guitar_steel() -> Int
 
 pub fn arpeggiate(Track, Duration) -> Track
+
+pub fn arpeggiate_with_style(Track, Duration, ArpStyle) -> Track
 
 pub fn arrange(Array[Section], Int, TimeSignature) -> Score
 
@@ -77,6 +81,8 @@ pub fn aug(Pitch, Duration) -> MusicEvent
 pub fn b(Int) -> Pitch
 
 pub fn basic_beat(Int) -> Score
+
+pub fn bass_from_progression(Track, BassStyle, Int) -> Track
 
 pub fn bass_roots(Track, Duration) -> Track
 
@@ -91,6 +97,8 @@ pub fn cello() -> Int
 pub fn ch(Array[Pitch], Duration) -> MusicEvent
 
 pub fn chord(Array[Pitch], Duration) -> Chord
+
+pub fn chord_distance(Chord, Chord) -> Int
 
 pub fn chord_quality(Pitch, ChordQuality, Duration) -> MusicEvent
 
@@ -208,11 +216,15 @@ pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
 pub fn progression(Pitch, ScaleKind, Array[RomanNumeral], Duration) -> Track
 
+pub fn progression_with_roman(Key, Array[RomanNumeral], Duration) -> Track
+
 pub fn quarter() -> Duration
 
 pub fn r(Duration) -> MusicEvent
 
 pub fn rest(Duration) -> Rest
+
+pub fn roman_progression(Key, String, Duration) -> Track
 
 pub fn scale(Pitch, ScaleKind, Int) -> Array[Pitch]
 
@@ -250,6 +262,8 @@ pub fn version() -> String
 
 pub fn violin() -> Int
 
+pub fn voice_lead(Track) -> Track
+
 pub fn whole() -> Duration
 
 // Errors
@@ -262,6 +276,27 @@ pub(all) enum Accidental {
 }
 pub fn Accidental::semitone_offset(Self) -> Int
 pub fn Accidental::to_string(Self) -> String
+
+pub(all) enum AccompanimentStyle {
+  BlockChords
+  PopBallad
+  SimpleArpeggio
+  BassAndPad
+}
+
+pub(all) enum ArpStyle {
+  Up
+  Down
+  UpDown
+  Alberti
+}
+
+pub(all) enum BassStyle {
+  Root
+  RootFifth
+  Octave
+  Walking
+}
 
 pub(all) struct Chord {
   pitches : Array[Pitch]
