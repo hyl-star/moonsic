@@ -1,11 +1,218 @@
-// moonsic v2 Browser Playback — multi-waveform + drum synthesis
+// moonsic v4 Browser Playback Engine
+// Scheduler + ADSR synth voices + loop + drum synthesis
 
 let audioContext = null
+let schedulerTimer = null
 let activeNodes = []
-let playbackTimer = null
+let playbackState = 'idle' // idle | playing
+let loopEnabled = false
+let currentEvents = []
+let currentBaseTime = 0
+let totalDuration = 0
+let nextEventIndex = 0
 
-// Drum MIDI notes
-const KICK = 36, SNARE = 38, CLOSED_HAT = 42, OPEN_HAT = 46
+const LOOKAHEAD = 0.025  // seconds
+const SCHEDULE_AHEAD = 0.1
+
+// --- Synth Voice Presets ---
+
+const VOICES = {
+  sine_lead:   { type: 'sine',     attack: 0.01, decay: 0.05, sustain: 0.7, release: 0.05, gain: 0.18 },
+  triangle_bass:{ type: 'triangle', attack: 0.005, decay: 0.03, sustain: 0.8, release: 0.03, gain: 0.22 },
+  square_lead: { type: 'square',   attack: 0.01, decay: 0.04, sustain: 0.6, release: 0.04, gain: 0.12 },
+  saw_pad:     { type: 'sawtooth', attack: 0.08, decay: 0.1,  sustain: 0.5, release: 0.15, gain: 0.08 },
+  soft_bell:   { type: 'sine',     attack: 0.002, decay: 0.3, sustain: 0.0, release: 0.01, gain: 0.15 },
+}
+
+// Voice assignment: channel → voice name
+function voiceForChannel(channel) {
+  if (channel === 9) return null // drums handled separately
+  if (channel === 0) return 'sine_lead'
+  return 'triangle_bass'
+}
+
+// --- ADSR Envelope ---
+
+function applyADSR(gainNode, voice, startTime, duration, baseTime) {
+  const g = gainNode.gain
+  const t = baseTime + startTime
+  const a = voice.attack, d = voice.decay, s = voice.sustain, r = voice.release, v = voice.gain
+
+  g.setValueAtTime(0, t)
+  g.linearRampToValueAtTime(v, t + a)
+  if (duration > a + d + r) {
+    g.linearRampToValueAtTime(v * s, t + a + d)
+    g.setValueAtTime(v * s, t + duration - r)
+    g.linearRampToValueAtTime(0, t + duration)
+  } else {
+    // short note: simplified envelope
+    const hold = Math.max(0.01, duration * 0.6)
+    g.linearRampToValueAtTime(v * s, t + a + d)
+    g.setValueAtTime(v * s, t + hold)
+    g.linearRampToValueAtTime(0, t + duration)
+  }
+}
+
+// --- Synth Voice Playback ---
+
+function playSynthNote(event, baseTime) {
+  const ctx = audioContext
+  const freq = 440 * Math.pow(2, (event.midi - 69) / 12)
+  const voiceName = voiceForChannel(event.channel)
+  if (!voiceName) return
+  const voice = VOICES[voiceName]
+
+  const osc = ctx.createOscillator()
+  osc.type = voice.type
+  osc.frequency.setValueAtTime(freq, baseTime + event.start)
+
+  const gain = ctx.createGain()
+  applyADSR(gain, voice, event.start, event.duration, baseTime)
+
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.start(baseTime + event.start)
+  osc.stop(baseTime + event.start + event.duration + voice.release)
+  activeNodes.push(osc, gain)
+}
+
+// --- Drum Synthesis ---
+
+function playDrumNote(event, baseTime) {
+  const ctx = audioContext
+  const t = baseTime + event.start
+  const midi = event.midi
+
+  if (midi === 36) { // Kick
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(150, t)
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.12)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.6 * event.velocity, t)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.start(t); osc.stop(t + 0.15)
+    activeNodes.push(osc, gain)
+  } else if (midi === 38) { // Snare
+    const bufSize = ctx.sampleRate * 0.1
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1
+    const noise = ctx.createBufferSource(); noise.buffer = buf
+    const g1 = ctx.createGain()
+    g1.gain.setValueAtTime(0.3 * event.velocity, t)
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
+    noise.connect(g1); g1.connect(ctx.destination)
+    const osc = ctx.createOscillator(); osc.type = 'triangle'
+    osc.frequency.setValueAtTime(180, t)
+    const g2 = ctx.createGain()
+    g2.gain.setValueAtTime(0.15, t)
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.06)
+    osc.connect(g2); g2.connect(ctx.destination)
+    noise.start(t); osc.start(t)
+    noise.stop(t + 0.1); osc.stop(t + 0.1)
+    activeNodes.push(noise, osc, g1, g2)
+  } else if (midi === 42 || midi === 46) { // Hat
+    const bufSize = ctx.sampleRate * 0.05
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1
+    const noise = ctx.createBufferSource(); noise.buffer = buf
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'
+    hp.frequency.setValueAtTime(5000, t)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.12 * event.velocity, t)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
+    noise.connect(hp); hp.connect(gain); gain.connect(ctx.destination)
+    noise.start(t); noise.stop(t + 0.05)
+    activeNodes.push(noise, gain)
+  }
+}
+
+// --- Scheduler ---
+
+function scheduleAhead(baseTime) {
+  const horizon = audioContext.currentTime + SCHEDULE_AHEAD
+  while (nextEventIndex < currentEvents.length) {
+    const e = currentEvents[currentEventsIndex]
+    const eventTime = baseTime + e.start
+    if (eventTime > horizon) break
+    if (e.channel === 9) {
+      playDrumNote(e, baseTime)
+    } else {
+      playSynthNote(e, baseTime)
+    }
+    nextEventIndex++
+  }
+}
+
+function schedulerTick() {
+  if (playbackState !== 'playing') return
+  scheduleAhead(currentBaseTime)
+  if (nextEventIndex >= currentEvents.length) {
+    if (loopEnabled) {
+      currentBaseTime += totalDuration
+      nextEventIndex = 0
+      scheduleAhead(currentBaseTime)
+    } else {
+      stopPlayback()
+      return
+    }
+  }
+  schedulerTimer = setTimeout(schedulerTick, LOOKAHEAD * 1000)
+}
+
+// --- Transport ---
+
+function playEvents(events) {
+  stopPlayback()
+  const ctx = getAudioContext()
+  currentEvents = events
+  totalDuration = Math.max(...events.map(e => e.start + e.duration)) + 0.2
+  currentBaseTime = ctx.currentTime + 0.05
+  nextEventIndex = 0
+  playbackState = 'playing'
+  updateUI()
+  schedulerTick()
+}
+
+function stopPlayback() {
+  playbackState = 'idle'
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null }
+  for (const node of activeNodes) {
+    try { node.disconnect() } catch (e) {}
+    try { node.stop() } catch (e) {}
+  }
+  activeNodes = []
+  updateUI()
+}
+
+// --- Loop ---
+
+function toggleLoop() {
+  loopEnabled = !loopEnabled
+  updateUI()
+}
+
+// --- UI ---
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  if (audioContext.state === 'suspended') audioContext.resume()
+  return audioContext
+}
+
+function updateUI() {
+  document.getElementById('play-btn').disabled = playbackState === 'playing'
+  document.getElementById('stop-btn').disabled = playbackState !== 'playing'
+  document.getElementById('loop-btn').textContent = loopEnabled ? 'Loop: ON' : 'Loop: OFF'
+  document.getElementById('status').textContent = playbackState === 'playing' ? 'playing...' : 'idle'
+}
+
+// --- Init ---
 
 const demoEvents = window.MOONSIC_DEMO_EVENTS || [
   { start: 0.0, duration: 0.5, midi: 60, velocity: 0.8, channel: 0 },
@@ -15,187 +222,6 @@ const demoEvents = window.MOONSIC_DEMO_EVENTS || [
   { start: 2.0, duration: 1.0, midi: 72, velocity: 0.8, channel: 0 },
 ]
 
-function midiToFrequency(midi) {
-  return 440 * Math.pow(2, (midi - 69) / 12)
-}
-
-function getAudioContext() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)()
-  }
-  return audioContext
-}
-
-// --- Drum synthesis ---
-
-function playKick(event, baseTime) {
-  const ctx = getAudioContext()
-  const osc = ctx.createOscillator()
-  osc.type = 'sine'
-  const startFreq = 150
-  const endFreq = 30
-  osc.frequency.setValueAtTime(startFreq, baseTime + event.start)
-  osc.frequency.exponentialRampToValueAtTime(endFreq, baseTime + event.start + 0.12)
-
-  const gain = ctx.createGain()
-  const maxGain = 0.6 * event.velocity
-  gain.gain.setValueAtTime(maxGain, baseTime + event.start)
-  gain.gain.exponentialRampToValueAtTime(0.001, baseTime + event.start + 0.15)
-
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-  osc.start(baseTime + event.start)
-  osc.stop(baseTime + event.start + 0.15)
-  activeNodes.push(osc, gain)
-}
-
-function playSnare(event, baseTime) {
-  const ctx = getAudioContext()
-  // Noise burst
-  const bufferSize = ctx.sampleRate * 0.1
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1
-
-  const noise = ctx.createBufferSource()
-  noise.buffer = buffer
-
-  const gain = ctx.createGain()
-  const maxGain = 0.3 * event.velocity
-  gain.gain.setValueAtTime(maxGain, baseTime + event.start)
-  gain.gain.exponentialRampToValueAtTime(0.001, baseTime + event.start + 0.08)
-
-  // Body tone
-  const osc = ctx.createOscillator()
-  osc.type = 'triangle'
-  osc.frequency.setValueAtTime(180, baseTime + event.start)
-  const oscGain = ctx.createGain()
-  oscGain.gain.setValueAtTime(0.15, baseTime + event.start)
-  oscGain.gain.exponentialRampToValueAtTime(0.001, baseTime + event.start + 0.06)
-
-  noise.connect(gain)
-  osc.connect(oscGain)
-  gain.connect(ctx.destination)
-  oscGain.connect(ctx.destination)
-  noise.start(baseTime + event.start)
-  osc.start(baseTime + event.start)
-  noise.stop(baseTime + event.start + 0.1)
-  osc.stop(baseTime + event.start + 0.1)
-  activeNodes.push(noise, osc, gain, oscGain)
-}
-
-function playHat(event, baseTime) {
-  const ctx = getAudioContext()
-  const bufferSize = ctx.sampleRate * 0.05
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1
-
-  const noise = ctx.createBufferSource()
-  noise.buffer = buffer
-
-  const hp = ctx.createBiquadFilter()
-  hp.type = 'highpass'
-  hp.frequency.setValueAtTime(5000, baseTime + event.start)
-
-  const gain = ctx.createGain()
-  const maxGain = 0.12 * event.velocity
-  gain.gain.setValueAtTime(maxGain, baseTime + event.start)
-  gain.gain.exponentialRampToValueAtTime(0.001, baseTime + event.start + 0.04)
-
-  noise.connect(hp)
-  hp.connect(gain)
-  gain.connect(ctx.destination)
-  noise.start(baseTime + event.start)
-  noise.stop(baseTime + event.start + 0.05)
-  activeNodes.push(noise, gain)
-}
-
-// --- Melodic playback ---
-
-function playMelodic(event, baseTime) {
-  const ctx = getAudioContext()
-  const freq = midiToFrequency(event.midi)
-
-  const osc = ctx.createOscillator()
-  // Pick waveform based on pitch range for variety
-  if (freq < 200) osc.type = 'triangle'
-  else if (freq < 500) osc.type = 'sine'
-  else osc.type = 'sawtooth'
-  osc.frequency.setValueAtTime(freq, baseTime + event.start)
-
-  const gain = ctx.createGain()
-  const maxGain = 0.15 * event.velocity
-  const attack = 0.01
-  const release = 0.03
-
-  gain.gain.setValueAtTime(0, baseTime + event.start)
-  gain.gain.linearRampToValueAtTime(maxGain, baseTime + event.start + attack)
-  gain.gain.setValueAtTime(maxGain, baseTime + event.start + event.duration - release)
-  gain.gain.linearRampToValueAtTime(0, baseTime + event.start + event.duration)
-
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-  osc.start(baseTime + event.start)
-  osc.stop(baseTime + event.start + event.duration + release)
-  activeNodes.push(osc, gain)
-}
-
-// --- Main ---
-
-function playNote(event, baseTime) {
-  if (event.channel === 9) {
-    // Drums on channel 9
-    if (event.midi === KICK) playKick(event, baseTime)
-    else if (event.midi === SNARE) playSnare(event, baseTime)
-    else if (event.midi === CLOSED_HAT || event.midi === OPEN_HAT) playHat(event, baseTime)
-    else playMelodic(event, baseTime) // fallback
-  } else {
-    playMelodic(event, baseTime)
-  }
-}
-
-function playEvents(events) {
-  stopPlayback()
-  const ctx = getAudioContext()
-  const baseTime = ctx.currentTime + 0.05
-  const totalDuration = Math.max(...events.map(e => e.start + e.duration)) + 0.2
-
-  for (const event of events) {
-    playNote(event, baseTime)
-  }
-
-  playbackTimer = setTimeout(() => {
-    cleanupNodes()
-    resetUI()
-  }, (baseTime - ctx.currentTime + totalDuration) * 1000)
-
-  updateUI('playing')
-}
-
-function cleanupNodes() {
-  for (const node of activeNodes) {
-    try { node.disconnect() } catch (e) { /* ignore */ }
-  }
-  activeNodes = []
-}
-
-function stopPlayback() {
-  cleanupNodes()
-  if (playbackTimer) {
-    clearTimeout(playbackTimer)
-    playbackTimer = null
-  }
-  updateUI('idle')
-}
-
-function updateUI(state) {
-  document.getElementById('play-btn').disabled = state === 'playing'
-  document.getElementById('stop-btn').disabled = state !== 'playing'
-  document.getElementById('status').textContent = state === 'playing' ? 'playing...' : 'idle'
-}
-
-function resetUI() { updateUI('idle') }
-
 document.getElementById('play-btn').addEventListener('click', () => playEvents(demoEvents))
 document.getElementById('stop-btn').addEventListener('click', () => stopPlayback())
+document.getElementById('loop-btn').addEventListener('click', () => toggleLoop())

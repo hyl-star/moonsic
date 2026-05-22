@@ -398,6 +398,7 @@ pub fn Score::to_midi_bytes(Self) -> Bytes
 pub fn Score::to_midi_bytes_with_ppq(Self, Int) -> Bytes
 pub fn Score::to_note_events(Self) -> Array[NoteEvent]
 pub fn Score::to_string(Self) -> String
+pub fn Score::to_wav_bytes(Self) -> Bytes
 pub fn Score::track_count(Self) -> Int
 pub fn Score::transpose(Self, Int) -> Self
 
