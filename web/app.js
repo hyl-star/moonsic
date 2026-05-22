@@ -56,8 +56,26 @@ function parseScore(text) {
 
 function parseLine(line) {
   const events = []
-  const tokens = line.split(/\s+/).filter(t => t && t !== '|')
-  for (const tok of tokens) {
+  // merge chord tokens: [C4 E4 G4]h → single token
+  let merged = line
+  const chordRe = /\[[^\]]+\][whqes]\.?/g
+  const chords = []
+  let m; while ((m = chordRe.exec(line)) !== null) chords.push({ idx:m.index, raw:m[0] })
+  for (let i = chords.length-1; i>=0; i--) {
+    merged = merged.slice(0, chords[i].idx) + 'CHORD' + i + ' ' + merged.slice(chords[i].idx + chords[i].raw.length)
+  }
+  const tokens = merged.split(/\s+/).filter(t => t && t !== '|')
+  for (let tok of tokens) {
+    if (tok.startsWith('CHORD')) {
+      const raw = chords[parseInt(tok.slice(5))].raw
+      const cm = raw.match(/^\[(.+)\]([whqes]\.?)/)
+      if (cm) {
+        const pitches = cm[1].split(/\s+/).map(parsePitch).filter(p => p >= 0)
+        const dur = parseDur(cm[2])
+        for (const p of pitches) events.push({ midi:p, dur, vel:100 })
+      }
+      continue
+    }
     if (tok === '|' || !tok) continue
     if (tok[0] === 'R') { events.push({ rest:true, dur:parseDur(tok.slice(1)) }); continue }
     if (tok[0] === '[') {
