@@ -18,6 +18,12 @@ pub fn Pitch::frequency(self : Pitch) -> Double {
 }
 
 ///|
+/// NoteEvent 直接取频率
+pub fn NoteEvent::frequency(self : NoteEvent) -> Double {
+  midi_to_frequency(self.midi_note)
+}
+
+///|
 /// 计算 2^x = exp(x * ln(2))
 fn pow2(exp : Double) -> Double {
   let ln2 = 0.6931471805599453

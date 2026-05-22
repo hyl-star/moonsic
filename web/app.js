@@ -5,8 +5,8 @@ let audioContext = null
 let activeOscillators = []
 let playbackTimer = null
 
-// Demo melody: C4 D4 E4 G4 C5
-const demoEvents = [
+// 优先使用 moonsic 生成的数据，否则回退到硬编码 demo
+const demoEvents = window.MOONSIC_DEMO_EVENTS || [
   { start: 0.0, duration: 0.5, midi: 60, velocity: 0.8, channel: 0 },
   { start: 0.5, duration: 0.5, midi: 62, velocity: 0.8, channel: 0 },
   { start: 1.0, duration: 0.5, midi: 64, velocity: 0.8, channel: 0 },

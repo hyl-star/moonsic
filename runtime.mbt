@@ -73,6 +73,19 @@ pub fn Track::to_note_events(self : Track) -> Array[NoteEvent] {
         cursor = cursor + n.duration.beats()
       }
       Rest(r) => cursor = cursor + r.duration.beats()
+      Chord(c) => {
+        for p in c.pitches {
+          let ne = {
+            start: cursor,
+            duration: c.duration.beats(),
+            midi_note: p.to_midi(),
+            velocity: c.velocity,
+            channel: self.channel,
+          }
+          events.push(ne)
+        }
+        cursor = cursor + c.duration.beats()
+      }
     }
   }
   events
@@ -108,4 +121,24 @@ fn sort_note_events(events : Array[NoteEvent]) -> Array[NoteEvent] {
     events[j + 1] = key
   }
   events
+}
+
+// --- 浏览器数据导出 ---
+
+///|
+/// 将 NoteEvent 数组导出为浏览器可用的 JS 数据格式
+pub fn note_events_to_browser_js(events : Array[NoteEvent]) -> String {
+  let mut result = "window.MOONSIC_DEMO_EVENTS = [\n"
+  for i = 0; i < events.length(); i = i + 1 {
+    let e = events[i]
+    let vel = (e.velocity.to_double() / 127.0 * 100.0).to_int().to_double() /
+      100.0
+    result = result +
+      "  { start: \{e.start}, duration: \{e.duration}, midi: \{e.midi_note}, velocity: \{vel}, channel: \{e.channel} }"
+    if i < events.length() - 1 {
+      result = result + ","
+    }
+    result = result + "\n"
+  }
+  result + "];"
 }

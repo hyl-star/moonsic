@@ -378,3 +378,170 @@ test "midi_export_has_meta_track" {
   let file = @midi.parse(bytes)
   assert_true(file.tracks[0].events.length() >= 3)
 }
+
+// --- v1.5 ergonomic API tests ---
+
+///|
+test "natural_pitch" {
+  assert_eq(@moonsic.natural_pitch(@moonsic.C, 4).to_midi(), 60)
+  assert_eq(@moonsic.natural_pitch(@moonsic.A, 4).to_midi(), 69)
+}
+
+///|
+test "pitch_shortcuts_natural" {
+  assert_eq(@moonsic.c(4).to_midi(), 60)
+  assert_eq(@moonsic.d(4).to_midi(), 62)
+  assert_eq(@moonsic.e(4).to_midi(), 64)
+  assert_eq(@moonsic.f(4).to_midi(), 65)
+  assert_eq(@moonsic.g(4).to_midi(), 67)
+  assert_eq(@moonsic.a(4).to_midi(), 69)
+  assert_eq(@moonsic.b(4).to_midi(), 71)
+}
+
+///|
+test "pitch_shortcuts_sharp" {
+  assert_eq(@moonsic.cs(4).to_midi(), 61)
+  assert_eq(@moonsic.ds(4).to_midi(), 63)
+  assert_eq(@moonsic.fs(4).to_midi(), 66)
+  assert_eq(@moonsic.gs(4).to_midi(), 68)
+}
+
+///|
+test "pitch_shortcuts_flat" {
+  assert_eq(@moonsic.db(4).to_midi(), 61)
+  assert_eq(@moonsic.eb(4).to_midi(), 63)
+  assert_eq(@moonsic.gb(4).to_midi(), 66)
+  assert_eq(@moonsic.ab(4).to_midi(), 68)
+  assert_eq(@moonsic.bb(4).to_midi(), 70)
+}
+
+///|
+test "duration_shortcuts" {
+  assert_eq(@moonsic.quarter().beats(), 1.0)
+  assert_eq(@moonsic.half().ticks(480), 960)
+  assert_eq(@moonsic.whole().beats(), 4.0)
+  assert_eq(@moonsic.eighth().beats(), 0.5)
+  assert_eq(@moonsic.sixteenth().beats(), 0.25)
+}
+
+///|
+test "event_shortcuts" {
+  let evt = @moonsic.n(@moonsic.c(4), @moonsic.quarter())
+  assert_eq(evt.duration().beats(), 1.0)
+  let rest_evt = @moonsic.r(@moonsic.half())
+  assert_eq(rest_evt.duration().beats(), 2.0)
+  let vel_evt = @moonsic.nv(@moonsic.c(4), @moonsic.quarter(), 64)
+  assert_eq(vel_evt.duration().beats(), 1.0)
+}
+
+///|
+test "track_score_builders" {
+  let lead = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  assert_eq(lead.event_count(), 2)
+  let song = @moonsic.score1(lead)
+  assert_eq(song.track_count(), 1)
+  let song2 = @moonsic.score_with([lead], 120, @moonsic.four_four())
+  assert_eq(song2.track_count(), 1)
+}
+
+///|
+test "note_event_frequency" {
+  let track = @moonsic.melody([@moonsic.n(@moonsic.a(4), @moonsic.quarter())])
+  let events = track.to_note_events()
+  let freq = events[0].frequency()
+  assert_true(freq > 439.9 && freq < 440.1)
+}
+
+///|
+test "dotted_duration_beats" {
+  assert_eq(@moonsic.dotted(@moonsic.quarter()).beats(), 1.5)
+  assert_eq(@moonsic.dotted(@moonsic.half()).beats(), 3.0)
+  assert_eq(@moonsic.dotted(@moonsic.eighth()).beats(), 0.75)
+}
+
+///|
+test "dotted_duration_ticks" {
+  assert_eq(@moonsic.dotted(@moonsic.quarter()).ticks(480), 720)
+  assert_eq(@moonsic.dotted(@moonsic.half()).ticks(480), 1440)
+}
+
+///|
+test "dotted_duration_seconds" {
+  assert_eq(@moonsic.dotted(@moonsic.quarter()).seconds(120), 0.75)
+}
+
+///|
+test "dotted_in_track_flattening" {
+  let track = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.dotted(@moonsic.quarter())),
+  ])
+  let events = track.to_note_events()
+  assert_eq(events[0].duration, 1.5)
+}
+
+///|
+test "major_chord_midi" {
+  let evt = @moonsic.major(@moonsic.c(4), @moonsic.quarter())
+  // C major = C4(60) E4(64) G4(67)
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[1].midi_note, 64)
+  assert_eq(events[2].midi_note, 67)
+  // All have same start and duration
+  assert_eq(events[0].start, 0.0)
+  assert_eq(events[1].start, 0.0)
+  assert_eq(events[2].start, 0.0)
+}
+
+///|
+test "minor_chord_midi" {
+  let evt = @moonsic.minor(@moonsic.a(3), @moonsic.quarter())
+  // A minor = A3(57) C4(60) E4(64)
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 57)
+  assert_eq(events[1].midi_note, 60)
+  assert_eq(events[2].midi_note, 64)
+}
+
+///|
+test "chord_transpose" {
+  let evt = @moonsic.major(@moonsic.c(4), @moonsic.quarter())
+  let transposed = evt.transpose(2)
+  let track = @moonsic.melody([transposed])
+  let events = track.to_note_events()
+  // D major = D4(62) F#4(66) A4(69)
+  assert_eq(events[0].midi_note, 62)
+  assert_eq(events[1].midi_note, 66)
+  assert_eq(events[2].midi_note, 69)
+}
+
+///|
+test "chord_cursor_advances_once" {
+  let track = @moonsic.melody([
+    @moonsic.major(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let events = track.to_note_events()
+  // 3 chord tones + 1 note = 4 events
+  assert_eq(events.length(), 4)
+  // D4 starts after the chord (1 beat later)
+  assert_eq(events[3].midi_note, 62)
+  assert_eq(events[3].start, 1.0)
+}
+
+///|
+test "chord_midi_export" {
+  let lead = @moonsic.melody([@moonsic.major(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(lead)
+  let bytes = score.to_midi_bytes()
+  let file = @midi.parse(bytes)
+  // meta track + 1 music track
+  assert_eq(file.tracks.length(), 2)
+}

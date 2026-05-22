@@ -139,6 +139,12 @@ pub fn natural(class : PitchClass, octave : Int) -> Pitch {
 }
 
 ///|
+/// v1.5 推荐名，等价于 natural()
+pub fn natural_pitch(class : PitchClass, octave : Int) -> Pitch {
+  { class, accidental: Natural, octave }
+}
+
+///|
 /// 音高转为 MIDI 音符编号
 /// 公式：(octave+1)*12 + base_semitone + accidental_offset
 pub fn Pitch::to_midi(self : Pitch) -> Int {
@@ -200,6 +206,7 @@ pub(all) enum Duration {
   Quarter
   Eighth
   Sixteenth
+  Dotted(Duration)
 }
 
 ///|
@@ -211,6 +218,7 @@ pub fn Duration::beats(self : Duration) -> Double {
     Quarter => 1.0
     Eighth => 0.5
     Sixteenth => 0.25
+    Dotted(base) => base.beats() * 1.5
   }
 }
 
@@ -242,7 +250,14 @@ pub fn Duration::to_string(self : Duration) -> String {
     Quarter => "quarter"
     Eighth => "eighth"
     Sixteenth => "sixteenth"
+    Dotted(base) => "dotted \{base.to_string()}"
   }
+}
+
+///|
+/// 附点时值 = 基础时值 × 1.5
+pub fn dotted(duration : Duration) -> Duration {
+  Dotted(duration)
 }
 
 // --- 速度 Tempo ---
@@ -382,6 +397,41 @@ pub fn Note::to_string(self : Note) -> String {
   "\{self.pitch.to_string()} \{self.duration.to_string()} v=\{self.velocity}"
 }
 
+// --- 和弦 Chord ---
+
+///|
+/// 和弦 = 多个音高 + 时值 + 力度
+pub(all) struct Chord {
+  pitches : Array[Pitch]
+  duration : Duration
+  velocity : Int
+}
+
+///|
+/// 创建和弦（默认力度 100）
+pub fn chord(pitches : Array[Pitch], duration : Duration) -> Chord {
+  { pitches, duration, velocity: DEFAULT_VELOCITY }
+}
+
+///|
+/// 创建和弦（指定力度）
+pub fn chord_with_velocity(
+  pitches : Array[Pitch],
+  duration : Duration,
+  velocity : Int,
+) -> Chord {
+  { pitches, duration, velocity }
+}
+
+///|
+pub fn Chord::transpose(self : Chord, semitones : Int) -> Chord {
+  let new_pitches = []
+  for p in self.pitches {
+    new_pitches.push(p.transpose(semitones))
+  }
+  { pitches: new_pitches, duration: self.duration, velocity: self.velocity }
+}
+
 // --- 休止 Rest ---
 
 ///|
@@ -407,6 +457,7 @@ pub fn Rest::to_string(self : Rest) -> String {
 pub(all) enum MusicEvent {
   Note(Note)
   Rest(Rest)
+  Chord(Chord)
 }
 
 ///|
@@ -415,6 +466,7 @@ pub fn MusicEvent::duration(self : MusicEvent) -> Duration {
   match self {
     Note(n) => n.duration
     Rest(r) => r.duration
+    Chord(c) => c.duration
   }
 }
 
@@ -423,15 +475,17 @@ pub fn MusicEvent::to_string(self : MusicEvent) -> String {
   match self {
     Note(n) => n.to_string()
     Rest(r) => r.to_string()
+    Chord(c) => "chord [\{c.pitches.length()} notes] \{c.duration.to_string()}"
   }
 }
 
 ///|
-/// 事件移调（休止不变，音符移调）
+/// 事件移调（休止不变，音符/和弦移调）
 pub fn MusicEvent::transpose(self : MusicEvent, semitones : Int) -> MusicEvent {
   match self {
     Note(n) => Note(n.transpose(semitones))
     Rest(r) => Rest(r)
+    Chord(c) => Chord(c.transpose(semitones))
   }
 }
 
