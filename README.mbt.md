@@ -74,13 +74,23 @@ py -m http.server 8000 -d web            # 启服务器
 # 打开 http://localhost:8000，点击 Play
 ```
 
-demo 优先使用 moonsic 生成的数据，无数据时回退到硬编码旋律。
+demo 优先使用 moonsic 生成的数据，无数据时回退到硬编码旋律。v4 支持 Loop 循环播放、ADSR 合成音色、鼓组合成。
+
+## WAV 导出
+
+```moonbit nocheck
+///|
+let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM
+
+///|
+let wav = song.to_wav_bytes_with(48000) // 指定采样率
+```
 
 ## 命令行
 
 ```bash
 moon run cmd/main    # 生成浏览器 demo 数据
-moon test            # 50 tests
+moon test            # 75 tests
 moon fmt             # 格式化
 moon info            # 更新接口文件
 ```
@@ -139,11 +149,14 @@ core.mbt       — 核心音乐模型（~650 行）
 runtime.mbt    — 事件运行时 + 浏览器数据导出（~150 行）
 midi.mbt       — 频率转换 + MIDI 导出 + 校验（~230 行）
 helpers.mbt    — v1.5 作曲快捷函数（~190 行）
-theory.mbt     — v2 音程/音阶/和弦进行（~130 行）
-patterns.mbt   — v2 模式变换（~140 行）
-instruments.mbt— v2 MIDI 乐器（~20 行）
+theory.mbt     — 音程/音阶/和弦品质/进行（~230 行）
+patterns.mbt   — v2 模式变换（~155 行）
+instruments.mbt— v2 MIDI 乐器（~50 行）
 arpeggio.mbt   — v2 琶音（~30 行）
-drums.mbt      — v2 鼓组（~60 行）
-web/           — 浏览器播放 demo
+drums.mbt      — v2 鼓组（~80 行）
+key.mbt        — v3 调性与拼写（~90 行）
+structure.mbt  — v3 Section + arrange（~165 行）
+wav.mbt        — v4 WAV/PCM 导出（~140 行）
+web/           — 浏览器播放引擎（scheduler + ADSR + loop）
 cmd/main/      — CLI（生成浏览器 demo 数据）
 ```

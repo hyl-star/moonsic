@@ -794,3 +794,37 @@ test "key_scale_g_major" {
   // G major: G A B C D E F#
   assert_eq(s[6].to_string(), "F#4")
 }
+
+///|
+test "wav_bytes_not_empty" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let wav = score.to_wav_bytes()
+  assert_true(wav.length() > 44)
+}
+
+///|
+test "wav_header_riff_wave" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let wav = score.to_wav_bytes()
+  // RIFF header
+  assert_eq(wav[0], b'R')
+  assert_eq(wav[1], b'I')
+  assert_eq(wav[2], b'F')
+  assert_eq(wav[3], b'F')
+  // WAVE
+  assert_eq(wav[8], b'W')
+  assert_eq(wav[9], b'A')
+  assert_eq(wav[10], b'V')
+  assert_eq(wav[11], b'E')
+  // fmt
+  assert_eq(wav[12], b'f')
+  assert_eq(wav[13], b'm')
+  assert_eq(wav[14], b't')
+  // data
+  assert_eq(wav[36], b'd')
+  assert_eq(wav[37], b'a')
+  assert_eq(wav[38], b't')
+  assert_eq(wav[39], b'a')
+}
