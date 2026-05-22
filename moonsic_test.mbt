@@ -192,3 +192,23 @@ test "track_repeat" {
   let r2 = track.repeat(2)
   assert_eq(r2.event_count(), 2)
 }
+
+///|
+test "score_duration_beats" {
+  let p = @moonsic.pitch
+  let track1 = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.D, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let track2 = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.E, @moonsic.Natural, 4), @moonsic.Whole),
+    ),
+  ])
+  let score = @moonsic.score([track1, track2])
+  assert_eq(score.duration_beats(), 4.0)
+}

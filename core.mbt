@@ -509,3 +509,68 @@ pub fn Track::to_string(self : Track) -> String {
   }
   result + "]"
 }
+
+// --- 乐谱 Score ---
+
+///|
+/// 乐谱 = 速度 + 拍号 + 多条轨道
+pub(all) struct Score {
+  tempo : Tempo
+  time_signature : TimeSignature
+  tracks : Array[Track]
+}
+
+///|
+/// 创建乐谱（默认速度 120，拍号 4/4）
+pub fn score(tracks : Array[Track]) -> Score {
+  { tempo: default_tempo(), time_signature: four_four(), tracks }
+}
+
+///|
+/// 创建乐谱（指定速度和拍号）
+pub fn score_with_tempo(
+  tracks : Array[Track],
+  tempo : Tempo,
+  time_signature : TimeSignature,
+) -> Score {
+  { tempo, time_signature, tracks }
+}
+
+///|
+/// 乐谱总拍数 = 最长轨道的拍数
+pub fn Score::duration_beats(self : Score) -> Double {
+  let mut max_beats = 0.0
+  for track in self.tracks {
+    let track_beats = track.duration_beats()
+    if track_beats > max_beats {
+      max_beats = track_beats
+    }
+  }
+  max_beats
+}
+
+///|
+/// 轨道数量
+pub fn Score::track_count(self : Score) -> Int {
+  self.tracks.length()
+}
+
+///|
+/// 乐谱移调（所有轨道）
+pub fn Score::transpose(self : Score, semitones : Int) -> Score {
+  let new_tracks = []
+  for track in self.tracks {
+    new_tracks.push(track.transpose(semitones))
+  }
+  { tempo: self.tempo, time_signature: self.time_signature, tracks: new_tracks }
+}
+
+///|
+pub fn Score::to_string(self : Score) -> String {
+  let mut result = "Score tempo=\{self.tempo.to_string()} time=\{self.time_signature.to_string()}\n"
+  for i = 0; i < self.tracks.length(); i = i + 1 {
+    result = result + "  \{self.tracks[i].to_string()}\n"
+  }
+  result
+}
+
