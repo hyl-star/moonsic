@@ -4,7 +4,8 @@
 
 ## v1.5 最小示例
 
-```moonbit
+```moonbit nocheck
+///|
 let lead = melody([
   n(c(4), quarter()),
   n(d(4), quarter()),
@@ -14,12 +15,13 @@ let lead = melody([
   n(c(5), half()),
 ])
 
-let harmony = melody([
-  major(c(3), half()),
-  minor(a(3), half()),
-])
+///|
+let harmony = melody([major(c(3), half()), minor(a(3), half())])
 
+///|
 let song = score_with([lead, harmony], 120, four_four())
+
+///|
 let bytes = song.to_midi_bytes()
 // bytes 可写入 .mid 文件
 ```
