@@ -46,24 +46,6 @@ pub const OCTAVE : Int = 12
 // --- 音阶 ---
 
 ///|
-pub(all) enum ScaleKind {
-  Major
-  NaturalMinor
-  MajorPentatonic
-  MinorPentatonic
-}
-
-///|
-pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
-  match self {
-    Major => [0, 2, 4, 5, 7, 9, 11]
-    NaturalMinor => [0, 2, 3, 5, 7, 8, 10]
-    MajorPentatonic => [0, 2, 4, 7, 9]
-    MinorPentatonic => [0, 3, 5, 7, 10]
-  }
-}
-
-///|
 pub fn scale(
   root : Pitch,
   kind : ScaleKind,

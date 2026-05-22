@@ -40,6 +40,26 @@ pub const A4_MIDI : Int = 69
 ///|
 pub const A4_FREQ : Double = 440.0
 
+// --- 音阶种类 ---
+
+///|
+pub(all) enum ScaleKind {
+  Major
+  NaturalMinor
+  MajorPentatonic
+  MinorPentatonic
+}
+
+///|
+pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
+  match self {
+    Major => [0, 2, 4, 5, 7, 9, 11]
+    NaturalMinor => [0, 2, 3, 5, 7, 8, 10]
+    MajorPentatonic => [0, 2, 4, 7, 9]
+    MinorPentatonic => [0, 3, 5, 7, 10]
+  }
+}
+
 // --- 音高类 PitchClass ---
 
 ///|
