@@ -1,27 +1,37 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>moonsic v7 — Expression + Instruments</title>
-  <link rel="stylesheet" href="styles.css">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>moonsic v8 — Multi-Track + Mixer</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div id="app">
-  <h1>moonsic v7</h1>
-  <p class="subtitle">dynamics · articulation · instrument · swing</p>
-  <textarea id="score-input" rows="8">
-tempo 110
-instrument piano
+  <h1>moonsic v8</h1>
+  <p class="subtitle">multi-track arrangement · drum notation · mixer</p>
+  <textarea id="score-input" rows="12">
+tempo 108
+time 4/4
+swing 0.56
+
+track lead instrument piano volume 0.85 pan 0.05
 | C4q@mp D4q E4q@mf G4q@f |
-| [C4 E4 G4]h@p Rq >G4q@f |
-| C5e@f B4e A4q@mf G4q_ Rq |</textarea>
+| C5e@f B4e A4q@mf G4q_ Rq |
+
+track chords instrument pad volume 0.40 pan -0.35
+| [C3 E3 G3]w@p |
+| [F3 A3 C4]h@mp [G3 B3 D4]h@mp |
+
+track bass instrument bass volume 0.75 pan 0.10
+| C2q Rq G2q Rq |
+| F2q Rq G2q Rq |
+
+track drums instrument drums volume 0.80 pan 0
+| Kq Hq Sq Hq |
+| Kq He He Sq Hq |</textarea>
   <div id="examples">
-    <button onclick="loadExample('melody')">melody</button>
-    <button onclick="loadExample('dynamics')">dynamics</button>
-    <button onclick="loadExample('staccato')">staccato</button>
-    <button onclick="loadExample('accent')">accent</button>
-    <button onclick="loadExample('swing')">swing</button>
-    <button onclick="loadExample('piano')">piano</button>
+    <button onclick="loadExample('full')">full arrangement</button>
+    <button onclick="loadExample('drums')">drums only</button>
+    <button onclick="loadExample('bassdrums')">bass + drums</button>
   </div>
   <div id="controls">
     <button id="play-btn">Play</button>
@@ -29,10 +39,10 @@ instrument piano
     <button id="loop-btn">Loop:OFF</button>
     <span id="status">idle</span>
   </div>
-  <div id="meter"><div id="meter-bar"></div></div>
+  <div id="master-meter"><div id="meter-bar"></div></div>
   <div id="time-display">0.0s</div>
   <div id="error-msg"></div>
-  <div id="info"></div>
+  <div id="mixer"><div id="mixer-rows"></div></div>
 </div>
 <script src="app.js"></script>
 </body>
