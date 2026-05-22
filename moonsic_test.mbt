@@ -162,3 +162,33 @@ test "note_transpose" {
   assert_eq(t.duration.beats(), 1.0)
   assert_eq(t.velocity, 100)
 }
+
+///|
+test "track_duration_beats" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.D, @moonsic.Natural, 4), @moonsic.Half),
+    ),
+  ])
+  assert_eq(track.duration_beats(), 3.0)
+}
+
+///|
+test "track_repeat" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let r0 = track.repeat(0)
+  assert_eq(r0.event_count(), 0)
+  let r1 = track.repeat(1)
+  assert_eq(r1.event_count(), 1)
+  let r2 = track.repeat(2)
+  assert_eq(r2.event_count(), 2)
+}

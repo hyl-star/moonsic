@@ -422,3 +422,90 @@ pub fn MusicEvent::transpose(self : MusicEvent, semitones : Int) -> MusicEvent {
     Rest(r) => Rest(r)
   }
 }
+
+// --- 轨道 Track ---
+
+///|
+/// 轨道 = 有序的音乐事件序列 + 通道号
+pub(all) struct Track {
+  events : Array[MusicEvent]
+  channel : Int
+}
+
+///|
+/// 创建轨道（默认通道 0）
+pub fn track(events : Array[MusicEvent]) -> Track {
+  { events, channel: 0 }
+}
+
+///|
+/// 创建指定通道的轨道
+pub fn track_with_channel(
+  events : Array[MusicEvent],
+  channel : Int,
+) -> Track {
+  { events, channel }
+}
+
+///|
+pub fn empty_track() -> Track {
+  { events: [], channel: 0 }
+}
+
+///|
+/// 追加事件到轨道末尾
+pub fn Track::append(self : Track, event : MusicEvent) -> Track {
+  let new_events = self.events
+  new_events.push(event)
+  { events: new_events, channel: self.channel }
+}
+
+///|
+/// 轨道的总拍数
+pub fn Track::duration_beats(self : Track) -> Double {
+  let mut total = 0.0
+  for event in self.events {
+    total = total + event.duration().beats()
+  }
+  total
+}
+
+///|
+/// 轨道中的事件数量
+pub fn Track::event_count(self : Track) -> Int {
+  self.events.length()
+}
+
+///|
+/// 轨道移调（休止不变，音符移调）
+pub fn Track::transpose(self : Track, semitones : Int) -> Track {
+  let new_events = []
+  for event in self.events {
+    new_events.push(event.transpose(semitones))
+  }
+  { events: new_events, channel: self.channel }
+}
+
+///|
+/// 重复轨道 count 次
+pub fn Track::repeat(self : Track, count : Int) -> Track {
+  let new_events = []
+  for i = 0; i < count; i = i + 1 {
+    for event in self.events {
+      new_events.push(event)
+    }
+  }
+  { events: new_events, channel: self.channel }
+}
+
+///|
+pub fn Track::to_string(self : Track) -> String {
+  let mut result = "Track ch=\{self.channel} ["
+  for i = 0; i < self.events.length(); i = i + 1 {
+    result = result + self.events[i].to_string()
+    if i < self.events.length() - 1 {
+      result = result + ", "
+    }
+  }
+  result + "]"
+}
