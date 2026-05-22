@@ -212,3 +212,108 @@ test "score_duration_beats" {
   let score = @moonsic.score([track1, track2])
   assert_eq(score.duration_beats(), 4.0)
 }
+
+///|
+test "track_to_note_events" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+    @moonsic.Rest(@moonsic.rest(@moonsic.Quarter)),
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.D, @moonsic.Natural, 4), @moonsic.Half),
+    ),
+  ])
+  let events = track.to_note_events()
+  assert_eq(events.length(), 2)
+  assert_eq(events[0].start, 0.0)
+  assert_eq(events[0].duration, 1.0)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[1].start, 2.0)
+  assert_eq(events[1].duration, 2.0)
+  assert_eq(events[1].midi_note, 62)
+}
+
+///|
+test "note_event_end" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let events = track.to_note_events()
+  assert_eq(events[0].end(), 1.0)
+}
+
+///|
+test "track_channel" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track_with_channel(
+    [
+      @moonsic.Note(
+        @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+      ),
+    ],
+    3,
+  )
+  let events = track.to_note_events()
+  assert_eq(events[0].channel, 3)
+}
+
+///|
+test "note_event_time_conversion" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let events = track.to_note_events()
+  assert_eq(events[0].start_seconds(120), 0.0)
+  assert_eq(events[0].duration_seconds(120), 0.5)
+  assert_eq(events[0].start_ticks(480), 0)
+  assert_eq(events[0].duration_ticks(480), 480)
+}
+
+///|
+test "track_transpose_runtime" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let t = track.transpose(2)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 62)
+}
+
+///|
+test "score_to_note_events" {
+  let p = @moonsic.pitch
+  let track1 = @moonsic.track_with_channel(
+    [
+      @moonsic.Note(
+        @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+      ),
+    ],
+    0,
+  )
+  let track2 = @moonsic.track_with_channel(
+    [
+      @moonsic.Note(
+        @moonsic.note(p(@moonsic.E, @moonsic.Natural, 4), @moonsic.Quarter),
+      ),
+    ],
+    1,
+  )
+  let score = @moonsic.score([track1, track2])
+  let events = score.to_note_events()
+  assert_eq(events.length(), 2)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[0].channel, 0)
+  assert_eq(events[1].midi_note, 64)
+  assert_eq(events[1].channel, 1)
+}
