@@ -317,3 +317,64 @@ test "score_to_note_events" {
   assert_eq(events[1].midi_note, 64)
   assert_eq(events[1].channel, 1)
 }
+
+///|
+test "midi_to_frequency" {
+  let f = @moonsic.midi_to_frequency(69)
+  assert_true(f > 439.9 && f < 440.1)
+  let f60 = @moonsic.midi_to_frequency(60)
+  assert_true(f60 > 261.0 && f60 < 262.0)
+}
+
+///|
+test "pitch_frequency" {
+  let p = @moonsic.pitch
+  let a4 = p(@moonsic.A, @moonsic.Natural, 4)
+  let freq = a4.frequency()
+  assert_true(freq > 439.9 && freq < 440.1)
+}
+
+///|
+test "midi_export_not_empty" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let score = @moonsic.score([track])
+  let bytes = score.to_midi_bytes()
+  assert_true(bytes.length() > 0)
+}
+
+///|
+test "midi_export_roundtrip" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.D, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let score = @moonsic.score([track])
+  let bytes = score.to_midi_bytes()
+  let file = @midi.parse(bytes)
+  assert_eq(file.tracks.length(), 2)
+  assert_eq(file.division, @moonsic.DEFAULT_PPQ.to_uint16())
+}
+
+///|
+test "midi_export_has_meta_track" {
+  let p = @moonsic.pitch
+  let track = @moonsic.track([
+    @moonsic.Note(
+      @moonsic.note(p(@moonsic.C, @moonsic.Natural, 4), @moonsic.Quarter),
+    ),
+  ])
+  let score = @moonsic.score([track])
+  let bytes = score.to_midi_bytes()
+  let file = @midi.parse(bytes)
+  assert_true(file.tracks[0].events.length() >= 3)
+}
