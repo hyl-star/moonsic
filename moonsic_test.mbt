@@ -110,3 +110,27 @@ test "time_signature" {
   assert_false(@moonsic.is_valid_time_signature(0, 4))
   assert_false(@moonsic.is_valid_time_signature(4, 5))
 }
+
+///|
+test "is_valid_midi_note" {
+  assert_true(@moonsic.is_valid_midi_note(0))
+  assert_true(@moonsic.is_valid_midi_note(127))
+  assert_false(@moonsic.is_valid_midi_note(-1))
+  assert_false(@moonsic.is_valid_midi_note(128))
+}
+
+///|
+test "is_valid_velocity" {
+  assert_true(@moonsic.is_valid_velocity(0))
+  assert_true(@moonsic.is_valid_velocity(127))
+  assert_false(@moonsic.is_valid_velocity(-1))
+  assert_false(@moonsic.is_valid_velocity(128))
+}
+
+///|
+test "is_valid_channel" {
+  assert_true(@moonsic.is_valid_channel(0))
+  assert_true(@moonsic.is_valid_channel(15))
+  assert_false(@moonsic.is_valid_channel(-1))
+  assert_false(@moonsic.is_valid_channel(16))
+}

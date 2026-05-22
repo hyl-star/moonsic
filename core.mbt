@@ -311,3 +311,20 @@ pub fn is_valid_time_signature(numerator : Int, denominator : Int) -> Bool {
     _ => false
   }
 }
+
+// --- 验证函数 ---
+
+///|
+pub fn is_valid_velocity(v : Int) -> Bool {
+  v >= MIN_VELOCITY && v <= MAX_VELOCITY
+}
+
+///|
+pub fn is_valid_midi_note(n : Int) -> Bool {
+  n >= MIN_MIDI_NOTE && n <= MAX_MIDI_NOTE
+}
+
+///|
+pub fn is_valid_channel(c : Int) -> Bool {
+  c >= MIN_CHANNEL && c <= MAX_CHANNEL
+}
