@@ -43,6 +43,5 @@ fn main {
     @lib.four_four(),
   )
 
-  println("// moonsic v\{@lib.version()} — 苏打绿 他夏了夏天")
   println(@lib.note_events_to_browser_js(song.to_note_events()))
 }

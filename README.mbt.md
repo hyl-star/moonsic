@@ -69,7 +69,7 @@ v1 风格的完整构造器仍然可用，但推荐用 v1.5 快捷 API。
 ## 浏览器播放
 
 ```bash
-moon run cmd/main > web/demo-events.js  # 生成 moonsic 数据
+moon run cmd/main | Out-File -Encoding utf8 web/demo-events.js  # 生成数据（PowerShell 必须指定 utf8）
 py -m http.server 8000 -d web            # 启服务器
 # 打开 http://localhost:8000，点击 Play
 ```
