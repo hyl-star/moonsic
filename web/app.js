@@ -64,17 +64,22 @@ function playEvents(events) {
   }
 
   playbackTimer = setTimeout(() => {
+    cleanupOscillators()
     resetUI()
   }, (baseTime - ctx.currentTime + totalDuration) * 1000)
 
   updateUI('playing')
 }
 
-function stopPlayback() {
+function cleanupOscillators() {
   for (const osc of activeOscillators) {
-    try { osc.stop() } catch (e) { /* already stopped */ }
+    try { osc.disconnect() } catch (e) { /* ignore */ }
   }
   activeOscillators = []
+}
+
+function stopPlayback() {
+  cleanupOscillators()
   if (playbackTimer) {
     clearTimeout(playbackTimer)
     playbackTimer = null

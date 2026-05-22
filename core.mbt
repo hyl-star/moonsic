@@ -1,6 +1,6 @@
-// ============================================================
+// 
 // 核心音乐模型
-// ============================================================
+// 
 
 // --- 常量 ---
 
@@ -254,7 +254,11 @@ pub(all) struct Tempo {
 }
 
 ///|
+/// 创建速度，BPM 必须 > 0
 pub fn tempo(bpm : Int) -> Tempo {
+  if bpm <= 0 {
+    abort("tempo: BPM 必须 > 0，实际值：\{bpm}")
+  }
   { bpm, }
 }
 
@@ -458,9 +462,12 @@ pub fn empty_track() -> Track {
 }
 
 ///|
-/// 追加事件到轨道末尾
+/// 追加事件到轨道末尾（返回新轨道，不修改原轨道）
 pub fn Track::append(self : Track, event : MusicEvent) -> Track {
-  let new_events = self.events
+  let new_events = []
+  for e in self.events {
+    new_events.push(e)
+  }
   new_events.push(event)
   { events: new_events, channel: self.channel }
 }

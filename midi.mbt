@@ -24,6 +24,40 @@ fn pow2(exp : Double) -> Double {
   @math.exp(exp * ln2)
 }
 
+// --- 导出前校验 ---
+
+/// 校验 Score 的所有值在合法范围内
+fn validate_score(score : Score, ppq : Int) -> Unit {
+  if score.tempo.bpm <= 0 {
+    abort(
+      "MIDI 导出失败：BPM 必须 > 0，当前值：\{score.tempo.bpm}",
+    )
+  }
+  if ppq <= 0 {
+    abort("MIDI 导出失败：PPQ 必须 > 0，当前值：\{ppq}")
+  }
+  for track in score.tracks {
+    let events = track.to_note_events()
+    for e in events {
+      if e.midi_note < MIN_MIDI_NOTE || e.midi_note > MAX_MIDI_NOTE {
+        abort(
+          "MIDI 导出失败：MIDI 音符越界 \{e.midi_note}，合法范围 [\{MIN_MIDI_NOTE}, \{MAX_MIDI_NOTE}]",
+        )
+      }
+      if e.velocity < MIN_VELOCITY || e.velocity > MAX_VELOCITY {
+        abort(
+          "MIDI 导出失败：力度越界 \{e.velocity}，合法范围 [\{MIN_VELOCITY}, \{MAX_VELOCITY}]",
+        )
+      }
+      if e.channel < MIN_CHANNEL || e.channel > MAX_CHANNEL {
+        abort(
+          "MIDI 导出失败：通道越界 \{e.channel}，合法范围 [\{MIN_CHANNEL}, \{MAX_CHANNEL}]",
+        )
+      }
+    }
+  }
+}
+
 // --- MIDI 导出 ---
 
 ///|
@@ -34,17 +68,18 @@ pub fn Score::to_midi_bytes(self : Score) -> Bytes {
 
 ///|
 /// 将乐谱导出为 MIDI 字节流（指定 PPQ）
+/// 导出前校验 BPM > 0、PPQ > 0、MIDI/力度/通道范围
 pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
-  let note_events = self.to_note_events()
+  validate_score(self, ppq)
 
   // 构建元数据轨道（track 0）：速度 + 拍号 + 轨道结束
   let meta_events : Array[@midi.Event] = []
 
-  // 速度：BPM 转为微秒/四分音符
+  // 速度：BPM 转为微秒/四分音符（BPM > 0 已在 validate_score 保证）
   let microseconds = 60000000U / self.tempo.bpm.reinterpret_as_uint()
   meta_events.push(Tempo(delta=0U, microseconds~))
 
-  // 拍号：使用 Meta 事件（CAIMEOX/midi 的 TimeSignature 序列化尚未实现）
+  // 拍号
   let ts = self.time_signature
   let denom_power = match ts.denominator {
     1 => 0
@@ -70,11 +105,10 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
   let meta_track = @midi.Track::{ events: meta_events }
   let all_tracks = [meta_track]
 
-  // 按通道分组 NoteEvent，为每个通道创建一条 MIDI 轨道
-  let channels = collect_channels(note_events)
-  for ch in channels {
-    let channel_events = filter_by_channel(note_events, ch)
-    let midi_events = note_events_to_midi(channel_events, ppq)
+  // 每条 Score 轨道对应一条 MIDI 轨道（保留用户轨道结构）
+  for track in self.tracks {
+    let track_events = track.to_note_events()
+    let midi_events = note_events_to_midi(track_events, ppq)
     all_tracks.push(@midi.Track::{ events: midi_events })
   }
 
@@ -88,41 +122,6 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
 
 // --- 内部辅助函数 ---
 
-///|
-/// 收集所有不重复的通道号
-fn collect_channels(events : Array[NoteEvent]) -> Array[Int] {
-  let channels = []
-  for e in events {
-    let mut found = false
-    for c in channels {
-      if c == e.channel {
-        found = true
-        break
-      }
-    }
-    if !found {
-      channels.push(e.channel)
-    }
-  }
-  channels
-}
-
-///|
-/// 按通道过滤 NoteEvent
-fn filter_by_channel(
-  events : Array[NoteEvent],
-  channel : Int,
-) -> Array[NoteEvent] {
-  let result = []
-  for e in events {
-    if e.channel == channel {
-      result.push(e)
-    }
-  }
-  result
-}
-
-///|
 /// 将 NoteEvent 序列转为 MIDI delta-tick 事件
 fn note_events_to_midi(
   events : Array[NoteEvent],
@@ -186,7 +185,6 @@ fn note_events_to_midi(
   midi_events
 }
 
-///|
 /// 内部绝对 MIDI 事件，用于排序
 priv struct AbsMidiEvent {
   tick : Int
@@ -196,7 +194,6 @@ priv struct AbsMidiEvent {
   channel : Int
 }
 
-///|
 /// 绝对 MIDI 事件排序：按 tick 升序，同一 tick 下 NoteOff 先于 NoteOn
 fn sort_abs_events(events : Array[AbsMidiEvent]) -> Unit {
   let n = events.length()
