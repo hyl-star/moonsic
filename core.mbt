@@ -73,3 +73,33 @@ pub fn PitchClass::to_string(self : PitchClass) -> String {
     B => "B"
   }
 }
+
+// --- 变音记号 Accidental ---
+
+///|
+/// 变音记号：升、降、还原
+pub(all) enum Accidental {
+  Natural
+  Sharp
+  Flat
+}
+
+///|
+/// 获取变音记号的半音偏移量（升=+1，降=-1，还原=0）
+pub fn Accidental::semitone_offset(self : Accidental) -> Int {
+  match self {
+    Natural => 0
+    Sharp => 1
+    Flat => -1
+  }
+}
+
+///|
+/// 转为字符串表示（还原="", 升="#", 降="b"）
+pub fn Accidental::to_string(self : Accidental) -> String {
+  match self {
+    Natural => ""
+    Sharp => "#"
+    Flat => "b"
+  }
+}

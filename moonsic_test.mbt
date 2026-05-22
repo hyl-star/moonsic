@@ -20,3 +20,17 @@ test "pitch_class_to_string" {
   assert_eq(@moonsic.C.to_string(), "C")
   assert_eq(@moonsic.A.to_string(), "A")
 }
+
+///|
+test "accidental_semitone_offset" {
+  assert_eq(@moonsic.Natural.semitone_offset(), 0)
+  assert_eq(@moonsic.Sharp.semitone_offset(), 1)
+  assert_eq(@moonsic.Flat.semitone_offset(), -1)
+}
+
+///|
+test "accidental_to_string" {
+  assert_eq(@moonsic.Natural.to_string(), "")
+  assert_eq(@moonsic.Sharp.to_string(), "#")
+  assert_eq(@moonsic.Flat.to_string(), "b")
+}
