@@ -1,29 +1,39 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>moonsic v6 — Live Editor</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>moonsic v7 — Expression + Instruments</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <h1>moonsic v6</h1>
-    <p class="subtitle">type notation, click Play</p>
-    <textarea id="score-input" rows="8">
-tempo 120
-time 4/4
-| C4q D4q E4q G4q | [C4 E4 G4]h Rq G4q:90 | x2</textarea>
-    <div id="controls">
-      <button id="play-btn">Play</button>
-      <button id="stop-btn" disabled>Stop</button>
-      <button id="loop-btn">Loop:OFF</button>
-      <span id="status">idle</span>
-    </div>
-    <div id="meter"><div id="meter-bar"></div></div>
-    <div id="time-display">0.0s</div>
-    <div id="error-msg"></div>
+<div id="app">
+  <h1>moonsic v7</h1>
+  <p class="subtitle">dynamics · articulation · instrument · swing</p>
+  <textarea id="score-input" rows="8">
+tempo 110
+instrument piano
+| C4q@mp D4q E4q@mf G4q@f |
+| [C4 E4 G4]h@p Rq >G4q@f |
+| C5e@f B4e A4q@mf G4q_ Rq |</textarea>
+  <div id="examples">
+    <button onclick="loadExample('melody')">melody</button>
+    <button onclick="loadExample('dynamics')">dynamics</button>
+    <button onclick="loadExample('staccato')">staccato</button>
+    <button onclick="loadExample('accent')">accent</button>
+    <button onclick="loadExample('swing')">swing</button>
+    <button onclick="loadExample('piano')">piano</button>
   </div>
-  <script src="app.js"></script>
+  <div id="controls">
+    <button id="play-btn">Play</button>
+    <button id="stop-btn" disabled>Stop</button>
+    <button id="loop-btn">Loop:OFF</button>
+    <span id="status">idle</span>
+  </div>
+  <div id="meter"><div id="meter-bar"></div></div>
+  <div id="time-display">0.0s</div>
+  <div id="error-msg"></div>
+  <div id="info"></div>
+</div>
+<script src="app.js"></script>
 </body>
 </html>
