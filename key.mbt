@@ -23,6 +23,7 @@ pub fn Key::scale_kind(self : Key) -> ScaleKind {
   self.kind
 }
 
+///|
 /// 调号拼写表：index 0=I, 1=II, ..., 6=VII
 fn key_spelling(tonic_midi : Int) -> Array[Accidental] {
   let ts = tonic_midi % 12
@@ -52,11 +53,23 @@ pub fn Key::degree(self : Key, deg : Int, base_octave : Int) -> Pitch {
   let idx = (deg - 1) % intervals.length()
   // 音名由音级决定（1=F, 2=G, 3=A, 4=B, ...）
   let tonic_class_idx = match self.tonic.class {
-    C => 0; D => 1; E => 2; F => 3; G => 4; A => 5; B => 6
+    C => 0
+    D => 1
+    E => 2
+    F => 3
+    G => 4
+    A => 5
+    B => 6
   }
   let class_idx = (tonic_class_idx + idx) % 7
   let class = match class_idx {
-    0 => C; 1 => D; 2 => E; 3 => F; 4 => G; 5 => A; 6 => B
+    0 => C
+    1 => D
+    2 => E
+    3 => F
+    4 => G
+    5 => A
+    6 => B
     _ => C
   }
   let accidental = if idx < spellings.length() {

@@ -70,11 +70,19 @@ pub fn acoustic_guitar_steel() -> Int
 
 pub fn arpeggiate(Track, Duration) -> Track
 
+pub fn arrange(Array[Section], Int, TimeSignature) -> Score
+
+pub fn aug(Pitch, Duration) -> MusicEvent
+
 pub fn b(Int) -> Pitch
 
 pub fn basic_beat(Int) -> Score
 
+pub fn bass_roots(Track, Duration) -> Track
+
 pub fn bb(Int) -> Pitch
+
+pub fn bridge(Array[Track]) -> Section
 
 pub fn c(Int) -> Pitch
 
@@ -84,7 +92,11 @@ pub fn ch(Array[Pitch], Duration) -> MusicEvent
 
 pub fn chord(Array[Pitch], Duration) -> Chord
 
+pub fn chord_quality(Pitch, ChordQuality, Duration) -> MusicEvent
+
 pub fn chord_with_velocity(Array[Pitch], Duration, Int) -> Chord
+
+pub fn chorus(Array[Track]) -> Section
 
 pub fn cs(Int) -> Pitch
 
@@ -95,6 +107,10 @@ pub fn db(Int) -> Pitch
 pub fn default_tempo() -> Tempo
 
 pub fn degree(Pitch, ScaleKind, Int) -> Pitch
+
+pub fn dim(Pitch, Duration) -> MusicEvent
+
+pub fn dom7(Pitch, Duration) -> MusicEvent
 
 pub fn dotted(Duration) -> Duration
 
@@ -132,6 +148,8 @@ pub fn hat(Duration) -> MusicEvent
 
 pub fn instrument(Track, Int) -> Track
 
+pub fn intro(Array[Track]) -> Section
+
 pub fn is_valid_bpm(Int) -> Bool
 
 pub fn is_valid_channel(Int) -> Bool
@@ -142,17 +160,27 @@ pub fn is_valid_time_signature(Int, Int) -> Bool
 
 pub fn is_valid_velocity(Int) -> Bool
 
+pub fn key(Pitch, ScaleKind) -> Key
+
 pub fn kick(Duration) -> MusicEvent
+
+pub fn layer(Array[Track]) -> Score
+
+pub fn maj7(Pitch, Duration) -> MusicEvent
 
 pub fn major(Pitch, Duration) -> MusicEvent
 
 pub fn melody(Array[MusicEvent]) -> Track
+
+pub fn melody_degrees(Key, Array[Int], Duration) -> Track
 
 pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
 
 pub fn midi_to_frequency(Int) -> Double
 
 pub fn midi_to_pitch(Int) -> Pitch
+
+pub fn min7(Pitch, Duration) -> MusicEvent
 
 pub fn minor(Pitch, Duration) -> MusicEvent
 
@@ -171,6 +199,8 @@ pub fn note_events_to_browser_js(Array[NoteEvent]) -> String
 pub fn note_with_velocity(Pitch, Duration, Int) -> Note
 
 pub fn nv(Pitch, Duration, Int) -> MusicEvent
+
+pub fn outro(Array[Track]) -> Section
 
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
@@ -192,6 +222,10 @@ pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 
 pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
 
+pub fn section(String, Array[Track]) -> Section
+
+pub fn section_layer(String, Array[Track]) -> Section
+
 pub fn sixteenth() -> Duration
 
 pub fn snare(Duration) -> MusicEvent
@@ -207,6 +241,8 @@ pub fn time_signature(Int, Int) -> TimeSignature
 pub fn track(Array[MusicEvent]) -> Track
 
 pub fn track_with_channel(Array[MusicEvent], Int) -> Track
+
+pub fn verse(Array[Track]) -> Section
 
 pub fn version() -> String
 
@@ -230,8 +266,20 @@ pub(all) struct Chord {
   duration : Duration
   velocity : Int
 }
+pub fn Chord::invert(Self, Int) -> Self
 pub fn Chord::transpose(Self, Int) -> Self
 pub fn Chord::with_velocity(Self, Int) -> Self
+
+pub(all) enum ChordQuality {
+  MajorTriad
+  MinorTriad
+  DiminishedTriad
+  AugmentedTriad
+  DominantSeventh
+  MajorSeventh
+  MinorSeventh
+}
+pub fn ChordQuality::intervals(Self) -> Array[Int]
 
 pub(all) enum Duration {
   Whole
@@ -247,6 +295,15 @@ pub fn Duration::seconds(Self, Int) -> Double
 pub fn Duration::stretch(Self, Double) -> Self
 pub fn Duration::ticks(Self, Int) -> Int
 pub fn Duration::to_string(Self) -> String
+
+pub(all) struct Key {
+  tonic : Pitch
+  kind : ScaleKind
+}
+pub fn Key::degree(Self, Int, Int) -> Pitch
+pub fn Key::scale(Self, Int, Int) -> Array[Pitch]
+pub fn Key::scale_kind(Self) -> ScaleKind
+pub fn Key::tonic_pitch(Self) -> Pitch
 
 pub(all) enum MusicEvent {
   Note(Note)
@@ -344,6 +401,12 @@ pub fn Score::to_string(Self) -> String
 pub fn Score::track_count(Self) -> Int
 pub fn Score::transpose(Self, Int) -> Self
 
+pub(all) struct Section {
+  name : String
+  tracks : Array[Track]
+}
+pub fn Section::duration_beats(Self) -> Double
+
 pub(all) struct Tempo {
   bpm : Int
 }
@@ -368,6 +431,7 @@ pub fn Track::down_octave(Self) -> Self
 pub fn Track::duration_beats(Self) -> Double
 pub fn Track::event_count(Self) -> Int
 pub fn Track::map_velocity(Self, (Int) -> Int) -> Self
+pub fn Track::pad_to(Self, Double) -> Self
 pub fn Track::repeat(Self, Int) -> Self
 pub fn Track::reverse(Self) -> Self
 pub fn Track::stretch(Self, Double) -> Self

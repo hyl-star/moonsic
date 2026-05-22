@@ -6,6 +6,7 @@
 
 ```moonbit nocheck
 // I-V-vi-IV 和弦进行 + 琶音 + 旋律 + 鼓组
+
 ///|
 let chords = progression(c(3), Major, [I, V, VI, IV], half())
 

@@ -6,17 +6,41 @@
 
 ///|
 pub const UNISON : Int = 0
+
+///|
 pub const MINOR_SECOND : Int = 1
+
+///|
 pub const MAJOR_SECOND : Int = 2
+
+///|
 pub const MINOR_THIRD : Int = 3
+
+///|
 pub const MAJOR_THIRD : Int = 4
+
+///|
 pub const PERFECT_FOURTH : Int = 5
+
+///|
 pub const TRITONE : Int = 6
+
+///|
 pub const PERFECT_FIFTH : Int = 7
+
+///|
 pub const MINOR_SIXTH : Int = 8
+
+///|
 pub const MAJOR_SIXTH : Int = 9
+
+///|
 pub const MINOR_SEVENTH : Int = 10
+
+///|
 pub const MAJOR_SEVENTH : Int = 11
+
+///|
 pub const OCTAVE : Int = 12
 
 // --- 音阶 ---
@@ -40,7 +64,11 @@ pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
 }
 
 ///|
-pub fn scale(root : Pitch, kind : ScaleKind, octave_count : Int) -> Array[Pitch] {
+pub fn scale(
+  root : Pitch,
+  kind : ScaleKind,
+  octave_count : Int,
+) -> Array[Pitch] {
   let intervals = kind.intervals()
   let base_midi = root.to_midi()
   let pitches = []
@@ -121,43 +149,57 @@ pub(all) enum RomanNumeral {
   VII
 }
 
+///|
 /// 获取罗马数字在指定调中的根音
 fn roman_root(root : Pitch, kind : ScaleKind, rn : RomanNumeral) -> Pitch {
   let deg = match rn {
-    I => 1; II => 2; III => 3; IV => 4; V => 5; VI => 6; VII => 7
+    I => 1
+    II => 2
+    III => 3
+    IV => 4
+    V => 5
+    VI => 6
+    VII => 7
   }
   degree(root, kind, deg)
 }
 
+///|
 /// 判断罗马数字在指定调中是大三和弦
 fn is_major_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
   match kind {
-    Major => match rn {
-      I | IV | V => true
-      _ => false
-    }
-    NaturalMinor => match rn {
-      III | VI | VII => true
-      _ => false
-    }
-    _ => match rn {
-      I | IV | V => true
-      _ => false
-    }
+    Major =>
+      match rn {
+        I | IV | V => true
+        _ => false
+      }
+    NaturalMinor =>
+      match rn {
+        III | VI | VII => true
+        _ => false
+      }
+    _ =>
+      match rn {
+        I | IV | V => true
+        _ => false
+      }
   }
 }
 
+///|
 /// 判断罗马数字在指定调中是减三和弦
 fn is_dim_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
   match kind {
-    Major => match rn {
-      VII => true
-      _ => false
-    }
-    NaturalMinor => match rn {
-      II => true
-      _ => false
-    }
+    Major =>
+      match rn {
+        VII => true
+        _ => false
+      }
+    NaturalMinor =>
+      match rn {
+        II => true
+        _ => false
+      }
     _ => false
   }
 }

@@ -752,7 +752,10 @@ test "dom7_chord" {
 
 ///|
 test "chord_invert" {
-  let c = @moonsic.chord([@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)], @moonsic.quarter())
+  let c = @moonsic.chord(
+    [@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)],
+    @moonsic.quarter(),
+  )
   let inv1 = c.invert(1) // first inversion: E G C5
   assert_eq(inv1.pitches[0].to_midi(), 64) // E4
   assert_eq(inv1.pitches[2].to_midi(), 72) // C5
