@@ -6,9 +6,25 @@ pub const A4_FREQ : Double = 440.0
 
 pub const A4_MIDI : Int = 69
 
+pub const CLAP : Int = 39
+
+pub const CLOSED_HAT : Int = 42
+
 pub const DEFAULT_PPQ : Int = 480
 
 pub const DEFAULT_VELOCITY : Int = 100
+
+pub const DRUM_CHANNEL : Int = 9
+
+pub const KICK : Int = 36
+
+pub const MAJOR_SECOND : Int = 2
+
+pub const MAJOR_SEVENTH : Int = 11
+
+pub const MAJOR_SIXTH : Int = 9
+
+pub const MAJOR_THIRD : Int = 4
 
 pub const MAX_CHANNEL : Int = 15
 
@@ -16,21 +32,53 @@ pub const MAX_MIDI_NOTE : Int = 127
 
 pub const MAX_VELOCITY : Int = 127
 
+pub const MINOR_SECOND : Int = 1
+
+pub const MINOR_SEVENTH : Int = 10
+
+pub const MINOR_SIXTH : Int = 8
+
+pub const MINOR_THIRD : Int = 3
+
 pub const MIN_CHANNEL : Int = 0
 
 pub const MIN_MIDI_NOTE : Int = 0
 
 pub const MIN_VELOCITY : Int = 0
 
+pub const OCTAVE : Int = 12
+
+pub const OPEN_HAT : Int = 46
+
+pub const PERFECT_FIFTH : Int = 7
+
+pub const PERFECT_FOURTH : Int = 5
+
+pub const SNARE : Int = 38
+
+pub const TRITONE : Int = 6
+
+pub const UNISON : Int = 0
+
 pub fn a(Int) -> Pitch
 
 pub fn ab(Int) -> Pitch
 
+pub fn acoustic_grand_piano() -> Int
+
+pub fn acoustic_guitar_steel() -> Int
+
+pub fn arpeggiate(Track, Duration) -> Track
+
 pub fn b(Int) -> Pitch
+
+pub fn basic_beat(Int) -> Score
 
 pub fn bb(Int) -> Pitch
 
 pub fn c(Int) -> Pitch
+
+pub fn cello() -> Int
 
 pub fn ch(Array[Pitch], Duration) -> MusicEvent
 
@@ -46,7 +94,11 @@ pub fn db(Int) -> Pitch
 
 pub fn default_tempo() -> Tempo
 
+pub fn degree(Pitch, ScaleKind, Int) -> Pitch
+
 pub fn dotted(Duration) -> Duration
+
+pub fn drum_note(Int, Duration, Int) -> MusicEvent
 
 pub fn ds(Int) -> Pitch
 
@@ -55,6 +107,10 @@ pub fn e(Int) -> Pitch
 pub fn eb(Int) -> Pitch
 
 pub fn eighth() -> Duration
+
+pub fn electric_bass_finger() -> Int
+
+pub fn electric_piano_1() -> Int
 
 pub fn empty_track() -> Track
 
@@ -72,6 +128,10 @@ pub fn gs(Int) -> Pitch
 
 pub fn half() -> Duration
 
+pub fn hat(Duration) -> MusicEvent
+
+pub fn instrument(Track, Int) -> Track
+
 pub fn is_valid_bpm(Int) -> Bool
 
 pub fn is_valid_channel(Int) -> Bool
@@ -81,6 +141,8 @@ pub fn is_valid_midi_note(Int) -> Bool
 pub fn is_valid_time_signature(Int, Int) -> Bool
 
 pub fn is_valid_velocity(Int) -> Bool
+
+pub fn kick(Duration) -> MusicEvent
 
 pub fn major(Pitch, Duration) -> MusicEvent
 
@@ -112,11 +174,15 @@ pub fn nv(Pitch, Duration, Int) -> MusicEvent
 
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
+pub fn progression(Pitch, ScaleKind, Array[RomanNumeral], Duration) -> Track
+
 pub fn quarter() -> Duration
 
 pub fn r(Duration) -> MusicEvent
 
 pub fn rest(Duration) -> Rest
+
+pub fn scale(Pitch, ScaleKind, Int) -> Array[Pitch]
 
 pub fn score(Array[Track]) -> Score
 
@@ -128,6 +194,12 @@ pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
 
 pub fn sixteenth() -> Duration
 
+pub fn snare(Duration) -> MusicEvent
+
+pub fn synth_lead_square() -> Int
+
+pub fn synth_pad_warm() -> Int
+
 pub fn tempo(Int) -> Tempo
 
 pub fn time_signature(Int, Int) -> TimeSignature
@@ -137,6 +209,8 @@ pub fn track(Array[MusicEvent]) -> Track
 pub fn track_with_channel(Array[MusicEvent], Int) -> Track
 
 pub fn version() -> String
+
+pub fn violin() -> Int
 
 pub fn whole() -> Duration
 
@@ -157,6 +231,7 @@ pub(all) struct Chord {
   velocity : Int
 }
 pub fn Chord::transpose(Self, Int) -> Self
+pub fn Chord::with_velocity(Self, Int) -> Self
 
 pub(all) enum Duration {
   Whole
@@ -169,6 +244,7 @@ pub(all) enum Duration {
 pub fn Duration::beats(Self) -> Double
 pub fn Duration::default_ticks(Self) -> Int
 pub fn Duration::seconds(Self, Int) -> Double
+pub fn Duration::stretch(Self, Double) -> Self
 pub fn Duration::ticks(Self, Int) -> Int
 pub fn Duration::to_string(Self) -> String
 
@@ -178,6 +254,8 @@ pub(all) enum MusicEvent {
   Chord(Chord)
 }
 pub fn MusicEvent::duration(Self) -> Duration
+pub fn MusicEvent::map_velocity(Self, (Int) -> Int) -> Self
+pub fn MusicEvent::stretch(Self, Double) -> Self
 pub fn MusicEvent::to_string(Self) -> String
 pub fn MusicEvent::transpose(Self, Int) -> Self
 
@@ -186,8 +264,10 @@ pub(all) struct Note {
   duration : Duration
   velocity : Int
 }
+pub fn Note::stretch(Self, Double) -> Self
 pub fn Note::to_string(Self) -> String
 pub fn Note::transpose(Self, Int) -> Self
+pub fn Note::with_velocity(Self, Int) -> Self
 
 pub(all) struct NoteEvent {
   start : Double
@@ -230,7 +310,26 @@ pub fn PitchClass::to_string(Self) -> String
 pub(all) struct Rest {
   duration : Duration
 }
+pub fn Rest::stretch(Self, Double) -> Self
 pub fn Rest::to_string(Self) -> String
+
+pub(all) enum RomanNumeral {
+  I
+  II
+  III
+  IV
+  V
+  VI
+  VII
+}
+
+pub(all) enum ScaleKind {
+  Major
+  NaturalMinor
+  MajorPentatonic
+  MinorPentatonic
+}
+pub fn ScaleKind::intervals(Self) -> Array[Int]
 
 pub(all) struct Score {
   tempo : Tempo
@@ -261,14 +360,21 @@ pub fn TimeSignature::to_string(Self) -> String
 pub(all) struct Track {
   events : Array[MusicEvent]
   channel : Int
+  program : Int
 }
 pub fn Track::append(Self, MusicEvent) -> Self
+pub fn Track::concat(Self, Self) -> Self
+pub fn Track::down_octave(Self) -> Self
 pub fn Track::duration_beats(Self) -> Double
 pub fn Track::event_count(Self) -> Int
+pub fn Track::map_velocity(Self, (Int) -> Int) -> Self
 pub fn Track::repeat(Self, Int) -> Self
+pub fn Track::reverse(Self) -> Self
+pub fn Track::stretch(Self, Double) -> Self
 pub fn Track::to_note_events(Self) -> Array[NoteEvent]
 pub fn Track::to_string(Self) -> String
 pub fn Track::transpose(Self, Int) -> Self
+pub fn Track::up_octave(Self) -> Self
 
 // Type aliases
 

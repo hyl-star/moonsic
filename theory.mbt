@@ -7,17 +7,41 @@
 ///|
 /// 音程半音数常量
 pub const UNISON : Int = 0
+
+///|
 pub const MINOR_SECOND : Int = 1
+
+///|
 pub const MAJOR_SECOND : Int = 2
+
+///|
 pub const MINOR_THIRD : Int = 3
+
+///|
 pub const MAJOR_THIRD : Int = 4
+
+///|
 pub const PERFECT_FOURTH : Int = 5
+
+///|
 pub const TRITONE : Int = 6
+
+///|
 pub const PERFECT_FIFTH : Int = 7
+
+///|
 pub const MINOR_SIXTH : Int = 8
+
+///|
 pub const MAJOR_SIXTH : Int = 9
+
+///|
 pub const MINOR_SEVENTH : Int = 10
+
+///|
 pub const MAJOR_SEVENTH : Int = 11
+
+///|
 pub const OCTAVE : Int = 12
 
 // --- 音阶 ---
@@ -44,7 +68,11 @@ pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
 
 ///|
 /// 从根音生成音阶，跨指定八度数
-pub fn scale(root : Pitch, kind : ScaleKind, octave_count : Int) -> Array[Pitch] {
+pub fn scale(
+  root : Pitch,
+  kind : ScaleKind,
+  octave_count : Int,
+) -> Array[Pitch] {
   let intervals = kind.intervals()
   let base_midi = root.to_midi()
   let pitches = []

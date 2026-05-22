@@ -1,8 +1,20 @@
 ///|
-/// moonsic 命令行 — 导出示例 MIDI + 浏览器 demo 数据
+/// moonsic v2 — 和弦进行 + 琶音 + 旋律 + 鼓组
 /// 运行：`moon run cmd/main`
 fn main {
-  // v1.5 简洁 API 构建示例旋律
+  // I-V-vi-IV 和弦进行（C 大调）
+  let chords = @lib.progression(
+    @lib.c(3),
+    @lib.Major,
+    [@lib.I, @lib.V, @lib.VI, @lib.IV],
+    @lib.half(),
+  )
+
+  // 琶音化
+  let arp = @lib.arpeggiate(chords, @lib.eighth())
+  let arp_piano = @lib.instrument(arp, @lib.electric_piano_1())
+
+  // 旋律
   let lead = @lib.melody([
     @lib.n(@lib.c(4), @lib.quarter()),
     @lib.n(@lib.d(4), @lib.quarter()),
@@ -11,14 +23,18 @@ fn main {
     @lib.r(@lib.eighth()),
     @lib.n(@lib.c(5), @lib.half()),
   ])
+  let lead_violin = @lib.instrument(lead, @lib.violin())
 
-  let harmony = @lib.melody([
-    @lib.major(@lib.c(3), @lib.half()),
-    @lib.minor(@lib.a(3), @lib.half()),
-  ])
+  // 鼓组
+  let drums = @lib.basic_beat(4)
 
-  let song = @lib.score_with([lead, harmony], 120, @lib.four_four())
+  // 合并所有轨道
+  let song = @lib.score_with(
+    [arp_piano, lead_violin, drums.tracks[0], drums.tracks[1], drums.tracks[2]],
+    120,
+    @lib.four_four(),
+  )
 
-  println("// moonsic v\{@lib.version()} — demo events")
+  println("// moonsic v\{@lib.version()} — v2 demo events")
   println(@lib.note_events_to_browser_js(song.to_note_events()))
 }

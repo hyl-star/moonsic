@@ -2,6 +2,43 @@
 
 用 MoonBit 写旋律，导出 MIDI，在浏览器播放。
 
+## v2 作曲示例
+
+```moonbit nocheck
+// I-V-vi-IV 和弦进行 + 琶音 + 旋律 + 鼓组
+///|
+let chords = progression(c(3), Major, [I, V, VI, IV], half())
+
+///|
+let arp = instrument(arpeggiate(chords, eighth()), electric_piano_1())
+
+///|
+let lead = instrument(
+  melody([
+    n(c(4), quarter()),
+    n(d(4), quarter()),
+    n(e(4), quarter()),
+    n(g(4), dotted(quarter())),
+    r(eighth()),
+    n(c(5), half()),
+  ]),
+  violin(),
+)
+
+///|
+let drums = basic_beat(4)
+
+///|
+let song = score_with(
+  [arp, lead, drums.tracks[0], drums.tracks[1], drums.tracks[2]],
+  120,
+  four_four(),
+)
+
+///|
+let bytes = song.to_midi_bytes()
+```
+
 ## v1.5 最小示例
 
 ```moonbit nocheck
@@ -97,10 +134,15 @@ moon info            # 更新接口文件
 ## 项目结构
 
 ```
-core.mbt     — 核心音乐模型
-runtime.mbt  — 事件运行时 + 浏览器数据导出
-midi.mbt     — 频率转换 + MIDI 导出
-helpers.mbt  — v1.5 作曲快捷函数
-web/         — 浏览器播放 demo
-cmd/main/    — CLI（生成浏览器 demo 数据）
+core.mbt       — 核心音乐模型（~650 行）
+runtime.mbt    — 事件运行时 + 浏览器数据导出（~150 行）
+midi.mbt       — 频率转换 + MIDI 导出 + 校验（~230 行）
+helpers.mbt    — v1.5 作曲快捷函数（~190 行）
+theory.mbt     — v2 音程/音阶/和弦进行（~130 行）
+patterns.mbt   — v2 模式变换（~140 行）
+instruments.mbt— v2 MIDI 乐器（~20 行）
+arpeggio.mbt   — v2 琶音（~30 行）
+drums.mbt      — v2 鼓组（~60 行）
+web/           — 浏览器播放 demo
+cmd/main/      — CLI（生成浏览器 demo 数据）
 ```

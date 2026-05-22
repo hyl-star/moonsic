@@ -5,10 +5,20 @@
 ///|
 /// GM 鼓音符（通道 9）
 pub const DRUM_CHANNEL : Int = 9
+
+///|
 pub const KICK : Int = 36
+
+///|
 pub const SNARE : Int = 38
+
+///|
 pub const CLOSED_HAT : Int = 42
+
+///|
 pub const OPEN_HAT : Int = 46
+
+///|
 pub const CLAP : Int = 39
 
 ///|

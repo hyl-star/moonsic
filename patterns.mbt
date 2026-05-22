@@ -40,6 +40,7 @@ pub fn Duration::stretch(self : Duration, factor : Double) -> Duration {
   duration_from_beats(new_beats)
 }
 
+///|
 /// 根据拍数反推最接近的 Duration
 fn duration_from_beats(beats : Double) -> Duration {
   if beats >= 3.75 {
@@ -58,7 +59,11 @@ fn duration_from_beats(beats : Double) -> Duration {
 ///|
 /// 音符拉伸
 pub fn Note::stretch(self : Note, factor : Double) -> Note {
-  { pitch: self.pitch, duration: self.duration.stretch(factor), velocity: self.velocity }
+  {
+    pitch: self.pitch,
+    duration: self.duration.stretch(factor),
+    velocity: self.velocity,
+  }
 }
 
 ///|
@@ -77,9 +82,14 @@ pub fn MusicEvent::stretch(self : MusicEvent, factor : Double) -> MusicEvent {
   }
 }
 
+///|
 /// 和弦拉伸（内部）
 fn chord_stretch(c : Chord, factor : Double) -> Chord {
-  { pitches: c.pitches, duration: c.duration.stretch(factor), velocity: c.velocity }
+  {
+    pitches: c.pitches,
+    duration: c.duration.stretch(factor),
+    velocity: c.velocity,
+  }
 }
 
 ///|
