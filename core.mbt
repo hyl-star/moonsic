@@ -181,3 +181,58 @@ pub fn midi_to_pitch(midi : Int) -> Pitch {
   }
   { class, accidental, octave }
 }
+
+// --- 时值 Duration ---
+
+///|
+/// 音符时值：全音符、二分、四分、八分、十六分
+pub(all) enum Duration {
+  Whole
+  Half
+  Quarter
+  Eighth
+  Sixteenth
+}
+
+///|
+/// 获取时值对应的拍数（以四分音符=1拍为基准）
+pub fn Duration::beats(self : Duration) -> Double {
+  match self {
+    Whole => 4.0
+    Half => 2.0
+    Quarter => 1.0
+    Eighth => 0.5
+    Sixteenth => 0.25
+  }
+}
+
+///|
+/// 将时值转为 MIDI tick 数
+pub fn Duration::ticks(self : Duration, ppq : Int) -> Int {
+  let raw = self.beats() * ppq.to_double()
+  raw.to_int()
+}
+
+///|
+/// 使用默认 PPQ 转为 tick 数
+pub fn Duration::default_ticks(self : Duration) -> Int {
+  self.ticks(DEFAULT_PPQ)
+}
+
+///|
+/// 将时值转为秒数
+pub fn Duration::seconds(self : Duration, bpm : Int) -> Double {
+  let quarter_sec = 60.0 / bpm.to_double()
+  self.beats() * quarter_sec
+}
+
+///|
+pub fn Duration::to_string(self : Duration) -> String {
+  match self {
+    Whole => "whole"
+    Half => "half"
+    Quarter => "quarter"
+    Eighth => "eighth"
+    Sixteenth => "sixteenth"
+  }
+}

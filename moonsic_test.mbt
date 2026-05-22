@@ -61,3 +61,31 @@ test "midi_to_pitch_roundtrip" {
   assert_eq(result.to_midi(), 60)
   assert_eq(result.to_string(), "C4")
 }
+
+///|
+test "duration_beats" {
+  assert_eq(@moonsic.Whole.beats(), 4.0)
+  assert_eq(@moonsic.Half.beats(), 2.0)
+  assert_eq(@moonsic.Quarter.beats(), 1.0)
+  assert_eq(@moonsic.Eighth.beats(), 0.5)
+  assert_eq(@moonsic.Sixteenth.beats(), 0.25)
+}
+
+///|
+test "duration_ticks" {
+  assert_eq(@moonsic.Quarter.ticks(480), 480)
+  assert_eq(@moonsic.Whole.ticks(480), 1920)
+  assert_eq(@moonsic.Half.ticks(480), 960)
+  assert_eq(@moonsic.Eighth.ticks(480), 240)
+  assert_eq(@moonsic.Sixteenth.ticks(480), 120)
+  assert_eq(@moonsic.Quarter.ticks(960), 960)
+}
+
+///|
+test "duration_seconds" {
+  assert_eq(@moonsic.Quarter.seconds(120), 0.5)
+  assert_eq(@moonsic.Half.seconds(120), 1.0)
+  assert_eq(@moonsic.Eighth.seconds(120), 0.25)
+  assert_eq(@moonsic.Quarter.seconds(60), 1.0)
+  assert_eq(@moonsic.Quarter.seconds(240), 0.25)
+}
