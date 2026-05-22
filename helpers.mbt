@@ -217,3 +217,69 @@ pub fn score_with(
 ) -> Score {
   score_with_tempo(tracks, tempo(bpm), time_signature)
 }
+
+// --- 文本旋律解析 ---
+
+///|
+/// 从紧凑文本格式解析旋律：`melody_str("C4q D4q E4q G4q | A4h")`
+/// 格式：音名[变音][八度]时值[.]  休止：`r` + 时值   `|` 忽略
+pub fn melody_str(input : String) -> Track {
+  let events = []
+  let len = input.length()
+  let mut i = 0
+  while i < len {
+    let ch = input[i]
+    if ch == ' ' || ch == '|' || ch == '\n' {
+      i = i + 1
+      continue
+    }
+    if ch == 'r' {
+      // 休止：r + 时值码
+      i = i + 1
+      if i >= len { break }
+      let (dur, advance) = parse_dur(input, i)
+      events.push(Rest(rest(dur)))
+      i = advance
+    } else if ch >= 'A' && ch <= 'G' {
+      // 音名
+      let class = match ch {
+        'C' => C; 'D' => D; 'E' => E; 'F' => F; 'G' => G; 'A' => A; 'B' => B
+        _ => C
+      }
+      i = i + 1
+      // 可选变音记号
+      let mut acc = Natural
+      if i < len && (input[i] == '#' || input[i] == 'b') {
+        acc = if input[i] == '#' { Sharp } else { Flat }
+        i = i + 1
+      }
+      // 八度数字
+      if i >= len { break }
+      let octave = input[i].to_int() - '0'.to_int()
+      i = i + 1
+      // 时值码
+      let (dur, advance) = parse_dur(input, i)
+      let p = pitch(class, acc, octave)
+      events.push(Note(note(p, dur)))
+      i = advance
+    } else {
+      i = i + 1
+    }
+  }
+  track(events)
+}
+
+/// 解析时值码：w=whole, h=half, q=quarter, e=eighth, s=sixteenth，可选 `.` 附点
+fn parse_dur(input : String, i : Int) -> (Duration, Int) {
+  if i >= input.length() { return (Quarter, i) }
+  let base = match input[i] {
+    'w' => Whole; 'h' => Half; 'q' => Quarter; 'e' => Eighth; 's' => Sixteenth
+    _ => Quarter
+  }
+  let next = i + 1
+  if next < input.length() && input[next] == '.' {
+    (dotted(base), next + 1)
+  } else {
+    (base, next)
+  }
+}
