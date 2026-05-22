@@ -432,6 +432,26 @@ pub fn Chord::transpose(self : Chord, semitones : Int) -> Chord {
   { pitches: new_pitches, duration: self.duration, velocity: self.velocity }
 }
 
+///|
+/// 和弦转位：将最低音升高八度，重复 times 次
+pub fn Chord::invert(self : Chord, times : Int) -> Chord {
+  if times <= 0 || self.pitches.length() <= 1 {
+    return self
+  }
+  let n = times % self.pitches.length()
+  let new_pitches = []
+  for i = 0; i < self.pitches.length(); i = i + 1 {
+    let src_idx = i + n
+    let p = if src_idx >= self.pitches.length() {
+      self.pitches[src_idx - self.pitches.length()].transpose(12)
+    } else {
+      self.pitches[src_idx]
+    }
+    new_pitches.push(p)
+  }
+  { pitches: new_pitches, duration: self.duration, velocity: self.velocity }
+}
+
 // --- 休止 Rest ---
 
 ///|

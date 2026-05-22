@@ -159,6 +159,36 @@ pub fn minor(root : Pitch, duration : Duration) -> MusicEvent {
   Chord(chord([root, root.transpose(3), root.transpose(7)], duration))
 }
 
+///|
+/// 减三和弦：dim(b(3), half()) = B D F
+pub fn dim(root : Pitch, duration : Duration) -> MusicEvent {
+  chord_quality(root, DiminishedTriad, duration)
+}
+
+///|
+/// 增三和弦：aug(c(4), half()) = C E G#
+pub fn aug(root : Pitch, duration : Duration) -> MusicEvent {
+  chord_quality(root, AugmentedTriad, duration)
+}
+
+///|
+/// 属七和弦：dom7(g(3), half()) = G B D F
+pub fn dom7(root : Pitch, duration : Duration) -> MusicEvent {
+  chord_quality(root, DominantSeventh, duration)
+}
+
+///|
+/// 大七和弦：maj7(c(4), half()) = C E G B
+pub fn maj7(root : Pitch, duration : Duration) -> MusicEvent {
+  chord_quality(root, MajorSeventh, duration)
+}
+
+///|
+/// 小七和弦：min7(a(3), half()) = A C E G
+pub fn min7(root : Pitch, duration : Duration) -> MusicEvent {
+  chord_quality(root, MinorSeventh, duration)
+}
+
 // --- 轨道/乐谱快捷构造 ---
 
 ///|

@@ -724,3 +724,50 @@ test "basic_beat_midi_export" {
   let bytes = song.to_midi_bytes()
   assert_true(bytes.length() > 0)
 }
+
+// --- v3 harmony tests ---
+
+///|
+test "dim_chord" {
+  let evt = @moonsic.dim(@moonsic.b(3), @moonsic.half())
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  // B dim = B(59) D(62) F(65)
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 59)
+  assert_eq(events[1].midi_note, 62)
+  assert_eq(events[2].midi_note, 65)
+}
+
+///|
+test "dom7_chord" {
+  let evt = @moonsic.dom7(@moonsic.g(3), @moonsic.half())
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  // G7 = G(55) B(59) D(62) F(65)
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 55)
+  assert_eq(events[3].midi_note, 65)
+}
+
+///|
+test "chord_invert" {
+  let c = @moonsic.chord([@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)], @moonsic.quarter())
+  let inv1 = c.invert(1) // first inversion: E G C5
+  assert_eq(inv1.pitches[0].to_midi(), 64) // E4
+  assert_eq(inv1.pitches[2].to_midi(), 72) // C5
+}
+
+///|
+test "minor_progression" {
+  let chords = @moonsic.progression(
+    @moonsic.a(3),
+    @moonsic.NaturalMinor,
+    [@moonsic.I, @moonsic.IV, @moonsic.V],
+    @moonsic.quarter(),
+  )
+  let events = chords.to_note_events()
+  // Am: i = A C E (minor), iv = D F A (minor), v = E G B (minor)
+  assert_eq(events[0].midi_note, 57) // A3
+  assert_eq(events[3].midi_note, 62) // D4
+}
