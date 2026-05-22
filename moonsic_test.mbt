@@ -89,3 +89,24 @@ test "duration_seconds" {
   assert_eq(@moonsic.Quarter.seconds(60), 1.0)
   assert_eq(@moonsic.Quarter.seconds(240), 0.25)
 }
+
+///|
+test "tempo" {
+  let t = @moonsic.tempo(120)
+  assert_eq(t.quarter_seconds(), 0.5)
+  let t60 = @moonsic.tempo(60)
+  assert_eq(t60.quarter_seconds(), 1.0)
+  assert_true(@moonsic.is_valid_bpm(120))
+  assert_false(@moonsic.is_valid_bpm(0))
+}
+
+///|
+test "time_signature" {
+  let ts = @moonsic.four_four()
+  assert_eq(ts.numerator, 4)
+  assert_eq(ts.denominator, 4)
+  assert_true(@moonsic.is_valid_time_signature(4, 4))
+  assert_true(@moonsic.is_valid_time_signature(3, 4))
+  assert_false(@moonsic.is_valid_time_signature(0, 4))
+  assert_false(@moonsic.is_valid_time_signature(4, 5))
+}
