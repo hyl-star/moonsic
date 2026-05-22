@@ -103,3 +103,81 @@ pub fn Accidental::to_string(self : Accidental) -> String {
     Flat => "b"
   }
 }
+
+// --- 音高 Pitch ---
+
+///|
+/// 音高 = 音名 + 变音记号 + 八度
+pub(all) struct Pitch {
+  class : PitchClass
+  accidental : Accidental
+  octave : Int
+}
+
+///|
+/// 创建音高
+pub fn pitch(
+  class : PitchClass,
+  accidental : Accidental,
+  octave : Int,
+) -> Pitch {
+  { class, accidental, octave }
+}
+
+///|
+/// 创建自然音高（无变音记号）
+pub fn natural(class : PitchClass, octave : Int) -> Pitch {
+  { class, accidental: Natural, octave }
+}
+
+///|
+/// 音高转为 MIDI 音符编号
+/// 公式：(octave+1)*12 + base_semitone + accidental_offset
+pub fn Pitch::to_midi(self : Pitch) -> Int {
+  (self.octave + 1) * 12 +
+  self.class.base_semitone() +
+  self.accidental.semitone_offset()
+}
+
+///|
+/// 判断该音高是否在有效 MIDI 范围内（0-127）
+pub fn Pitch::is_valid_midi(self : Pitch) -> Bool {
+  let midi = self.to_midi()
+  midi >= 0 && midi <= 127
+}
+
+///|
+/// 移调：按半音数移动，使用升号拼写
+pub fn Pitch::transpose(self : Pitch, semitones : Int) -> Pitch {
+  let midi = self.to_midi() + semitones
+  midi_to_pitch(midi)
+}
+
+///|
+/// 转为字符串，如 "C4", "C#4", "Db4"
+pub fn Pitch::to_string(self : Pitch) -> String {
+  "\{self.class.to_string()}\{self.accidental.to_string()}\{self.octave}"
+}
+
+///|
+/// 从 MIDI 编号转为 Pitch（升号拼写）
+pub fn midi_to_pitch(midi : Int) -> Pitch {
+  let octave = midi / 12 - 1
+  let semitone = midi % 12
+  let (class, accidental) = match semitone {
+    0 => (C, Natural)
+    1 => (C, Sharp)
+    2 => (D, Natural)
+    3 => (D, Sharp)
+    4 => (E, Natural)
+    5 => (F, Natural)
+    6 => (F, Sharp)
+    7 => (G, Natural)
+    8 => (G, Sharp)
+    9 => (A, Natural)
+    10 => (A, Sharp)
+    11 => (B, Natural)
+    _ => (C, Natural)
+  }
+  { class, accidental, octave }
+}

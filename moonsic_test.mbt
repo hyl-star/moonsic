@@ -34,3 +34,30 @@ test "accidental_to_string" {
   assert_eq(@moonsic.Sharp.to_string(), "#")
   assert_eq(@moonsic.Flat.to_string(), "b")
 }
+
+///|
+test "pitch_to_midi" {
+  let p = @moonsic.pitch
+  assert_eq(p(@moonsic.C, @moonsic.Natural, 4).to_midi(), 60)
+  assert_eq(p(@moonsic.A, @moonsic.Natural, 4).to_midi(), 69)
+  assert_eq(p(@moonsic.C, @moonsic.Sharp, 4).to_midi(), 61)
+  assert_eq(p(@moonsic.D, @moonsic.Flat, 4).to_midi(), 61)
+  assert_eq(p(@moonsic.B, @moonsic.Natural, 3).to_midi(), 59)
+  assert_eq(p(@moonsic.C, @moonsic.Natural, -1).to_midi(), 0)
+  assert_eq(p(@moonsic.G, @moonsic.Natural, 9).to_midi(), 127)
+}
+
+///|
+test "pitch_transpose" {
+  let p = @moonsic.pitch
+  let c4 = p(@moonsic.C, @moonsic.Natural, 4)
+  assert_eq(c4.transpose(2).to_midi(), 62)
+  assert_eq(c4.transpose(-12).to_midi(), 48)
+}
+
+///|
+test "midi_to_pitch_roundtrip" {
+  let result = @moonsic.midi_to_pitch(60)
+  assert_eq(result.to_midi(), 60)
+  assert_eq(result.to_string(), "C4")
+}
