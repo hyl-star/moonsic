@@ -34,6 +34,29 @@ function parseScore(text) {
     line = line.trim(); if (!line || line.startsWith('#')) continue
     if (line.startsWith('tempo ')) { bpm = parseInt(line.slice(6))||120; continue }
     if (line.startsWith('time ')) continue
+    if (line.startsWith('key ')) { continue }
+    if (line.startsWith('style ')) { continue }
+    if (line.startsWith('progression ')) {
+      // auto-generate chords from progression text
+      const progText = line.slice(12).trim()
+      const numerals = parseRomanText(progText)
+      const chordEvents = generateChordsFromRoman(numerals, currentTrack ? currentTrack.instrument : 'piano')
+      if (chordEvents.length > 0) { prevRaw = chordEvents; if(currentTrack) currentTrack.rawEvents.push(...chordEvents) }
+      continue
+    }
+    if (line.startsWith('generate ')) {
+      const cmd = line.slice(9).trim()
+      if (cmd === 'chords') continue // already handled by progression
+      if (cmd.startsWith('bass ')) {
+        const style = cmd.slice(5); const bassEvents = generateBass(style)
+        if (bassEvents.length > 0) { ensureTrack('bass').rawEvents.push(...bassEvents) }
+      }
+      if (cmd.startsWith('arpeggio ')) {
+        const style = cmd.slice(9); const arpEvents = generateArpeggio(style)
+        if (arpEvents.length > 0) { ensureTrack('arpeggio').rawEvents.push(...arpEvents) }
+      }
+      continue
+    }
     if (line.startsWith('swing ')) { globalSwing = parseFloat(line.slice(6))||0.5; continue }
     if (line.startsWith('humanize ')) {
       const tm = line.match(/time\s+([\d.]+)/); if(tm) hTime = parseFloat(tm[1])
@@ -106,6 +129,81 @@ function parseScore(text) {
     track.events = events
   }
   return { tracks, bpm, allEvents: allFlat }
+}
+
+// --- v9 Theory Generators ---
+
+let v9Key = { tonic: 'C', accidental: '', octave: 4, kind: 'major' }
+let v9ProgEvents = null
+
+function parseRomanText(text) {
+  const map = { I:0, II:1, III:2, IV:3, V:4, VI:5, VII:6 }
+  const result = []; let i = 0
+  while (i < text.length) {
+    if (text[i] === ' ') { i++; continue }
+    let tok = ''; while (i < text.length && text[i] !== ' ') { tok += text[i]; i++ }
+    const upper = tok.toUpperCase()
+    if (map[upper] !== undefined) result.push(upper)
+  }
+  return result
+}
+
+function generateChordsFromRoman(numerals, instrument) {
+  const tonicMidi = typeof v9Key.tonic === 'string' ? (parsePitch(v9Key.tonic + (v9Key.accidental||'') + v9Key.octave)) : 60
+  const intervals = { I:[0,4,7], II:[2,5,9], III:[4,7,11], IV:[0,5,9], V:[2,7,11], VI:[0,4,9], VII:[2,5,11] }
+  const events = []
+  for (const rn of numerals) {
+    const intv = intervals[rn] || [0,4,7]
+    let first = true
+    for (const semitone of intv) {
+      events.push({ midi: tonicMidi + semitone - (tonicMidi%12) + (tonicMidi>=0?0:0), dur:2, vel:80, chord:!first, isDrum:false })
+      first = false
+    }
+  }
+  // fix: compute midi relative to tonic
+  const rootMidi = typeof v9Key.tonic === 'string' ? parsePitch(v9Key.tonic + (v9Key.accidental||'') + v9Key.octave) : 60
+  const degBase = { I:0,II:1,III:2,IV:3,V:4,VI:5,VII:6 }
+  const majorIntv = [0,2,4,5,7,9,11]
+  const chordIntv = { I:[0,4,7], II:[0,3,7], III:[0,3,7], IV:[0,4,7], V:[0,4,7], VI:[0,3,7], VII:[0,3,6] }
+  const result = []
+  for (const rn of numerals) {
+    const deg = degBase[rn]; const root = rootMidi + majorIntv[deg]
+    const intv = chordIntv[rn] || [0,4,7]; let first = true
+    for (const s of intv) { result.push({ midi: root + s, dur:2, vel:80, chord:!first, isDrum:false }); first = false }
+  }
+  v9ProgEvents = result
+  return result
+}
+
+function generateBass(style) {
+  if (!v9ProgEvents) return []
+  const events = []; const chordGroups = []; let g = []
+  for (const e of v9ProgEvents) { if (e.chord) g.push(e); else { if(g.length){chordGroups.push(g);g=[]}; g.push(e) } }
+  if (g.length) chordGroups.push(g)
+  for (const grp of chordGroups) {
+    const root = grp[0].midi; const dur = 2
+    if (style === 'root_fifth' || style === 'RootFifth') { events.push({midi:root,dur:1,vel:90,isDrum:false}); events.push({midi:root+7,dur:1,vel:90,isDrum:false}) }
+    else if (style === 'octave' || style === 'Octave') { events.push({midi:root,dur:1,vel:90,isDrum:false}); events.push({midi:root+12,dur:1,vel:90,isDrum:false}) }
+    else { events.push({midi:root,dur,vel:90,isDrum:false}) } // Root
+  }
+  return events
+}
+
+function generateArpeggio(style) {
+  if (!v9ProgEvents) return []
+  const events = []; const chordGroups = []; let g = []
+  for (const e of v9ProgEvents) { if (e.chord) g.push(e); else { if(g.length){chordGroups.push(g);g=[]}; g.push(e) } }
+  if (g.length) chordGroups.push(g)
+  for (const grp of chordGroups) {
+    const pitches = grp.map(e => e.midi)
+    if (style === 'up' || style === 'Up') { for (const p of pitches) events.push({midi:p,dur:0.5,vel:80,isDrum:false}) }
+    else if (style === 'down' || style === 'Down') { for (let i=pitches.length-1;i>=0;i--) events.push({midi:pitches[i],dur:0.5,vel:80,isDrum:false}) }
+    else if (style === 'updown' || style === 'UpDown') {
+      for (const p of pitches) events.push({midi:p,dur:0.5,vel:80,isDrum:false})
+      for (let i=pitches.length-2;i>=1;i--) events.push({midi:pitches[i],dur:0.5,vel:80,isDrum:false})
+    } else { for (const p of pitches) events.push({midi:p,dur:0.5,vel:80,isDrum:false}) }
+  }
+  return events
 }
 
 function parseLine(line, isDrumTrack) {
