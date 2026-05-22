@@ -17,6 +17,7 @@ function parseScore(text) {
   let allEvents = [], allDurations = [], allVelocities = []
   let allChannels = []
 
+  let prevEvents = null
   for (let line of lines) {
     line = line.trim()
     if (!line || line.startsWith('#')) continue
@@ -26,20 +27,20 @@ function parseScore(text) {
       if (m) { tsNum = parseInt(m[1]); tsDen = parseInt(m[2]) }
       continue
     }
-    // parse events with repeats
+    // standalone repeat: xN alone on a line → repeat previous line
+    const soloRx = line.match(/^x(\d+)$/)
+    if (soloRx && prevEvents) {
+      const n = parseInt(soloRx[1])
+      for (let r = 0; r < n; r++) { pushEvents(prevEvents, allEvents, allDurations, allVelocities, allChannels) }
+      continue
+    }
+    // inline repeat: events xN
     let repeat = 1
     const rx = line.match(/x(\d+)\s*$/)
     if (rx) { repeat = parseInt(rx[1]); line = line.replace(/x\d+\s*$/, '').trim() }
     const events = parseLine(line)
-    for (let r = 0; r < repeat; r++) {
-      for (const e of events) {
-        if (e.midi !== undefined) {
-          allEvents.push(e.midi); allDurations.push(e.chord ? 0 : e.dur); allVelocities.push(e.vel||100); allChannels.push(0)
-        } else if (e.rest) {
-          allEvents.push(-1); allDurations.push(e.dur); allVelocities.push(0); allChannels.push(0)
-        }
-      }
-    }
+    if (events.length > 0) prevEvents = events
+    for (let r = 0; r < repeat; r++) { pushEvents(events, allEvents, allDurations, allVelocities, allChannels) }
   }
 
   // build timed events
@@ -52,6 +53,16 @@ function parseScore(text) {
     if (allDurations[i] > 0) cursor += allDurations[i]
   }
   return { events: noteEvents, bpm, tsNum, tsDen }
+}
+
+function pushEvents(events, allEvents, allDurations, allVelocities, allChannels) {
+  for (const e of events) {
+    if (e.midi !== undefined) {
+      allEvents.push(e.midi); allDurations.push(e.chord ? 0 : e.dur); allVelocities.push(e.vel||100); allChannels.push(0)
+    } else if (e.rest) {
+      allEvents.push(-1); allDurations.push(e.dur); allVelocities.push(0); allChannels.push(0)
+    }
+  }
 }
 
 function parseLine(line) {
