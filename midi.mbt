@@ -17,6 +17,7 @@ pub fn Pitch::frequency(self : Pitch) -> Double {
   midi_to_frequency(self.to_midi())
 }
 
+///|
 /// 计算 2^x = exp(x * ln(2))
 fn pow2(exp : Double) -> Double {
   let ln2 = 0.6931471805599453
@@ -41,7 +42,7 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
 
   // 速度：BPM 转为微秒/四分音符
   let microseconds = 60000000U / self.tempo.bpm.reinterpret_as_uint()
-  meta_events.push(Tempo(delta=0U, microseconds=microseconds))
+  meta_events.push(Tempo(delta=0U, microseconds~))
 
   // 拍号：使用 Meta 事件（CAIMEOX/midi 的 TimeSignature 序列化尚未实现）
   let ts = self.time_signature
@@ -87,6 +88,7 @@ pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
 
 // --- 内部辅助函数 ---
 
+///|
 /// 收集所有不重复的通道号
 fn collect_channels(events : Array[NoteEvent]) -> Array[Int] {
   let channels = []
@@ -105,6 +107,7 @@ fn collect_channels(events : Array[NoteEvent]) -> Array[Int] {
   channels
 }
 
+///|
 /// 按通道过滤 NoteEvent
 fn filter_by_channel(
   events : Array[NoteEvent],
@@ -119,6 +122,7 @@ fn filter_by_channel(
   result
 }
 
+///|
 /// 将 NoteEvent 序列转为 MIDI delta-tick 事件
 fn note_events_to_midi(
   events : Array[NoteEvent],
@@ -182,6 +186,7 @@ fn note_events_to_midi(
   midi_events
 }
 
+///|
 /// 内部绝对 MIDI 事件，用于排序
 priv struct AbsMidiEvent {
   tick : Int
@@ -191,6 +196,7 @@ priv struct AbsMidiEvent {
   channel : Int
 }
 
+///|
 /// 绝对 MIDI 事件排序：按 tick 升序，同一 tick 下 NoteOff 先于 NoteOn
 fn sort_abs_events(events : Array[AbsMidiEvent]) -> Unit {
   let n = events.length()

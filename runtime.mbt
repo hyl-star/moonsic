@@ -91,6 +91,7 @@ pub fn Score::to_note_events(self : Score) -> Array[NoteEvent] {
   sort_note_events(all_events)
 }
 
+///|
 /// 按 start 时间稳定排序
 fn sort_note_events(events : Array[NoteEvent]) -> Array[NoteEvent] {
   let n = events.length()

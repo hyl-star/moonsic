@@ -15,21 +15,29 @@ pub const DEFAULT_VELOCITY : Int = 100
 ///|
 /// 力度范围：0-127
 pub const MIN_VELOCITY : Int = 0
+
+///|
 pub const MAX_VELOCITY : Int = 127
 
 ///|
 /// MIDI 音符范围：0-127
 pub const MIN_MIDI_NOTE : Int = 0
+
+///|
 pub const MAX_MIDI_NOTE : Int = 127
 
 ///|
 /// MIDI 通道范围：0-15
 pub const MIN_CHANNEL : Int = 0
+
+///|
 pub const MAX_CHANNEL : Int = 15
 
 ///|
 /// A4 的 MIDI 编号和频率
 pub const A4_MIDI : Int = 69
+
+///|
 pub const A4_FREQ : Double = 440.0
 
 // --- 音高类 PitchClass ---
@@ -440,10 +448,7 @@ pub fn track(events : Array[MusicEvent]) -> Track {
 
 ///|
 /// 创建指定通道的轨道
-pub fn track_with_channel(
-  events : Array[MusicEvent],
-  channel : Int,
-) -> Track {
+pub fn track_with_channel(events : Array[MusicEvent], channel : Int) -> Track {
   { events, channel }
 }
 
@@ -573,4 +578,3 @@ pub fn Score::to_string(self : Score) -> String {
   }
   result
 }
-
