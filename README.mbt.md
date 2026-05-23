@@ -98,7 +98,7 @@ let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM + normalize + master_ga
 
 ```bash
 moon run cmd/main    # 生成浏览器 demo 数据
-moon test            # 75 tests（v5）
+moon test            # 106 tests
 moon fmt             # 格式化
 moon info            # 更新接口文件
 ```
