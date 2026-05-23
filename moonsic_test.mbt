@@ -1354,3 +1354,204 @@ test "instrument_track_program_preserved" {
   let t2 = @moonsic.instrument(t, @moonsic.violin())
   assert_eq(t2.program, 40)
 }
+
+// --- v9 补充测试 ---
+
+///|
+test "roman_progression_single_iv" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "IV", @moonsic.half())
+  assert_eq(t.event_count(), 1)
+  // IV in C major = F major, root = F4(65)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 65)
+}
+
+///|
+test "roman_progression_single_vii" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "vii", @moonsic.half())
+  assert_eq(t.event_count(), 1)
+  // vii in C major = B dim, root = B4(71)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 71)
+}
+
+///|
+test "roman_progression_single_ii" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "ii", @moonsic.half())
+  assert_eq(t.event_count(), 1)
+  // ii in C major = D minor, root = D4(62)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 62)
+}
+
+///|
+test "roman_progression_single_iii" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "iii", @moonsic.half())
+  assert_eq(t.event_count(), 1)
+  // iii in C major = E minor, root = E4(64)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 64)
+}
+
+///|
+test "roman_progression_single_vi" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "vi", @moonsic.half())
+  assert_eq(t.event_count(), 1)
+  // vi in C major = A minor, root = A4(69)
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 69)
+}
+
+///|
+test "chord_distance_nonzero" {
+  // C major vs D minor should have non-zero distance
+  let a = @moonsic.chord(
+    [@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)],
+    @moonsic.quarter(),
+  )
+  let b = @moonsic.chord(
+    [@moonsic.d(4), @moonsic.f(4), @moonsic.a(4)],
+    @moonsic.quarter(),
+  )
+  let d = @moonsic.chord_distance(a, b)
+  assert_true(d > 0)
+}
+
+///|
+test "bass_from_progression_empty_chord" {
+  // 空 pitches 和弦应默认为 C 音
+  let emptychord = @moonsic.Chord(@moonsic.chord([], @moonsic.whole()))
+  let t = @moonsic.track([emptychord])
+  let bass = @moonsic.bass_from_progression(t, @moonsic.Root, 3)
+  let events = bass.to_note_events()
+  assert_eq(events.length(), 1)
+  // 默认 pitch(C, Natural, 3) = C3 = MIDI 48
+  assert_eq(events[0].midi_note, 48)
+}
+
+///|
+test "accompany_simple_arpeggio" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let tracks = @moonsic.accompany(
+    k,
+    "I vi",
+    @moonsic.SimpleArpeggio,
+    @moonsic.half(),
+  )
+  // SimpleArpeggio = 一条 UpDown 琶音轨
+  assert_eq(tracks.length(), 1)
+  let events = tracks[0].to_note_events()
+  // C major(3音) UpDown=4, Am(3音) UpDown=4 → 共8个事件
+  assert_eq(events.length(), 8)
+}
+
+///|
+test "accompany_bass_and_pad" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let tracks = @moonsic.accompany(k, "I", @moonsic.BassAndPad, @moonsic.whole())
+  // BassAndPad = voiced 和弦轨 + 低音轨
+  assert_eq(tracks.length(), 2)
+  // 两条轨都有内容
+  assert_true(tracks[0].event_count() > 0)
+  assert_true(tracks[1].event_count() > 0)
+}
+
+///|
+test "arpeggio_up_ascending_order" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.Up)
+  let events = arp.to_note_events()
+  assert_eq(events.length(), 3)
+  // Up = 升序: C3(48), E3(52), G3(55)
+  assert_eq(events[0].midi_note, 48)
+  assert_eq(events[1].midi_note, 52)
+  assert_eq(events[2].midi_note, 55)
+}
+
+///|
+test "arpeggio_updown_pattern" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.UpDown)
+  let events = arp.to_note_events()
+  // UpDown on 3 pitches: C3, E3, G3, E3 = 4 events
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 48) // C3
+  assert_eq(events[1].midi_note, 52) // E3
+  assert_eq(events[2].midi_note, 55) // G3
+  assert_eq(events[3].midi_note, 52) // E3 (回来不含两端的重复)
+}
+
+///|
+test "arpeggio_alberti_pattern" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.Alberti)
+  let events = arp.to_note_events()
+  // Alberti on C major: C3(48), G3(55), E3(52), G3(55) = 4 events
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 48) // low
+  assert_eq(events[1].midi_note, 55) // high
+  assert_eq(events[2].midi_note, 52) // middle
+  assert_eq(events[3].midi_note, 55) // high
+}
+
+///|
+test "roman_progression_minor_key" {
+  let k = @moonsic.key(@moonsic.a(3), @moonsic.NaturalMinor)
+  let t = @moonsic.roman_progression(k, "i iv v", @moonsic.half())
+  assert_eq(t.event_count(), 3)
+  // A natural minor: i=Am, iv=Dm, v=Em
+  let events = t.to_note_events()
+  assert_eq(events[0].midi_note, 57) // A3 for i
+  assert_eq(events[3].midi_note, 62) // D4 for iv
+  assert_eq(events[6].midi_note, 64) // E4 for v
+}
+
+///|
+test "accompany_block_chords_output" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let tracks = @moonsic.accompany(
+    k,
+    "I IV",
+    @moonsic.BlockChords,
+    @moonsic.half(),
+  )
+  assert_eq(tracks.length(), 1)
+  let events = tracks[0].to_note_events()
+  // I=C major(3) + IV=F major(3) = 6 events
+  assert_eq(events.length(), 6)
+}
+
+///|
+test "voice_lead_output_contains_chords" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I, @moonsic.IV, @moonsic.V, @moonsic.I],
+    @moonsic.half(),
+  )
+  let voiced = @moonsic.voice_lead(chords)
+  assert_eq(voiced.event_count(), 4)
+  let events = voiced.to_note_events()
+  // 4 chords × 3 notes each = 12 events
+  assert_eq(events.length(), 12)
+}
