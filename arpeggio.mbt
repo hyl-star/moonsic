@@ -14,7 +14,7 @@ pub fn arpeggiate(chords : Track, step_duration : Duration) -> Track {
 }
 
 ///|
-fn arpeggiate_dir(
+pub fn arpeggiate_dir(
   chords : Track,
   step_dur : Duration,
   style : ArpStyle,

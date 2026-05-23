@@ -32,14 +32,15 @@ fn parse_roman_text(text : String) -> Array[RomanNumeral] {
       continue
     }
     if text[i] == 'I' {
-      if i + 1 < len && text[i + 1] == 'I' {
-        if i + 2 < len && text[i + 2] == 'I' {
-          numerals.push(III)
-          i = i + 3
-        } else {
-          numerals.push(II)
-          i = i + 2
-        }
+      if i + 1 < len && text[i + 1] == 'V' {
+        numerals.push(IV)
+        i = i + 2
+      } else if i + 2 < len && text[i + 1] == 'I' && text[i + 2] == 'I' {
+        numerals.push(III)
+        i = i + 3
+      } else if i + 1 < len && text[i + 1] == 'I' {
+        numerals.push(II)
+        i = i + 2
       } else {
         numerals.push(I)
         i = i + 1
@@ -58,28 +59,26 @@ fn parse_roman_text(text : String) -> Array[RomanNumeral] {
     } else if text[i] >= 'a' && text[i] <= 'z' {
       // lowercase: ii, iii, vi, vii
       if text[i] == 'i' {
-        if i + 1 < len && text[i + 1] == 'i' {
-          if i + 2 < len && text[i + 2] == 'i' {
-            numerals.push(III)
-            i = i + 3
-          } else {
-            numerals.push(II)
-            i = i + 2
-          }
+        if i + 1 < len && text[i + 1] == 'v' {
+          numerals.push(IV)
+          i = i + 2
+        } else if i + 2 < len && text[i + 1] == 'i' && text[i + 2] == 'i' {
+          numerals.push(III)
+          i = i + 3
+        } else if i + 1 < len && text[i + 1] == 'i' {
+          numerals.push(II)
+          i = i + 2
         } else {
           numerals.push(I)
           i = i + 1
         }
       } else if text[i] == 'v' {
-        if i + 1 < len && text[i + 1] == 'i' {
-          numerals.push(VI)
-          i = i + 2
-        } else if i + 1 < len &&
-          text[i + 1] == 'i' &&
-          i + 2 < len &&
-          text[i + 2] == 'i' {
+        if i + 2 < len && text[i + 1] == 'i' && text[i + 2] == 'i' {
           numerals.push(VII)
           i = i + 3
+        } else if i + 1 < len && text[i + 1] == 'i' {
+          numerals.push(VI)
+          i = i + 2
         } else {
           numerals.push(V)
           i = i + 1

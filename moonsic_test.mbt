@@ -858,3 +858,252 @@ test "score_str_tempo_time" {
   assert_eq(s.tempo.bpm, 140)
   assert_eq(s.time_signature.numerator, 3)
 }
+
+///|
+test "pitch_midi_boundary" {
+  let p = @moonsic.pitch
+  assert_eq(p(@moonsic.C, @moonsic.Natural, -1).to_midi(), 0)
+  assert_eq(p(@moonsic.G, @moonsic.Natural, 9).to_midi(), 127)
+}
+
+///|
+test "pitch_enharmonic" {
+  let p = @moonsic.pitch
+  assert_eq(
+    p(@moonsic.C, @moonsic.Sharp, 4).to_midi(),
+    p(@moonsic.D, @moonsic.Flat, 4).to_midi(),
+  )
+}
+
+///|
+test "midi_to_pitch_roundtrip_extended" {
+  for i = 0; i < 128; i = i + 1 {
+    let pitch = @moonsic.midi_to_pitch(i)
+    assert_eq(pitch.to_midi(), i)
+  }
+}
+
+///|
+test "duration_dotted_edge" {
+  assert_eq(@moonsic.dotted(@moonsic.dotted(@moonsic.quarter())).beats(), 2.25)
+  assert_eq(@moonsic.dotted(@moonsic.whole()).beats(), 6.0)
+}
+
+///|
+test "chord_empty_pitches" {
+  let c = @moonsic.chord([], @moonsic.quarter())
+  assert_eq(c.pitches.length(), 0)
+}
+
+///|
+test "music_event_transpose_rest" {
+  let evt = @moonsic.r(@moonsic.quarter())
+  let t = evt.transpose(5)
+  assert_eq(t.duration().beats(), 1.0)
+}
+
+///|
+test "track_empty" {
+  let t = @moonsic.empty_track()
+  assert_eq(t.event_count(), 0)
+  assert_eq(t.duration_beats(), 0.0)
+  assert_eq(t.to_note_events().length(), 0)
+}
+
+///|
+test "track_repeat_zero" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let r = t.repeat(0)
+  assert_eq(r.event_count(), 0)
+}
+
+///|
+test "track_metadata_after_concat" {
+  let a = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+    .with_volume(0.5)
+    .with_pan(0.3)
+  let b = @moonsic.melody([@moonsic.n(@moonsic.d(4), @moonsic.quarter())])
+  let c = a.concat(b)
+  assert_eq(c.to_note_events().length(), 2)
+}
+
+///|
+test "score_master_gain_default" {
+  let s = @moonsic.score1(@moonsic.empty_track())
+  assert_true(s.master_gain > 0.0)
+}
+
+///|
+test "score_transpose_preserves_tempo" {
+  let s = @moonsic.score_with(
+    [@moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])],
+    140,
+    @moonsic.four_four(),
+  )
+  let t = s.transpose(2)
+  assert_eq(t.tempo.bpm, 140)
+  assert_eq(t.time_signature.numerator, 4)
+}
+
+///|
+test "score_empty" {
+  let s = @moonsic.score([])
+  assert_eq(s.track_count(), 0)
+  assert_eq(s.duration_beats(), 0.0)
+}
+
+///|
+test "midi_export_drum_channel" {
+  let t = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.c(4), @moonsic.quarter())],
+    9,
+  )
+  let s = @moonsic.score1(t)
+  assert_true(s.to_midi_bytes().length() > 0)
+}
+
+///|
+test "wav_bytes_has_data" {
+  let s = @moonsic.score1(
+    @moonsic.melody([
+      @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+      @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    ]),
+  )
+  assert_true(s.to_wav_bytes().length() > 100)
+}
+
+///|
+test "wav_header_channels_mono" {
+  let s = @moonsic.score1(
+    @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())]),
+  )
+  let wav = s.to_wav_bytes()
+  assert_eq(wav[22], (1).to_byte())
+}
+
+///|
+test "wav_chord_mix" {
+  let s = @moonsic.score1(
+    @moonsic.melody([@moonsic.major(@moonsic.c(4), @moonsic.quarter())]),
+  )
+  assert_true(s.to_wav_bytes().length() > 44)
+}
+
+///|
+test "browser_js_output_shape" {
+  let s = @moonsic.score1(
+    @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())]),
+  )
+  let js = @moonsic.note_events_to_browser_js(s.to_note_events())
+  assert_true(js.length() > 30)
+}
+
+///|
+test "scale_two_octaves" {
+  let s = @moonsic.scale(@moonsic.c(4), @moonsic.Major, 2)
+  assert_eq(s.length(), 14)
+  assert_eq(s[0].to_midi(), 60)
+  assert_eq(s[7].to_midi(), 72)
+}
+
+///|
+test "degree_9th" {
+  let p = @moonsic.degree(@moonsic.c(4), @moonsic.Major, 9)
+  assert_eq(p.to_midi(), 74)
+}
+
+///|
+test "roman_progression_text_parse" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let t = @moonsic.roman_progression(k, "I V vi IV", @moonsic.half())
+  assert_eq(t.event_count(), 4)
+}
+
+///|
+test "chord_distance_same" {
+  let a = @moonsic.chord(
+    [@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)],
+    @moonsic.quarter(),
+  )
+  let b = @moonsic.chord(
+    [@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)],
+    @moonsic.quarter(),
+  )
+  assert_eq(@moonsic.chord_distance(a, b), 0)
+}
+
+///|
+test "bass_root_octave" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let bass = @moonsic.bass_from_progression(chords, @moonsic.Root, 2)
+  assert_eq(bass.to_note_events()[0].midi_note, 36)
+}
+
+///|
+test "bass_root_fifth_duration" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.whole(),
+  )
+  let bass = @moonsic.bass_from_progression(chords, @moonsic.RootFifth, 2)
+  assert_eq(bass.to_note_events().length(), 4)
+}
+
+///|
+test "arpeggio_up_down" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.UpDown)
+  let events = arp.to_note_events()
+  assert_eq(events.length(), 4)
+}
+
+///|
+test "arpeggio_alberti" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.Alberti)
+  let events = arp.to_note_events()
+  assert_eq(events.length(), 4)
+  assert_eq(events[1].midi_note, 55)
+}
+
+///|
+test "accompany_pop_ballad" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let tracks = @moonsic.accompany(
+    k,
+    "I V vi IV",
+    @moonsic.PopBallad,
+    @moonsic.half(),
+  )
+  assert_eq(tracks.length(), 3)
+}
+
+///|
+test "accompany_block_chords" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let tracks = @moonsic.accompany(
+    k,
+    "I vi IV V",
+    @moonsic.BlockChords,
+    @moonsic.half(),
+  )
+  assert_eq(tracks.length(), 1)
+}
