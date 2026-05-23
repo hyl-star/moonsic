@@ -72,6 +72,8 @@ pub fn acoustic_guitar_steel() -> Int
 
 pub fn arpeggiate(Track, Duration) -> Track
 
+pub fn arpeggiate_dir(Track, Duration, ArpStyle) -> Track
+
 pub fn arpeggiate_with_style(Track, Duration, ArpStyle) -> Track
 
 pub fn arrange(Array[Section], Int, TimeSignature) -> Score

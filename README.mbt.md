@@ -1,113 +1,47 @@
 # moonsic
 
-用 MoonBit 写旋律，导出 MIDI，在浏览器播放。
+moonsic is a MoonBit music IR and export library with MIDI, WAV, and browser event output.
 
-## v2 作曲示例
+## Quick Start
 
 ```moonbit nocheck
-// I-V-vi-IV 和弦进行 + 琶音 + 旋律 + 鼓组
-
 ///|
 let chords = progression(c(3), Major, [I, V, VI, IV], half())
 
 ///|
-let arp = instrument(arpeggiate(chords, eighth()), electric_piano_1())
+let lead = melody_str("C4q D4q E4q G4q")
 
 ///|
-let lead = instrument(
-  melody([
-    n(c(4), quarter()),
-    n(d(4), quarter()),
-    n(e(4), quarter()),
-    n(g(4), dotted(quarter())),
-    r(eighth()),
-    n(c(5), half()),
-  ]),
-  violin(),
-)
+let song = score_with([chords, lead], 120, four_four())
 
 ///|
-let drums = basic_beat(4)
+let midi = song.to_midi_bytes()
 
 ///|
-let song = score_with(
-  [arp, lead, drums.tracks[0], drums.tracks[1], drums.tracks[2]],
-  120,
-  four_four(),
-)
-
-///|
-let bytes = song.to_midi_bytes()
+let wav = song.to_wav_bytes()
 ```
 
-## v1.5 最小示例
+## Core Concepts
 
-```moonbit nocheck
-///|
-let lead = melody([
-  n(c(4), quarter()),
-  n(d(4), quarter()),
-  n(e(4), quarter()),
-  n(g(4), dotted(quarter())),
-  r(eighth()),
-  n(c(5), half()),
-])
+- **Pitch** — pitch class + accidental + octave, e.g. `c(4)` = C4 (MIDI 60).
+- **Duration** — `whole()`, `half()`, `quarter()`, `eighth()`, `sixteenth()`, `dotted()`.
+- **MusicEvent** — track element: `Note`, `Rest`, or `Chord`.
+- **Track** — ordered sequence of events with channel, instrument, volume, pan, mute.
+- **Score** — tempo + time signature + multiple tracks.
+- **NoteEvent** — runtime event with absolute start time, duration, MIDI note, velocity, channel.
 
-///|
-let harmony = melody([major(c(3), half()), minor(a(3), half())])
+Pipeline:
 
-///|
-let song = score_with([lead, harmony], 120, four_four())
-
-///|
-let bytes = song.to_midi_bytes()
-// bytes 可写入 .mid 文件
+```text
+API / text notation -> Score -> NoteEvent -> MIDI / WAV / browser events
 ```
 
-v1 风格的完整构造器仍然可用，但推荐用 v1.5 快捷 API。
+## Compose With MoonBit API
 
-## 浏览器播放
+### Pitch shortcuts
 
-```bash
-moon run cmd/main | Out-File -Encoding utf8 web/demo-events.js  # 生成数据（PowerShell 必须指定 utf8）
-py -m http.server 8000 -d web            # 启服务器
-# 打开 http://localhost:8000，点击 Play
-```
-
-demo 优先使用 moonsic 生成的数据，无数据时回退到硬编码旋律。v4 支持 Loop 循环播放、ADSR 合成音色、鼓组合成。
-
-## v5 Mixer
-
-```moonbit nocheck
-///|
-let lead = melody_str("C4q D4q E4q G4q").with_volume(0.9).with_pan(0.1) // 偏右
-
-///|
-let song = score_with([lead, bass, drums], 120, four_four())
-// Score 自带 master_gain=0.85，WAV 自动 normalize
-```
-
-## WAV 导出
-
-```moonbit nocheck
-///|
-let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM + normalize + master_gain
-```
-
-## 命令行
-
-```bash
-moon run cmd/main    # 生成浏览器 demo 数据
-moon test            # 106 tests
-moon fmt             # 格式化
-moon info            # 更新接口文件
-```
-
-## API 速览
-
-### 音高快捷构造
-| 函数 | 结果 | MIDI |
-|------|------|------|
+| Function | Result | MIDI |
+|----------|--------|------|
 | `c(4)` | C4 | 60 |
 | `d(4)` | D4 | 62 |
 | `e(4)` | E4 | 64 |
@@ -116,55 +50,195 @@ moon info            # 更新接口文件
 | `a(4)` | A4 | 69 |
 | `b(4)` | B4 | 71 |
 | `cs(4)` | C#4 | 61 |
+| `ds(4)` | D#4 | 63 |
+| `fs(4)` | F#4 | 66 |
+| `gs(4)` | G#4 | 68 |
 | `db(4)` | Db4 | 61 |
 | `eb(4)` | Eb4 | 63 |
+| `gb(4)` | Gb4 | 66 |
+| `ab(4)` | Ab4 | 68 |
 | `bb(4)` | Bb4 | 70 |
-| `pitch(C, Natural, 4)` | 完整构造器 | — |
-| `natural_pitch(C, 4)` | 自然音高 | 60 |
 
-### 时值
-| 函数 | 拍数 |
-|------|------|
+### Duration
+
+| Function | Beats |
+|----------|-------|
 | `whole()` | 4.0 |
 | `half()` | 2.0 |
 | `quarter()` | 1.0 |
 | `eighth()` | 0.5 |
 | `sixteenth()` | 0.25 |
 | `dotted(quarter())` | 1.5 |
-| `dotted(half())` | 3.0 |
 
-### 事件
-| 函数 | 说明 |
-|------|------|
-| `n(c(4), quarter())` | 快捷音符 |
-| `nv(c(4), quarter(), 64)` | 指定力度 |
-| `r(half())` | 快捷休止 |
-| `major(c(3), half())` | 大三和弦 C E G |
-| `minor(a(3), half())` | 小三和弦 A C E |
-| `ch([c(4),e(4),g(4)], quarter())` | 自定义和弦 |
+### Events
 
-### 轨道与乐谱
-| 函数 | 说明 |
-|------|------|
-| `melody([...])` | 快捷轨道 |
-| `score1(track)` | 单轨道乐谱 (120 BPM, 4/4) |
-| `score_with([tracks], 120, four_four())` | 指定速度拍号 |
+| Function | Description |
+|----------|-------------|
+| `n(c(4), quarter())` | Note with default velocity 100 |
+| `nv(c(4), quarter(), 64)` | Note with explicit velocity |
+| `r(half())` | Rest |
+| `major(c(3), half())` | Major triad C E G |
+| `minor(a(3), half())` | Minor triad A C E |
+| `dim(b(3), half())` | Diminished triad B D F |
+| `aug(c(4), half())` | Augmented triad C E G# |
+| `dom7(g(3), half())` | Dominant 7th G B D F |
+| `maj7(c(4), half())` | Major 7th C E G B |
+| `min7(a(3), half())` | Minor 7th A C E G |
+| `ch([c(4),e(4),g(4)], quarter())` | Custom chord |
 
-## 项目结构
+### Track and Score
+
+| Function | Description |
+|----------|-------------|
+| `melody([...])` | Create track from events |
+| `melody_with_channel([...], ch)` | Track with channel |
+| `track_with_channel([...], ch)` | Explicit channel track |
+| `score1(track)` | Single-track score (120 BPM, 4/4) |
+| `score_with([tracks], bpm, time_sig)` | Multi-track score |
+| `empty_track()` | Empty track |
+
+### Music Operations
+
+| Function | Description |
+|----------|-------------|
+| `track.transpose(n)` | Transpose track by n semitones |
+| `track.stretch(factor)` | Stretch durations |
+| `track.repeat(count)` | Repeat track N times |
+| `track.concat(other)` | Concatenate two tracks |
+| `track.reverse()` | Reverse event order |
+| `track.map_velocity(f)` | Map velocity function over all events |
+| `track.up_octave()` | Raise one octave |
+| `track.down_octave()` | Lower one octave |
+| `track.duration_beats()` | Total beats |
+| `track.with_volume(v)` | Set track volume (0.0..) |
+| `track.with_pan(p)` | Set track pan (-1.0..1.0) |
+
+### Theory
+
+| Function | Description |
+|----------|-------------|
+| `scale(root, kind, octaves)` | Build scale pitches |
+| `degree(root, kind, n)` | Nth scale degree |
+| `key(tonic, kind)` | Key with spelling table |
+| `progression(root, kind, [I, IV, V], dur)` | Chord progression |
+| `roman_progression(key, "I V vi IV", dur)` | Text-based progression |
+| `voice_lead(chords)` | Apply voice leading |
+| `bass_from_progression(chords, style, octave)` | Generate bass line |
+| `arpeggiate(chords, step_dur)` | Arpeggiate chords |
+| `arpeggiate_dir(chords, step_dur, style)` | Arpeggiate with style |
+
+### Instrument and Drums
+
+| Function | Description |
+|----------|-------------|
+| `instrument(track, program)` | Set MIDI instrument |
+| `acoustic_grand_piano()` | Program 0 |
+| `violin()` | Program 40 |
+| `drum_note(note, dur, vel)` | Drum event |
+| `kick(dur)` | Kick drum (36) |
+| `snare(dur)` | Snare drum (38) |
+| `hat(dur)` | Closed hat (42) |
+| `basic_beat(bars)` | 3-track drum pattern |
+
+## Text Notation
+
+```moonbit nocheck
+///|
+let t = melody_str("C4q D4q [E4 G4]h Rq D4q:64 x2")
+
+///|
+let s = score_str("tempo 140\ntime 3/4\nC4q D4q E4q")
+```
+
+Format: `[Note][Accidental][Octave][Duration][:Velocity]`.  
+Chord format: `[Pitch1 Pitch2 ...]Duration`.  
+Repeat suffix: `xN`. Line comments: `# comment`.
+
+## Export MIDI
+
+```moonbit nocheck
+///|
+let bytes = song.to_midi_bytes() // default PPQ 480
+
+///|
+let bytes = song.to_midi_bytes_with_ppq(960)
+```
+
+Exports multi-track MIDI with tempo meta event, time signature, instrument program change, and NoteOn/NoteOff ordering. Produces Standard MIDI File (SMF) format 1. Can be saved to `.mid` and opened in DAWs or notation software.
+
+## Export WAV
+
+```moonbit nocheck
+///|
+let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM
+```
+
+v10 uses simple built-in sine-wave synthesis with ADSR envelope, normalize, and master gain. Future `moondsp` backend integration is on the roadmap.
+
+## Browser Playback
+
+```bash
+moon run cmd/main | Out-File -Encoding utf8 web/demo-events.js  # Generate data (PowerShell requires utf8)
+py -m http.server 8000 -d web              # Start server
+# Open http://localhost:8000, click Play
+```
+
+The demo loads moonsic-generated event data or falls back to a hardcoded melody. Supports loop playback, ADSR synthesis, and drum synthesis.
+
+## API Stability
+
+**Stable API** (intended to remain backward-compatible through v10.x):
+- Pitch and duration constructors (`c(4)`, `quarter()`, etc.)
+- Event constructors (`n()`, `nv()`, `r()`, `ch()`, `major()`, `minor()`, etc.)
+- Track/Score builders (`melody()`, `score1()`, `score_with()`, `track()`)
+- Music operations (`transpose`, `stretch`, `repeat`, `concat`, `reverse`, `map_velocity`)
+- Render/export (`to_midi_bytes`, `to_wav_bytes`, `note_events_to_browser_js`)
+- Core types (`Pitch`, `Duration`, `Note`, `Chord`, `Rest`, `MusicEvent`, `Track`, `Score`, `NoteEvent`)
+
+**Experimental API** (evolving, may change in minor versions):
+- `melody_str` / `score_str` text parser
+- `roman_progression` / `accompany` / `voice_lead`
+- Bass and arpeggio generators (`bass_from_progression`, `arpeggiate_dir`)
+- Style enums (`BassStyle`, `ArpStyle`, `AccompanimentStyle`)
+
+## Project Structure
 
 ```
-core.mbt       — 核心音乐模型（~650 行）
-runtime.mbt    — 事件运行时 + 浏览器数据导出（~150 行）
-midi.mbt       — 频率转换 + MIDI 导出 + 校验（~230 行）
-helpers.mbt    — v1.5 作曲快捷函数（~190 行）
-theory.mbt     — 音程/音阶/和弦品质/进行（~230 行）
-patterns.mbt   — v2 模式变换（~155 行）
-instruments.mbt— v2 MIDI 乐器（~50 行）
-arpeggio.mbt   — v2 琶音（~30 行）
-drums.mbt      — v2 鼓组（~80 行）
-key.mbt        — v3 调性与拼写（~90 行）
-structure.mbt  — v3 Section + arrange（~165 行）
-wav.mbt        — v4 WAV/PCM 导出（~140 行）
-web/           — 浏览器播放引擎（scheduler + ADSR + loop）
-cmd/main/      — CLI（生成浏览器 demo 数据）
+core.mbt        — Core music model (~750 lines): Pitch, Duration, Note, Chord, Rest, MusicEvent, Track, Score
+runtime.mbt     — Event runtime (~140 lines): NoteEvent, track/song flattening, browser JS export
+midi.mbt        — MIDI export (~230 lines): frequency conversion, validation, SMF generation
+helpers.mbt     — Composition shortcuts (~190 lines): pitch/duration/event builders, text parser
+theory.mbt      — Music theory (~230 lines): intervals, scales, chord qualities, chord progression
+patterns.mbt    — Track transforms (~155 lines): concat, reverse, stretch, map_velocity, octave
+instruments.mbt — GM instrument presets (~50 lines)
+arpeggio.mbt    — Arpeggio generator (~70 lines)
+bass.mbt        — Bass line generator (~70 lines)
+drums.mbt       — Drum constants and basic beat (~80 lines)
+harmony.mbt     — Roman numeral parser + voice leading (~180 lines)
+key.mbt         — Key-aware pitch spelling (~90 lines)
+structure.mbt   — Section, arrange, layer, pad_to (~150 lines)
+wav.mbt         — WAV/PCM export (~150 lines)
+accompany.mbt   — Multi-track accompaniment templates (~90 lines)
+web/            — Browser playback engine (scheduler + ADSR + loop)
+cmd/main/       — CLI entry point (generates browser demo data)
 ```
+
+## Development Commands
+
+```bash
+moon test              # Run tests (127 tests)
+moon check             # Type check
+moon info              # Update pkg.generated.mbti
+moon fmt               # Format code
+moon run cmd/main      # Generate browser demo data
+```
+
+After `moon info`, review `pkg.generated.mbti` diffs to confirm API changes are intentional.
+
+## Roadmap
+
+- **v11** — DSL compiler, text-to-Score pipeline
+- **v12** — `moondsp` WAV backend (replacing built-in synthesis)
+- **v13** — Adaptive audio, real-time scheduling
+
+Prior version summaries are maintained in `todo/` design documents.

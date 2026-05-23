@@ -1107,3 +1107,250 @@ test "accompany_block_chords" {
   )
   assert_eq(tracks.length(), 1)
 }
+
+// --- v10 补充测试 ---
+
+///|
+test "pentatonic_major_scale" {
+  let s = @moonsic.scale(@moonsic.c(4), @moonsic.MajorPentatonic, 1)
+  assert_eq(s.length(), 5)
+  // C D E G A (C=60, D=62, E=64, G=67, A=69)
+  assert_eq(s[0].to_midi(), 60)
+  assert_eq(s[1].to_midi(), 62)
+  assert_eq(s[2].to_midi(), 64)
+  assert_eq(s[3].to_midi(), 67)
+  assert_eq(s[4].to_midi(), 69)
+}
+
+///|
+test "pentatonic_minor_scale" {
+  let s = @moonsic.scale(@moonsic.c(4), @moonsic.MinorPentatonic, 1)
+  assert_eq(s.length(), 5)
+  // C Eb F G Bb (C=60, Eb=63, F=65, G=67, Bb=70)
+  assert_eq(s[0].to_midi(), 60)
+  assert_eq(s[1].to_midi(), 63)
+  assert_eq(s[2].to_midi(), 65)
+  assert_eq(s[3].to_midi(), 67)
+  assert_eq(s[4].to_midi(), 70)
+}
+
+///|
+test "voice_leading_preserves_event_count" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I, @moonsic.IV, @moonsic.V],
+    @moonsic.half(),
+  )
+  let voiced = @moonsic.voice_lead(chords)
+  assert_eq(voiced.event_count(), chords.event_count())
+}
+
+///|
+test "arpeggio_down" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let arp = @moonsic.arpeggiate_dir(chords, @moonsic.eighth(), @moonsic.Down)
+  let events = arp.to_note_events()
+  assert_eq(events.length(), 3)
+  // Down should give G3(55), E3(52), C3(48)
+  assert_eq(events[0].midi_note, 55)
+  assert_eq(events[1].midi_note, 52)
+  assert_eq(events[2].midi_note, 48)
+}
+
+///|
+test "bass_octave_style" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.whole(),
+  )
+  let bass = @moonsic.bass_from_progression(chords, @moonsic.Octave, 2)
+  let events = bass.to_note_events()
+  // octave alternates C2(36) and C3(48) on each beat
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 36)
+  assert_eq(events[1].midi_note, 48)
+}
+
+///|
+test "bass_walking_style" {
+  let chords = @moonsic.progression(
+    @moonsic.c(3),
+    @moonsic.Major,
+    [@moonsic.I],
+    @moonsic.half(),
+  )
+  let bass = @moonsic.bass_from_progression(chords, @moonsic.Walking, 2)
+  let events = bass.to_note_events()
+  assert_true(events.length() > 0)
+  // walking uses eigth notes (0.5 beat each), total 2 beats = 4 events
+  assert_eq(events.length(), 4)
+}
+
+///|
+test "aug_chord" {
+  let evt = @moonsic.aug(@moonsic.c(4), @moonsic.half())
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  // C aug = C(60) E(64) G#(68)
+  assert_eq(events.length(), 3)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[1].midi_note, 64)
+  assert_eq(events[2].midi_note, 68)
+}
+
+///|
+test "maj7_chord" {
+  let evt = @moonsic.maj7(@moonsic.c(4), @moonsic.half())
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  // Cmaj7 = C(60) E(64) G(67) B(71)
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 60)
+  assert_eq(events[1].midi_note, 64)
+  assert_eq(events[2].midi_note, 67)
+  assert_eq(events[3].midi_note, 71)
+}
+
+///|
+test "min7_chord" {
+  let evt = @moonsic.min7(@moonsic.a(3), @moonsic.half())
+  let track = @moonsic.melody([evt])
+  let events = track.to_note_events()
+  // Am7 = A(57) C(60) E(64) G(67)
+  assert_eq(events.length(), 4)
+  assert_eq(events[0].midi_note, 57)
+  assert_eq(events[1].midi_note, 60)
+  assert_eq(events[2].midi_note, 64)
+  assert_eq(events[3].midi_note, 67)
+}
+
+///|
+test "chord_quality_intervals_builtin" {
+  let major_int = @moonsic.MajorTriad.intervals()
+  assert_eq(major_int.length(), 3)
+  assert_eq(major_int[0], 0)
+  assert_eq(major_int[1], 4)
+  assert_eq(major_int[2], 7)
+  let dim_int = @moonsic.DiminishedTriad.intervals()
+  assert_eq(dim_int[0], 0)
+  assert_eq(dim_int[1], 3)
+  assert_eq(dim_int[2], 6)
+  let aug_int = @moonsic.AugmentedTriad.intervals()
+  assert_eq(aug_int[0], 0)
+  assert_eq(aug_int[1], 4)
+  assert_eq(aug_int[2], 8)
+  let dom7_int = @moonsic.DominantSeventh.intervals()
+  assert_eq(dom7_int.length(), 4)
+  let maj7_int = @moonsic.MajorSeventh.intervals()
+  assert_eq(maj7_int[3], 11)
+  let min7_int = @moonsic.MinorSeventh.intervals()
+  assert_eq(min7_int[3], 10)
+}
+
+///|
+test "browser_js_starts_with_global_var" {
+  let s = @moonsic.score1(
+    @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())]),
+  )
+  let js = @moonsic.note_events_to_browser_js(s.to_note_events())
+  assert_true(js.contains("window.MOONSIC_DEMO_EVENTS"))
+}
+
+///|
+test "browser_js_contains_note_fields" {
+  let s = @moonsic.score1(
+    @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())]),
+  )
+  let js = @moonsic.note_events_to_browser_js(s.to_note_events())
+  assert_true(js.contains("start"))
+  assert_true(js.contains("duration"))
+}
+
+///|
+test "section_create" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.section("verse", [t])
+  assert_eq(s.name, "verse")
+  assert_eq(s.tracks.length(), 1)
+  assert_eq(s.duration_beats(), 1.0)
+}
+
+///|
+test "track_append_event" {
+  let t = @moonsic.empty_track()
+  let t2 = t.append(@moonsic.n(@moonsic.c(4), @moonsic.quarter()))
+  let t3 = t2.append(@moonsic.n(@moonsic.d(4), @moonsic.quarter()))
+  assert_eq(t3.event_count(), 2)
+  assert_eq(t3.duration_beats(), 2.0)
+}
+
+///|
+test "track_pad_to" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let padded = t.pad_to(4.0)
+  assert_eq(padded.event_count(), 3) // 1 original + 1 half + 1 quarter rest = 3 events
+  assert_true(padded.duration_beats() >= 4.0)
+}
+
+///|
+test "track_with_mute" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let muted = t.with_mute(true)
+  assert_true(muted.mute)
+  assert_true(muted.event_count() == t.event_count())
+}
+
+///|
+test "chord_with_velocity_explicit" {
+  let c = @moonsic.chord_with_velocity(
+    [@moonsic.c(4), @moonsic.e(4), @moonsic.g(4)],
+    @moonsic.quarter(),
+    64,
+  )
+  assert_eq(c.velocity, 64)
+  assert_eq(c.pitches.length(), 3)
+}
+
+///|
+test "pitch_is_valid_midi_boundary" {
+  let p = @moonsic.pitch
+  assert_true(p(@moonsic.B, @moonsic.Natural, 3).is_valid_midi()) // 59, valid
+  assert_true(p(@moonsic.B, @moonsic.Natural, 3).is_valid_midi())
+  let high = p(@moonsic.G, @moonsic.Natural, 9) // 127, valid
+  assert_true(high.is_valid_midi())
+  let too_low = p(@moonsic.B, @moonsic.Flat, -2) // invalid
+  assert_false(too_low.is_valid_midi())
+  let too_high = p(@moonsic.G, @moonsic.Sharp, 9) // 128, invalid
+  assert_false(too_high.is_valid_midi())
+}
+
+///|
+test "duration_to_string" {
+  assert_eq(@moonsic.Quarter.to_string(), "quarter")
+  assert_eq(@moonsic.Half.to_string(), "half")
+  assert_eq(@moonsic.Sixteenth.to_string(), "sixteenth")
+  assert_true(@moonsic.dotted(@moonsic.Half).to_string().contains("dotted"))
+}
+
+///|
+test "bass_rest_on_non_chord_event" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(3), @moonsic.quarter())])
+  let bass = @moonsic.bass_from_progression(t, @moonsic.Root, 2)
+  let events = bass.to_note_events()
+  assert_eq(events.length(), 0) // Note events produce rests, no note output
+}
+
+///|
+test "instrument_track_program_preserved" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.instrument(t, @moonsic.violin())
+  assert_eq(t2.program, 40)
+}
