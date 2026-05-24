@@ -2677,3 +2677,266 @@ test "rhythm_duration_to_fraction_triplet_eighth" {
   assert_eq(frac.numerator, 1)
   assert_eq(frac.denominator, 3)
 }
+
+// ============================================================
+// Position 互转测试
+// ============================================================
+
+///|
+test "position_to_ticks_bar1_beat0_4_4" {
+  let pos = @moonsic.BarPosition::{
+    bar: 1,
+    beat: @moonsic.rational(0, 1).unwrap(),
+    offset: @moonsic.rational(0, 1).unwrap(),
+  }
+  let sig = @moonsic.time_signature(4, 4)
+  let ticks = @moonsic.position_to_ticks(pos, sig, 480).unwrap()
+  assert_eq(ticks, 1920)
+}
+
+///|
+test "position_to_ticks_bar0_beat2_4_4" {
+  let pos = @moonsic.BarPosition::{
+    bar: 0,
+    beat: @moonsic.rational(2, 1).unwrap(),
+    offset: @moonsic.rational(0, 1).unwrap(),
+  }
+  let sig = @moonsic.time_signature(4, 4)
+  let ticks = @moonsic.position_to_ticks(pos, sig, 480).unwrap()
+  assert_eq(ticks, 960)
+}
+
+///|
+test "ticks_to_position_1920_4_4" {
+  let sig = @moonsic.time_signature(4, 4)
+  let pos = @moonsic.ticks_to_position(1920, sig, 480).unwrap()
+  assert_eq(pos.bar, 1)
+  assert_eq(pos.beat.numerator, 0)
+  assert_eq(pos.offset.numerator, 0)
+}
+
+///|
+test "ticks_to_position_960_4_4" {
+  let sig = @moonsic.time_signature(4, 4)
+  let pos = @moonsic.ticks_to_position(960, sig, 480).unwrap()
+  assert_eq(pos.bar, 0)
+  assert_eq(pos.beat.numerator, 2)
+  assert_eq(pos.offset.numerator, 0)
+}
+
+///|
+test "position_to_ticks_invalid_sig_err" {
+  let pos = @moonsic.BarPosition::{
+    bar: 0,
+    beat: @moonsic.rational(0, 1).unwrap(),
+    offset: @moonsic.rational(0, 1).unwrap(),
+  }
+  // 5/3 是非法拍号
+  let sig = @moonsic.time_signature(5, 3)
+  let r = @moonsic.position_to_ticks(pos, sig, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+test "ticks_to_position_negative_tick_err" {
+  let sig = @moonsic.time_signature(4, 4)
+  let r = @moonsic.ticks_to_position(-1, sig, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+test "position_to_ticks_invalid_ppq_err" {
+  let pos = @moonsic.BarPosition::{
+    bar: 0,
+    beat: @moonsic.rational(0, 1).unwrap(),
+    offset: @moonsic.rational(0, 1).unwrap(),
+  }
+  let sig = @moonsic.time_signature(4, 4)
+  let r = @moonsic.position_to_ticks(pos, sig, 0)
+  assert_true(r is Err(_))
+}
+
+// ============================================================
+// TimeMap 测试
+// ============================================================
+
+///|
+test "make_time_map_ok" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  assert_eq(tm.ppq, 480)
+  assert_eq(tm.sig_num, 4)
+  assert_eq(tm.sig_den, 4)
+  assert_true(tm.tempo_bpm > 119.9 && tm.tempo_bpm < 120.1)
+}
+
+///|
+test "make_time_map_invalid_ppq_err" {
+  let sig = @moonsic.time_signature(4, 4)
+  let r = @moonsic.make_time_map(0, sig, 120.0)
+  assert_true(r is Err(_))
+}
+
+///|
+test "make_time_map_invalid_sig_err" {
+  let sig = @moonsic.time_signature(5, 3)
+  let r = @moonsic.make_time_map(480, sig, 120.0)
+  assert_true(r is Err(_))
+}
+
+///|
+test "make_time_map_invalid_bpm_err" {
+  let sig = @moonsic.time_signature(4, 4)
+  let r = @moonsic.make_time_map(480, sig, 0.0)
+  assert_true(r is Err(_))
+}
+
+///|
+test "tempo_at_tick_before_change_initial" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let bpm = @moonsic.tempo_at_tick(tm, 0)
+  assert_true(bpm > 119.9 && bpm < 120.1)
+}
+
+///|
+test "tempo_at_tick_at_change_value" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let ch = @moonsic.TempoChange::{ at_tick: 480, tempo_bpm: 140.0 }
+  let tm2 = @moonsic.add_tempo_change(tm, ch)
+  // Before change (tick 479): still 120
+  let bpm_before = @moonsic.tempo_at_tick(tm2, 479)
+  assert_true(bpm_before > 119.9 && bpm_before < 120.1)
+  // At change (tick 480): becomes 140
+  let bpm_at = @moonsic.tempo_at_tick(tm2, 480)
+  assert_true(bpm_at > 139.9 && bpm_at < 140.1)
+  // After change (tick 960): stays 140
+  let bpm_after = @moonsic.tempo_at_tick(tm2, 960)
+  assert_true(bpm_after > 139.9 && bpm_after < 140.1)
+}
+
+///|
+test "signature_at_bar_default_sig" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let (num, den) = @moonsic.signature_at_bar(tm, 0)
+  assert_eq(num, 4)
+  assert_eq(den, 4)
+}
+
+///|
+test "add_tempo_change_returns_timemap" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let ch = @moonsic.TempoChange::{ at_tick: 960, tempo_bpm: 100.0 }
+  let tm2 = @moonsic.add_tempo_change(tm, ch)
+  assert_eq(tm2.tempo_changes.length(), 1)
+  assert_eq(tm2.tempo_changes[0].at_tick, 960)
+}
+
+///|
+test "add_sig_change_updates_signature_at_bar" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let ch = @moonsic.TimeSigChange::{ at_bar: 4, sig_num: 3, sig_den: 4 }
+  let tm2 = @moonsic.add_sig_change(tm, ch)
+  // Before bar 4: still 4/4
+  let (n1, d1) = @moonsic.signature_at_bar(tm2, 3)
+  assert_eq(n1, 4)
+  assert_eq(d1, 4)
+  // At bar 4: becomes 3/4
+  let (n2, d2) = @moonsic.signature_at_bar(tm2, 4)
+  assert_eq(n2, 3)
+  assert_eq(d2, 4)
+}
+
+///|
+test "ticks_to_seconds_timemap_basic" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  // 480 ticks at 120 bpm ppq=480 → 0.5 seconds
+  let sec = @moonsic.ticks_to_seconds_timemap(480, tm).unwrap()
+  assert_true(sec > 0.49 && sec < 0.51)
+}
+
+///|
+test "ticks_to_seconds_timemap_multi_tempo" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let ch = @moonsic.TempoChange::{ at_tick: 480, tempo_bpm: 60.0 }
+  let tm2 = @moonsic.add_tempo_change(tm, ch)
+  // Segment 1: 0..480 at 120 bpm → 0.5s
+  // Segment 2: 480..960 at 60 bpm → 1.0s
+  // Total: 1.5s
+  let sec = @moonsic.ticks_to_seconds_timemap(960, tm2).unwrap()
+  assert_true(sec > 1.49 && sec < 1.51)
+}
+
+///|
+test "ticks_to_seconds_timemap_negative_target_err" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let r = @moonsic.ticks_to_seconds_timemap(-1, tm)
+  assert_true(r is Err(_))
+}
+
+// ============================================================
+// FFI JSON 测试
+// ============================================================
+
+///|
+test "ffi_parse_time_sig_4_4" {
+  let json = @moonsic.ffi_parse_time_sig("4/4")
+  assert_true(json.contains("4"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_duration_ticks_q_480" {
+  let json = @moonsic.ffi_duration_ticks("q", 480)
+  assert_true(json.contains("480"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_parse_tempo_120bpm" {
+  let json = @moonsic.ffi_parse_tempo("120bpm")
+  assert_true(json.contains("120"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_parse_time_sig_5_3_error" {
+  let json = @moonsic.ffi_parse_time_sig("5/3")
+  assert_true(json.contains("error"))
+  assert_true(json.contains("false"))
+}
+
+///|
+test "ffi_bar_length_4_4_480" {
+  let json = @moonsic.ffi_bar_length("4/4", 480)
+  assert_true(json.contains("1920"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_ticks_to_seconds_480_120_480" {
+  let json = @moonsic.ffi_ticks_to_seconds(480, 120.0, 480)
+  assert_true(json.contains("0.5"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_duration_ticks_invalid_err" {
+  let json = @moonsic.ffi_duration_ticks("x", 480)
+  assert_true(json.contains("error"))
+  assert_true(json.contains("false"))
+}
+
+///|
+test "ffi_parse_tempo_invalid_err" {
+  let json = @moonsic.ffi_parse_tempo("-120bpm")
+  assert_true(json.contains("error"))
+  assert_true(json.contains("false"))
+}
