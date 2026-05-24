@@ -251,7 +251,7 @@ fn split_whitespace(s : String) -> Array[String] {
 /// 解析单个节奏 token（如 "q"、"q."、"R8"、"Rq."）
 /// 返回 (duration, is_rest)
 fn parse_rhythm_token(token : String) -> Result[(Duration, Bool), MotifError] {
-  letis_rest = false
+  let is_rest = false
   let dur_str = if token.length() > 1 && token[0] == 'R' {
     is_rest = true
     token[1:token.length()].to_owned()
@@ -466,14 +466,14 @@ pub fn transform_motif_checked(
   }
   match transform {
     TransposeDegrees(n) => {
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for e in motif.events {
         new_events.push({ degree: e.degree + n, cell: e.cell })
       }
       Ok({ events: new_events, total_beats: motif.total_beats })
     }
     InvertAround(axis) => {
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for e in motif.events {
         let new_degree = 2 * axis - e.degree
         new_events.push({ degree: new_degree, cell: e.cell })
@@ -481,7 +481,7 @@ pub fn transform_motif_checked(
       Ok({ events: new_events, total_beats: motif.total_beats })
     }
     Retrograde => {
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       let n = motif.events.length()
       for i = 0; i < n; i = i + 1 {
         new_events.push(motif.events[n - 1 - i])
@@ -489,7 +489,7 @@ pub fn transform_motif_checked(
       Ok({ events: new_events, total_beats: motif.total_beats })
     }
     Augment => {
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for e in motif.events {
         let new_dur = e.cell.duration.stretch(2.0)
         let new_cell = {
@@ -504,7 +504,7 @@ pub fn transform_motif_checked(
       Ok({ events: new_events, total_beats: total })
     }
     Diminish => {
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for e in motif.events {
         let new_dur = e.cell.duration.stretch(0.5)
         let new_cell = {
@@ -525,7 +525,7 @@ pub fn transform_motif_checked(
       }
       // 处理负数：归一化到 0..len-1
       let shift = (n % len + len) % len
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for i = 0; i < len; i = i + 1 {
         let src_idx = (i + shift) % len
         new_events.push(motif.events[src_idx])
@@ -537,7 +537,7 @@ pub fn transform_motif_checked(
       if n <= 0 {
         return Err(InvalidRepeatCount("重复次数必须 > 0，当前：\{n}"))
       }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for r = 0; r < n; r = r + 1 {
         for e in motif.events {
           new_events.push(e)
@@ -554,7 +554,7 @@ pub fn transform_motif_checked(
           ),
         )
       }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for i = 0; i < motif.events.length(); i = i + 1 {
         new_events.push({ degree: degrees[i], cell: motif.events[i].cell })
       }
@@ -568,7 +568,7 @@ pub fn transform_motif_checked(
           ),
         )
       }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for i = 0; i < motif.events.length(); i = i + 1 {
         new_events.push({
           degree: motif.events[i].degree,
@@ -632,8 +632,8 @@ pub fn repeat_motif_checked(
   if motif.events.length() == 0 {
     return Err(InvalidMotif("动机事件为空"))
   }
-  letmotifs : Array[Motif] = []
-  letall_events : Array[MotifEvent] = []
+  let motifs : Array[Motif] = []
+  let all_events : Array[MotifEvent] = []
   for i = 0; i < count; i = i + 1 {
     motifs.push(motif)
     for e in motif.events {
@@ -666,8 +666,8 @@ pub fn join_patterns_checked(
   }
   match mode {
     Sequential => {
-      letall_motifs : Array[Motif] = []
-      letall_events : Array[MotifEvent] = []
+      let all_motifs : Array[Motif] = []
+      let all_events : Array[MotifEvent] = []
       for p in patterns {
         for m in p.motifs {
           all_motifs.push(m)
@@ -681,8 +681,8 @@ pub fn join_patterns_checked(
     }
     Overlay => {
       // 同时开始，合并所有 motifs 和 events，总拍数取最大值
-      letall_motifs : Array[Motif] = []
-      letall_events : Array[MotifEvent] = []
+      let all_motifs : Array[Motif] = []
+      let all_events : Array[MotifEvent] = []
       letmax_beats = 0.0
       for p in patterns {
         for m in p.motifs {
@@ -704,8 +704,8 @@ pub fn join_patterns_checked(
         )
       }
       // 顺序拼接，保留标记
-      letall_motifs : Array[Motif] = []
-      letall_events : Array[MotifEvent] = []
+      let all_motifs : Array[Motif] = []
+      let all_events : Array[MotifEvent] = []
       for p in patterns {
         for m in p.motifs {
           all_motifs.push(m)
@@ -718,8 +718,8 @@ pub fn join_patterns_checked(
       Ok({ motifs: all_motifs, events: all_events, total_beats: total })
     }
     Loop => {
-      letall_motifs : Array[Motif] = []
-      letall_events : Array[MotifEvent] = []
+      let all_motifs : Array[Motif] = []
+      let all_events : Array[MotifEvent] = []
       for p in patterns {
         for m in p.motifs {
           all_motifs.push(m)
@@ -733,7 +733,7 @@ pub fn join_patterns_checked(
     }
     Interleave => {
       // 收集所有 motifs
-      letall_motifs_list : Array[Motif] = []
+      let all_motifs_list : Array[Motif] = []
       for p in patterns {
         for m in p.motifs {
           all_motifs_list.push(m)
@@ -750,7 +750,7 @@ pub fn join_patterns_checked(
         }
       }
       // 按列交织
-      letinterleaved_events : Array[MotifEvent] = []
+      let interleaved_events : Array[MotifEvent] = []
       for i = 0; i < max_len; i = i + 1 {
         for m in all_motifs_list {
           if i < m.events.length() {
@@ -808,7 +808,7 @@ pub fn fit_pattern_to_bars_checked(
       let rest_dur = duration_from_beats(diff)
       let rest_cell = default_cell(rest_dur, true)
       let rest_event = { degree: 0, cell: rest_cell }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for e in pattern.events {
         new_events.push(e)
       }
@@ -823,7 +823,7 @@ pub fn fit_pattern_to_bars_checked(
       if current_beats <= target_beats + 0.0001 {
         return Ok(pattern)
       }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       letacc = 0.0
       for e in pattern.events {
         let beat = e.cell.duration.beats()
@@ -844,7 +844,7 @@ pub fn fit_pattern_to_bars_checked(
           PatternDoesNotFit("当前 pattern 拍数为 0，无法 RepeatToFit"),
         )
       }
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       letacc = 0.0
       while acc + 0.0001 < target_beats {
         for e in pattern.events {
@@ -883,7 +883,7 @@ pub fn fit_pattern_to_bars_checked(
         pattern.events[n - 1].cell.duration.beats()
       let needed = target_beats - prev_beats
       let last_dur = duration_from_beats(needed)
-      letnew_events : Array[MotifEvent] = []
+      let new_events : Array[MotifEvent] = []
       for i = 0; i < n - 1; i = i + 1 {
         new_events.push(pattern.events[i])
       }
@@ -975,18 +975,18 @@ pub fn ffi_transform_motif_json(input_json : String) -> String {
   // 提取 transform 字段
   let (transform_name, motif_degrees, rhythm_str) = match parsed {
     JObject(fields) => {
-      let t = match fields["transform"] {
-        Some(StringVal(s)) => s
+      let t = match jv_field(fields, "transform") {
+        Some(JString(s)) => s
         _ =>
           return build_ffi_error("MotifParseError", "缺少 transform 字段")
       }
-      // 可选：提取 motif 的 degrees 和 rhythm 用于构造
-      let degs = match fields["degrees"] {
-        Some(ArrayVal(arr)) => {
+      // 提取 motif 的 degrees 和 rhythm
+      let degs = match jv_field(fields, "degrees") {
+        Some(JArray(arr)) => {
           let result : Array[Int] = []
           for item in arr {
             match item {
-              NumberVal(n) => result.push(n.to_int())
+              JNumber(n) => result.push(n.to_int())
               _ => {}
             }
           }
@@ -994,8 +994,8 @@ pub fn ffi_transform_motif_json(input_json : String) -> String {
         }
         _ => []
       }
-      let rhy = match fields["rhythm"] {
-        Some(StringVal(s)) => s
+      let rhy = match jv_field(fields, "rhythm") {
+        Some(JString(s)) => s
         _ => "q q q q"
       }
       (t, degs, rhy)
@@ -1023,6 +1023,17 @@ pub fn ffi_transform_motif_json(input_json : String) -> String {
       }
     Err(e) => build_ffi_error("MotifParseError", e.to_string())
   }
+}
+
+///|
+/// 在 JsonField 数组中查找指定 key 的 value
+fn jv_field(fields : Array[JsonField], key : String) -> JsonValue? {
+  for f in fields {
+    if f.key == key {
+      return Some(f.value)
+    }
+  }
+  None
 }
 
 ///|
