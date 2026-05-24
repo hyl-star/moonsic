@@ -299,7 +299,7 @@ fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
       while p < len && input[p] != ']' {
         p = skip_blank(p, input, len)
         if p < len && input[p] >= 'A' && input[p] <= 'G' {
-          let (pitch_val, p2) = parse_pitch(input, p)
+          let (pitch_val, p2) = parse_pitch_at(input, p)
           pitches.push(pitch_val)
           p = p2
         } else {
@@ -326,7 +326,7 @@ fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
       p = p2
       break
     } else if input[p] >= 'A' && input[p] <= 'G' {
-      let (pitch_val, p2) = parse_pitch(input, p)
+      let (pitch_val, p2) = parse_pitch_at(input, p)
       p = p2
       let (dur, p3) = parse_dur(input, p)
       p = p3
@@ -347,7 +347,8 @@ fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
 }
 
 ///|
-fn parse_pitch(input : String, p : Int) -> (Pitch, Int) {
+/// 内部解析：从位置 p 解析音高，返回 (Pitch, 新位置)
+fn parse_pitch_at(input : String, p : Int) -> (Pitch, Int) {
   let class = match input[p] {
     'C' => C
     'D' => D
@@ -434,4 +435,155 @@ fn match_prefix(p : Int, input : String, prefix : String) -> Bool {
     j = j + 1
   }
   j == pl
+}
+
+// --- 独立解析 API ---
+
+///|
+/// 从文本解析音高。支持 "C4"、"F#3"、"Bb5" 等格式。
+/// 返回 Result[Pitch, String]，非法输入时返回 Err。
+pub fn parse_pitch(input : String) -> Result[Pitch, String] {
+  if input.length() < 2 {
+    return Err("Invalid pitch")
+  }
+  // 解析音名
+  let class = match input[0] {
+    'C' => C
+    'D' => D
+    'E' => E
+    'F' => F
+    'G' => G
+    'A' => A
+    'B' => B
+    _ => return Err("Invalid pitch")
+  }
+  let mut pos = 1
+  // 解析可选变音记号
+  let mut acc = Natural
+  if pos < input.length() && (input[pos] == '#' || input[pos] == 'b') {
+    acc = if input[pos] == '#' { Sharp } else { Flat }
+    pos = pos + 1
+  }
+  // 解析八度数字（支持多位数字）
+  if pos >= input.length() {
+    return Err("Invalid pitch")
+  }
+  if !(input[pos] >= '0' && input[pos] <= '9') {
+    return Err("Invalid pitch")
+  }
+  let (octave, new_pos) = read_octave(input, pos)
+  if octave < 0 {
+    return Err("Invalid pitch")
+  }
+  // 不允许有剩余字符
+  if new_pos < input.length() {
+    return Err("Invalid pitch")
+  }
+  Ok(pitch(class, acc, octave))
+}
+
+///|
+/// 内部：从 pos 读取八度数字，返回 (八度值, 新位置)
+fn read_octave(input : String, pos : Int) -> (Int, Int) {
+  let mut p = pos
+  let mut val = 0
+  let len = input.length()
+  while p < len && input[p] >= '0' && input[p] <= '9' {
+    val = val * 10 + (input[p].to_int() - '0'.to_int())
+    p = p + 1
+  }
+  if p == pos {
+    return (-1, pos)
+  }
+  (val, p)
+}
+
+///|
+/// 从文本解析音级。支持 "C"、"C#"、"Db" 等格式（无八度数字）。
+/// 返回的 PitchClass 仅包含音名（字母部分），变音记号不存储在 PitchClass 中。
+pub fn parse_pitch_class(input : String) -> Result[PitchClass, String] {
+  if input.length() == 0 {
+    return Err("Invalid pitch class")
+  }
+  // 解析音名
+  let pc = match input[0] {
+    'C' => C
+    'D' => D
+    'E' => E
+    'F' => F
+    'G' => G
+    'A' => A
+    'B' => B
+    _ => return Err("Invalid pitch class")
+  }
+  let len = input.length()
+  // 仅音名：合法
+  if len == 1 {
+    return Ok(pc)
+  }
+  // 音名 + 一个变音记号：合法
+  if len == 2 && (input[1] == '#' || input[1] == 'b') {
+    return Ok(pc)
+  }
+  // 含八度数字或其他字符：不合法
+  Err("Invalid pitch class")
+}
+
+// --- FFI JSON 包装 ---
+
+///|
+/// FFI 包装：解析音高字符串并返回 JSON 格式的 MIDI 编号。
+/// 输入 "C4" → {"ok":true,"value":60}
+/// 输入 "X9" → {"ok":false,"error":"Invalid pitch"}
+pub fn ffi_parse_pitch_to_midi(input : String) -> String {
+  match parse_pitch(input) {
+    Ok(p) => "{\"ok\":true,\"value\":" + p.to_midi().to_string() + "}"
+    Err(_) => "{\"ok\":false,\"error\":\"Invalid pitch\"}"
+  }
+}
+
+///|
+/// FFI 包装：解析和弦字符串并返回 JSON 格式的音级列表。
+/// 输入 "Cm7" → {"ok":true,"value":["C","Eb","G","Bb"]}
+pub fn ffi_parse_chord_tones(input : String) -> String {
+  match parse_chord(input) {
+    Ok(c) => {
+      // 使用 pitch 的 class+accidental 以保留变音记号（如 "Eb" 而非 "E"）
+      let mut notes_str = "["
+      for i = 0; i < c.pitches.length(); i = i + 1 {
+        let p = c.pitches[i]
+        notes_str = notes_str +
+          "\"" +
+          p.class.to_string() +
+          p.accidental.to_string() +
+          "\""
+        if i < c.pitches.length() - 1 {
+          notes_str = notes_str + ","
+        }
+      }
+      notes_str = notes_str + "]"
+      "{\"ok\":true,\"value\":" + notes_str + "}"
+    }
+    Err(_) => "{\"ok\":false,\"error\":\"Invalid chord\"}"
+  }
+}
+
+///|
+/// FFI 包装：解析音阶字符串并返回 JSON 格式的音级列表。
+/// 输入 "C major" → {"ok":true,"value":["C","D","E","F","G","A","B"]}
+pub fn ffi_build_scale(input : String) -> String {
+  match parse_scale(input) {
+    Ok(s) => {
+      let mut notes_str = "["
+      for i = 0; i < s.tones.length(); i = i + 1 {
+        notes_str = notes_str + "\"" + s.tones[i].to_string() + "\""
+        if i < s.tones.length() - 1 {
+          notes_str = notes_str + ","
+        }
+      }
+      notes_str = notes_str + "]"
+      "{\"ok\":true,\"value\":" + notes_str + "}"
+    }
+    Err(_) => "{\"ok\":false,\"error\":\"Invalid scale\"}"
+  }
 }

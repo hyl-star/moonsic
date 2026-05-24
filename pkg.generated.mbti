@@ -146,6 +146,12 @@ pub fn empty_track() -> Track
 
 pub fn f(Int) -> Pitch
 
+pub fn ffi_build_scale(String) -> String
+
+pub fn ffi_parse_chord_tones(String) -> String
+
+pub fn ffi_parse_pitch_to_midi(String) -> String
+
 pub fn four_four() -> TimeSignature
 
 pub fn fs(Int) -> Pitch
@@ -225,6 +231,10 @@ pub fn outro(Array[Track]) -> Section
 pub fn parse_chord(String) -> Result[Chord, String]
 
 pub fn parse_interval(String) -> Result[Interval, String]
+
+pub fn parse_pitch(String) -> Result[Pitch, String]
+
+pub fn parse_pitch_class(String) -> Result[PitchClass, String]
 
 pub fn parse_scale(String) -> Result[Scale, String]
 

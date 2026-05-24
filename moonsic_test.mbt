@@ -1895,3 +1895,148 @@ test "parse_chord_Dm7" {
   assert_eq(tones[2].to_string(), "A")
   assert_eq(tones[3].to_string(), "C")
 }
+
+// ============================================================
+// parse_pitch / parse_pitch_class / FFI JSON 测试
+// ============================================================
+
+///|
+test "parse_pitch_C4_ok" {
+  let r = @moonsic.parse_pitch("C4")
+  assert_true(r.is_ok())
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 60)
+  assert_eq(p.to_string(), "C4")
+}
+
+///|
+test "parse_pitch_F_sharp_3_ok" {
+  let r = @moonsic.parse_pitch("F#3")
+  assert_true(r.is_ok())
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 54)
+}
+
+///|
+test "parse_pitch_Bb5_ok" {
+  let r = @moonsic.parse_pitch("Bb5")
+  assert_true(r.is_ok())
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 82)
+}
+
+///|
+test "parse_pitch_H_sharp_13_err" {
+  let r = @moonsic.parse_pitch("H#13")
+  assert_true(r.is_err())
+}
+
+///|
+test "parse_pitch_empty_err" {
+  let r = @moonsic.parse_pitch("")
+  assert_true(r.is_err())
+}
+
+///|
+test "parse_pitch_invalid_note_err" {
+  let r = @moonsic.parse_pitch("X9")
+  assert_true(r.is_err())
+}
+
+///|
+test "parse_pitch_class_C_sharp_ok" {
+  let r = @moonsic.parse_pitch_class("C#")
+  assert_true(r.is_ok())
+  let pc = r.unwrap()
+  // PitchClass "C#" = C (accidental not stored in PitchClass)
+  assert_eq(pc.base_semitone(), 0)
+}
+
+///|
+test "parse_pitch_class_H_err" {
+  let r = @moonsic.parse_pitch_class("H")
+  assert_true(r.is_err())
+}
+
+///|
+test "parse_pitch_class_C_ok" {
+  let r = @moonsic.parse_pitch_class("C")
+  assert_true(r.is_ok())
+  assert_eq(r.unwrap().base_semitone(), 0)
+}
+
+///|
+test "parse_pitch_class_Db_ok" {
+  let r = @moonsic.parse_pitch_class("Db")
+  assert_true(r.is_ok())
+  // "Db" → PitchClass D
+  assert_eq(r.unwrap().base_semitone(), 2)
+}
+
+///|
+test "parse_pitch_class_empty_err" {
+  let r = @moonsic.parse_pitch_class("")
+  assert_true(r.is_err())
+}
+
+///|
+test "parse_pitch_class_with_octave_err" {
+  let r = @moonsic.parse_pitch_class("C4")
+  assert_true(r.is_err())
+}
+
+///|
+test "ffi_parse_pitch_to_midi_C4" {
+  let json = @moonsic.ffi_parse_pitch_to_midi("C4")
+  assert_true(json.contains("60"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_parse_pitch_to_midi_X9_error" {
+  let json = @moonsic.ffi_parse_pitch_to_midi("X9")
+  assert_true(json.contains("error"))
+  assert_true(json.contains("false"))
+}
+
+///|
+test "ffi_parse_chord_tones_Cm7" {
+  let json = @moonsic.ffi_parse_chord_tones("Cm7")
+  assert_true(json.contains("Eb"))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_parse_chord_tones_invalid" {
+  let json = @moonsic.ffi_parse_chord_tones("H#dim")
+  assert_true(json.contains("error"))
+}
+
+///|
+test "ffi_build_scale_C_major" {
+  let json = @moonsic.ffi_build_scale("C major")
+  assert_true(json.contains("\"C\""))
+  assert_true(json.contains("\"D\""))
+  assert_true(json.contains("\"E\""))
+  assert_true(json.contains("true"))
+}
+
+///|
+test "ffi_build_scale_invalid" {
+  let json = @moonsic.ffi_build_scale("X blarg")
+  assert_true(json.contains("error"))
+}
+
+///|
+test "parse_pitch_multi_octave_C10" {
+  let r = @moonsic.parse_pitch("C10")
+  assert_true(r.is_ok())
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 132)
+}
+
+///|
+test "parse_pitch_class_double_accidental_err" {
+  let r = @moonsic.parse_pitch_class("C##")
+  assert_true(r.is_err())
+}
