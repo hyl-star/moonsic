@@ -1,4 +1,12 @@
 ///|
+/// Minimal Example — generate a C major scale, export MIDI:
+/// ```
+/// let notes = @lib.melody_str("C4q D4q E4q F4q G4q A4q B4q C5q")
+/// let song = @lib.score1(notes)
+/// let _ = song.to_midi_bytes_with_ppq_checked(480)
+/// ```
+
+///|
 /// 苏打绿 — 他夏了夏天（C 大调, 4/4, ♩=120）
 /// 运行：`moon run cmd/main`
 fn main {
