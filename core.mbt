@@ -1,6 +1,6 @@
-// 
+//
 // 核心音乐模型
-// 
+//
 
 // --- 常量 ---
 
@@ -48,6 +48,14 @@ pub(all) enum ScaleKind {
   NaturalMinor
   MajorPentatonic
   MinorPentatonic
+  HarmonicMinor
+  MelodicMinor
+  Dorian
+  Phrygian
+  Lydian
+  Mixolydian
+  Locrian
+  Chromatic
 }
 
 ///|
@@ -57,6 +65,14 @@ pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
     NaturalMinor => [0, 2, 3, 5, 7, 8, 10]
     MajorPentatonic => [0, 2, 4, 7, 9]
     MinorPentatonic => [0, 3, 5, 7, 10]
+    HarmonicMinor => [0, 2, 3, 5, 7, 8, 11]
+    MelodicMinor => [0, 2, 3, 5, 7, 9, 11]
+    Dorian => [0, 2, 3, 5, 7, 9, 10]
+    Phrygian => [0, 1, 3, 5, 7, 8, 10]
+    Lydian => [0, 2, 4, 6, 7, 9, 11]
+    Mixolydian => [0, 2, 4, 5, 7, 9, 10]
+    Locrian => [0, 1, 3, 5, 6, 8, 10]
+    Chromatic => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   }
 }
 
@@ -105,30 +121,36 @@ pub fn PitchClass::to_string(self : PitchClass) -> String {
 // --- 变音记号 Accidental ---
 
 ///|
-/// 变音记号：升、降、还原
+/// 变音记号：重降、降、还原、升、重升
 pub(all) enum Accidental {
+  DoubleFlat
+  Flat
   Natural
   Sharp
-  Flat
+  DoubleSharp
 }
 
 ///|
-/// 获取变音记号的半音偏移量（升=+1，降=-1，还原=0）
+/// 获取变音记号的半音偏移量（重降=-2，降=-1，还原=0，升=+1，重升=+2）
 pub fn Accidental::semitone_offset(self : Accidental) -> Int {
   match self {
+    DoubleFlat => -2
+    Flat => -1
     Natural => 0
     Sharp => 1
-    Flat => -1
+    DoubleSharp => 2
   }
 }
 
 ///|
-/// 转为字符串表示（还原="", 升="#", 降="b"）
+/// 转为字符串表示（重降="bb", 降="b", 还原="", 升="#", 重升="x"）
 pub fn Accidental::to_string(self : Accidental) -> String {
   match self {
+    DoubleFlat => "bb"
+    Flat => "b"
     Natural => ""
     Sharp => "#"
-    Flat => "b"
+    DoubleSharp => "x"
   }
 }
 

@@ -87,6 +87,10 @@ pub(all) enum ChordQuality {
   DominantSeventh
   MajorSeventh
   MinorSeventh
+  HalfDiminished7
+  Diminished7
+  Suspended2
+  Suspended4
 }
 
 ///|
@@ -100,6 +104,10 @@ pub fn ChordQuality::intervals(self : ChordQuality) -> Array[Int] {
     DominantSeventh => [0, 4, 7, 10]
     MajorSeventh => [0, 4, 7, 11]
     MinorSeventh => [0, 3, 7, 10]
+    HalfDiminished7 => [0, 3, 6, 10]
+    Diminished7 => [0, 3, 6, 9]
+    Suspended2 => [0, 2, 7]
+    Suspended4 => [0, 5, 7]
   }
 }
 
@@ -207,4 +215,208 @@ pub fn progression(
     events.push(chord_evt)
   }
   track(events)
+}
+
+// --- 和弦文本解析 ---
+
+///|
+/// 从文本解析和弦。支持 "C"、"Cm"、"Cmaj7"、"Dm7"、"G7"、"F#dim" 等格式。
+pub fn parse_chord(input : String) -> Result[Chord, String] {
+  if input.length() == 0 {
+    return Err("空的和弦字符串")
+  }
+
+  // 解析根音字母
+  let root_class = match input[0] {
+    'C' => C
+    'D' => D
+    'E' => E
+    'F' => F
+    'G' => G
+    'A' => A
+    'B' => B
+    _ => return Err("无效根音：\{input}")
+  }
+  let mut pos = 1
+
+  // 解析可选的变音记号
+  let mut accidental = Natural
+  if pos < input.length() {
+    if input[pos] == '#' {
+      accidental = Sharp
+      pos = pos + 1
+    } else if input[pos] == 'b' {
+      accidental = Flat
+      pos = pos + 1
+    }
+  }
+
+  // 解析和弦品质后缀
+  let (quality, _end_pos) = parse_chord_quality(input, pos)
+
+  // 构建和弦（使用八度 4 和默认四分音符时值，正确拼写）
+  let root = pitch(root_class, accidental, 4)
+  let root_midi = root.to_midi()
+  let semitone_intervals = quality.intervals()
+  let letter_offsets = chord_letter_steps(quality)
+  let root_cls = class_index(root_class)
+  let pitches = []
+  for i = 0; i < semitone_intervals.length(); i = i + 1 {
+    let target_midi = root_midi + semitone_intervals[i]
+    let expected_class = class_from_index((root_cls + letter_offsets[i]) % 7)
+    // 找到使 expected_class 最接近 target_midi 的八度
+    let target_octave = target_midi / 12 - 1
+    let natural = (target_octave + 1) * 12 + expected_class.base_semitone()
+    let mut diff = target_midi - natural
+    let mut octave = target_octave
+    if diff > 6 {
+      octave = target_octave + 1
+      diff = target_midi - ((octave + 1) * 12 + expected_class.base_semitone())
+    } else if diff < -6 {
+      octave = target_octave - 1
+      diff = target_midi - ((octave + 1) * 12 + expected_class.base_semitone())
+    } else {
+      // diff is within -6..6, use current octave
+    }
+    let acc = match diff {
+      -2 => DoubleFlat
+      -1 => Flat
+      0 => Natural
+      1 => Sharp
+      2 => DoubleSharp
+      _ => Natural
+    }
+    pitches.push(pitch(expected_class, acc, octave))
+  }
+  Ok(chord(pitches, Quarter))
+}
+
+///|
+/// 和弦品质对应的字母步进（在字母空间中的偏移）
+fn chord_letter_steps(quality : ChordQuality) -> Array[Int] {
+  match quality {
+    MajorTriad => [0, 2, 4]
+    MinorTriad => [0, 2, 4]
+    DiminishedTriad => [0, 2, 4]
+    AugmentedTriad => [0, 2, 4]
+    DominantSeventh => [0, 2, 4, 6]
+    MajorSeventh => [0, 2, 4, 6]
+    MinorSeventh => [0, 2, 4, 6]
+    HalfDiminished7 => [0, 2, 4, 6]
+    Diminished7 => [0, 2, 4, 6]
+    Suspended2 => [0, 1, 4]
+    Suspended4 => [0, 3, 4]
+  }
+}
+
+///|
+/// 解析和弦品质后缀（内部函数）
+fn parse_chord_quality(input : String, pos : Int) -> (ChordQuality, Int) {
+  if pos >= input.length() {
+    return (MajorTriad, pos)
+  }
+  // 优先匹配较长的模式
+  if match_chord_str(input, pos, "maj7") {
+    (MajorSeventh, pos + 4)
+  } else if match_chord_str(input, pos, "dim7") {
+    (Diminished7, pos + 4)
+  } else if match_chord_str(input, pos, "m7b5") {
+    (HalfDiminished7, pos + 4)
+  } else if match_chord_str(input, pos, "m7") {
+    (MinorSeventh, pos + 2)
+  } else if match_chord_str(input, pos, "dim") {
+    (DiminishedTriad, pos + 3)
+  } else if match_chord_str(input, pos, "aug") {
+    (AugmentedTriad, pos + 3)
+  } else if match_chord_str(input, pos, "m") {
+    (MinorTriad, pos + 1)
+  } else if match_chord_str(input, pos, "7") {
+    (DominantSeventh, pos + 1)
+  } else if match_chord_str(input, pos, "sus2") {
+    (Suspended2, pos + 4)
+  } else if match_chord_str(input, pos, "sus4") {
+    (Suspended4, pos + 4)
+  } else {
+    (MajorTriad, pos)
+  }
+}
+
+///|
+/// 检查字符串从 pos 开始是否匹配 target
+fn match_chord_str(s : String, pos : Int, target : String) -> Bool {
+  let len = target.length()
+  if pos + len > s.length() {
+    return false
+  }
+  let mut i = 0
+  while i < len {
+    if s[pos + i] != target[i] {
+      return false
+    }
+    i = i + 1
+  }
+  true
+}
+
+///|
+/// 返回和弦包含的音级列表（去重，按和弦内顺序）
+pub fn chord_tones(chord : Chord) -> Array[PitchClass] {
+  let classes = []
+  for p in chord.pitches {
+    let pc = p.class
+    let mut found = false
+    let mut i = 0
+    while i < classes.length() && found == false {
+      if pitch_class_eq(classes[i], pc) {
+        found = true
+      }
+      i = i + 1
+    }
+    if found == false {
+      classes.push(pc)
+    }
+  }
+  classes
+}
+
+///|
+/// PitchClass 相等比较（PitchClass 未 derive Eq）
+fn pitch_class_eq(a : PitchClass, b : PitchClass) -> Bool {
+  match a {
+    C =>
+      match b {
+        C => true
+        _ => false
+      }
+    D =>
+      match b {
+        D => true
+        _ => false
+      }
+    E =>
+      match b {
+        E => true
+        _ => false
+      }
+    F =>
+      match b {
+        F => true
+        _ => false
+      }
+    G =>
+      match b {
+        G => true
+        _ => false
+      }
+    A =>
+      match b {
+        A => true
+        _ => false
+      }
+    B =>
+      match b {
+        B => true
+        _ => false
+      }
+  }
 }
