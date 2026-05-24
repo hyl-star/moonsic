@@ -111,7 +111,7 @@ fn json_escape(s : String) -> String {
     } else if c == '\t' {
       result = result + "\\t"
     } else {
-      result = result + "\{c}"
+      result = result + s[i:i + 1].to_owned()
     }
   }
   result + "\""

@@ -3958,3 +3958,397 @@ test "make_part_empty_name_err" {
   let r = @moonsic.make_part("", [])
   assert_true(r.is_err())
 }
+
+// ============================================================
+// serialize 模块测试 — JSON 序列化/反序列化
+// ============================================================
+
+///|
+test "score_to_json_basic_structure" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"schema\":\"moonsic.score\""))
+  assert_true(json.contains("\"version\":1"))
+  assert_true(json.contains("\"data\""))
+  assert_true(json.contains("\"tempo\""))
+  assert_true(json.contains("\"time_signature\""))
+  assert_true(json.contains("\"tracks\""))
+}
+
+///|
+test "score_to_json_empty_tracks" {
+  let score = @moonsic.score([])
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"tracks\":[]"))
+  assert_true(json.contains("\"bpm\":120"))
+}
+
+///|
+test "score_to_json_multi_track" {
+  let t1 = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.e(4), @moonsic.quarter())],
+    1,
+  )
+  let score = @moonsic.score([t1, t2])
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"channel\":0"))
+  assert_true(json.contains("\"channel\":1"))
+}
+
+///|
+test "score_to_json_with_chord" {
+  let evt = @moonsic.major(@moonsic.c(4), @moonsic.quarter())
+  let t = @moonsic.melody([evt])
+  let score = @moonsic.score1(t)
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"chord\""))
+  assert_true(json.contains("\"pitches\""))
+}
+
+///|
+test "score_to_json_with_rest" {
+  let t = @moonsic.melody([
+    @moonsic.r(@moonsic.quarter()),
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score1(t)
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"rest\""))
+  assert_true(json.contains("\"note\""))
+}
+
+///|
+test "score_to_json_custom_tempo" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score_with([t], 140, @moonsic.time_signature(3, 4))
+  let json = @moonsic.score_to_json(score)
+  assert_true(json.contains("\"bpm\":140"))
+  assert_true(json.contains("\"numerator\":3"))
+  assert_true(json.contains("\"denominator\":4"))
+}
+
+///|
+test "track_to_json_single_note" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let json = @moonsic.track_to_json(t)
+  assert_true(json.contains("\"channel\":0"))
+  assert_true(json.contains("\"events\""))
+  assert_true(json.contains("\"note\":\"C\""))
+  assert_true(json.contains("\"octave\":4"))
+}
+
+///|
+test "track_to_json_multiple_events" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+    @moonsic.r(@moonsic.quarter()),
+  ])
+  let json = @moonsic.track_to_json(t)
+  assert_true(json.contains("\"note\"") && json.contains("\"rest\""))
+}
+
+///|
+test "track_to_json_empty" {
+  let t = @moonsic.track([])
+  let json = @moonsic.track_to_json(t)
+  assert_true(json.contains("\"events\":[]"))
+}
+
+///|
+test "note_event_to_json_all_fields" {
+  let e : @moonsic.NoteEvent = {
+    start: 0.5,
+    duration: 1.0,
+    midi_note: 60,
+    velocity: 100,
+    channel: 0,
+  }
+  let json = @moonsic.note_event_to_json(e)
+  assert_true(json.contains("\"start\":0.5"))
+  assert_true(json.contains("\"duration\":1"))
+  assert_true(json.contains("\"midi_note\":60"))
+  assert_true(json.contains("\"velocity\":100"))
+  assert_true(json.contains("\"channel\":0"))
+}
+
+///|
+test "note_event_to_json_minimal" {
+  let e : @moonsic.NoteEvent = {
+    start: 0.0,
+    duration: 0.25,
+    midi_note: 69,
+    velocity: 64,
+    channel: 15,
+  }
+  let json = @moonsic.note_event_to_json(e)
+  assert_true(json.contains("\"midi_note\":69"))
+  assert_true(json.contains("\"channel\":15"))
+}
+
+///|
+test "json_stringify_primitives" {
+  let jv_null = @moonsic.JNull
+  assert_eq(@moonsic.json_stringify(jv_null), "null")
+  let jv_true = @moonsic.JBool(true)
+  assert_eq(@moonsic.json_stringify(jv_true), "true")
+  let jv_false = @moonsic.JBool(false)
+  assert_eq(@moonsic.json_stringify(jv_false), "false")
+  let jv_num = @moonsic.JNumber(42.0)
+  assert_eq(@moonsic.json_stringify(jv_num), "42")
+  let jv_str = @moonsic.JString("hello")
+  assert_eq(@moonsic.json_stringify(jv_str), "\"hello\"")
+}
+
+///|
+test "json_stringify_object_and_array" {
+  let obj = @moonsic.JObject([
+    @moonsic.JsonField::{ key: "a", value: @moonsic.JNumber(1.0) },
+    @moonsic.JsonField::{ key: "b", value: @moonsic.JString("x") },
+  ])
+  let s_obj = @moonsic.json_stringify(obj)
+  assert_eq(s_obj, "{\"a\":1,\"b\":\"x\"}")
+
+  let arr = @moonsic.JArray([@moonsic.JNumber(1.0), @moonsic.JBool(true)])
+  let s_arr = @moonsic.json_stringify(arr)
+  assert_eq(s_arr, "[1,true]")
+}
+
+///|
+test "json_stringify_escaped_string" {
+  let jv = @moonsic.JString("a\"b\\c")
+  let s = @moonsic.json_stringify(jv)
+  assert_true(s.contains("\\\""))
+  assert_true(s.contains("\\\\"))
+}
+
+///|
+test "json_stringify_newline_and_tab" {
+  let jv = @moonsic.JString("line1\nline2\tindent")
+  let s = @moonsic.json_stringify(jv)
+  assert_true(s.contains("\\n"))
+  assert_true(s.contains("\\t"))
+}
+
+///|
+test "json_parse_primitives" {
+  let r1 = @moonsic.json_parse("42")
+  assert_true(r1.is_ok())
+  let r2 = @moonsic.json_parse("true")
+  assert_true(r2.is_ok())
+  let r3 = @moonsic.json_parse("\"hello\"")
+  assert_true(r3.is_ok())
+  let r4 = @moonsic.json_parse("null")
+  assert_true(r4.is_ok())
+}
+
+///|
+test "json_parse_object" {
+  let r = @moonsic.json_parse("{\"a\":1,\"b\":true}")
+  assert_true(r.is_ok())
+}
+
+///|
+test "json_parse_array" {
+  let r = @moonsic.json_parse("[1,true,\"hello\"]")
+  assert_true(r.is_ok())
+}
+
+///|
+test "json_parse_invalid" {
+  let r = @moonsic.json_parse("{invalid}")
+  assert_true(r.is_err())
+}
+
+///|
+test "json_parse_roundtrip" {
+  let jv = @moonsic.JObject([
+    @moonsic.JsonField::{ key: "schema", value: @moonsic.JString("test") },
+    @moonsic.JsonField::{ key: "version", value: @moonsic.JNumber(1.0) },
+  ])
+  let json_str = @moonsic.json_stringify(jv)
+  let parsed = @moonsic.json_parse(json_str).unwrap()
+  let back = @moonsic.json_stringify(parsed)
+  assert_eq(json_str, back)
+}
+
+///|
+test "json_parse_empty_string_err" {
+  let r = @moonsic.json_parse("")
+  assert_true(r.is_err())
+}
+
+///|
+test "score_from_json_string_roundtrip" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let json = @moonsic.score_to_json(score)
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_ok())
+  let s2 = r.unwrap()
+  assert_eq(s2.track_count(), 1)
+  assert_eq(s2.tracks[0].event_count(), 1)
+  assert_eq(s2.tempo.bpm, 120)
+}
+
+///|
+test "score_from_json_string_invalid_schema" {
+  let json = "{\"schema\":\"other.v1\",\"version\":1,\"data\":{}}"
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_from_json_string_unsupported_version" {
+  let json = "{\"schema\":\"moonsic.score\",\"version\":99,\"data\":{}}"
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_from_json_string_roundtrip_with_chord" {
+  let t = @moonsic.melody([@moonsic.major(@moonsic.c(4), @moonsic.half())])
+  let score = @moonsic.score1(t)
+  let json = @moonsic.score_to_json(score)
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_ok())
+  let s2 = r.unwrap()
+  assert_eq(s2.track_count(), 1)
+  assert_eq(s2.tracks[0].event_count(), 1)
+}
+
+///|
+test "score_from_json_string_empty" {
+  let score = @moonsic.score([])
+  let json = @moonsic.score_to_json(score)
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_ok())
+  let s2 = r.unwrap()
+  assert_eq(s2.track_count(), 0)
+}
+
+///|
+test "score_from_json_string_multi_track" {
+  let t1 = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.e(4), @moonsic.half())],
+    2,
+  )
+  let score = @moonsic.score([t1, t2])
+  let json = @moonsic.score_to_json(score)
+  let r = @moonsic.score_from_json_string(json)
+  assert_true(r.is_ok())
+  let s2 = r.unwrap()
+  assert_eq(s2.track_count(), 2)
+}
+
+///|
+test "parse_to_json_pitch" {
+  let json = @moonsic.parse_to_json("C4", "pitch")
+  assert_true(json.contains("\"ok\":true"))
+  assert_true(json.contains("\"note\":\"C\""))
+  assert_true(json.contains("\"octave\":4"))
+}
+
+///|
+test "parse_to_json_chord" {
+  let json = @moonsic.parse_to_json("Cm7", "chord")
+  assert_true(json.contains("\"ok\":true"))
+  assert_true(json.contains("\"pitches\""))
+}
+
+///|
+test "parse_to_json_interval" {
+  let json = @moonsic.parse_to_json("M3", "interval")
+  assert_true(json.contains("\"ok\":true"))
+  assert_true(json.contains("\"M\""))
+  assert_true(json.contains("\"semitones\":4"))
+}
+
+///|
+test "parse_to_json_error" {
+  let json = @moonsic.parse_to_json("H#13", "pitch")
+  assert_true(json.contains("\"ok\":false"))
+}
+
+///|
+test "parse_to_json_unsupported_kind" {
+  let json = @moonsic.parse_to_json("test", "unknown")
+  assert_true(json.contains("\"false\""))
+  assert_true(json.contains("不支持"))
+}
+
+///|
+test "pitch_to_json_string_C4" {
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  let json = @moonsic.pitch_to_json_string(p)
+  assert_true(json.contains("\"note\":\"C\""))
+  assert_true(json.contains("\"octave\":4"))
+}
+
+///|
+test "duration_to_json_string_quarter" {
+  let json = @moonsic.duration_to_json_string(@moonsic.Quarter)
+  assert_true(json.contains("\"kind\":\"quarter\""))
+  assert_true(json.contains("\"dots\":0"))
+}
+
+///|
+test "duration_to_json_string_dotted" {
+  let json = @moonsic.duration_to_json_string(@moonsic.dotted(@moonsic.Half))
+  assert_true(json.contains("\"kind\":\"half\""))
+  assert_true(json.contains("\"dots\":1"))
+}
+
+///|
+test "json_stringify_empty_object" {
+  let jv = @moonsic.JObject([])
+  assert_eq(@moonsic.json_stringify(jv), "{}")
+}
+
+///|
+test "json_stringify_empty_array" {
+  let jv = @moonsic.JArray([])
+  assert_eq(@moonsic.json_stringify(jv), "[]")
+}
+
+///|
+test "json_parse_nested_object" {
+  let r = @moonsic.json_parse("{\"a\":{\"b\":[1,2]}}")
+  assert_true(r.is_ok())
+}
+
+///|
+test "json_parse_decimal_number" {
+  let r = @moonsic.json_parse("3.14")
+  assert_true(r.is_ok())
+}
+
+///|
+test "json_parse_negative_number" {
+  let r = @moonsic.json_parse("-42")
+  assert_true(r.is_ok())
+}
+
+///|
+test "chord_to_json_string_C_major" {
+  let c = @moonsic.chord(
+    [
+      @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4),
+      @moonsic.pitch(@moonsic.E, @moonsic.Natural, 4),
+      @moonsic.pitch(@moonsic.G, @moonsic.Natural, 4),
+    ],
+    @moonsic.Quarter,
+  )
+  let json = @moonsic.chord_to_json_string(c)
+  assert_true(json.contains("\"pitches\""))
+  assert_true(json.contains("\"velocity\":100"))
+}
+
+///|
+test "json_parse_trailing_garbage_err" {
+  let r = @moonsic.json_parse("42 {}")
+  assert_true(r.is_err())
+}
