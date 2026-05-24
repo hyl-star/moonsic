@@ -70,6 +70,10 @@ pub fn acoustic_grand_piano() -> Int
 
 pub fn acoustic_guitar_steel() -> Int
 
+pub fn add_sig_change(TimeMap, TimeSigChange) -> TimeMap
+
+pub fn add_tempo_change(TimeMap, TempoChange) -> TimeMap
+
 pub fn arpeggiate(Track, Duration) -> Track
 
 pub fn arpeggiate_dir(Track, Duration, ArpStyle) -> Track
@@ -150,11 +154,21 @@ pub fn empty_track() -> Track
 
 pub fn f(Int) -> Pitch
 
+pub fn ffi_bar_length(String, Int) -> String
+
 pub fn ffi_build_scale(String) -> String
+
+pub fn ffi_duration_ticks(String, Int) -> String
 
 pub fn ffi_parse_chord_tones(String) -> String
 
 pub fn ffi_parse_pitch_to_midi(String) -> String
+
+pub fn ffi_parse_tempo(String) -> String
+
+pub fn ffi_parse_time_sig(String) -> String
+
+pub fn ffi_ticks_to_seconds(Int, Double, Int) -> String
 
 pub fn four_four() -> TimeSignature
 
@@ -197,6 +211,8 @@ pub fn layer(Array[Track]) -> Score
 pub fn maj7(Pitch, Duration) -> MusicEvent
 
 pub fn major(Pitch, Duration) -> MusicEvent
+
+pub fn make_time_map(Int, TimeSignature, Double) -> Result[TimeMap, TimeError]
 
 pub fn melody(Array[MusicEvent]) -> Track
 
@@ -250,6 +266,8 @@ pub fn parse_time_sig(String) -> Result[TimeSignature, TimeError]
 
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
+pub fn position_to_ticks(BarPosition, TimeSignature, Int) -> Result[Int, TimeError]
+
 pub fn progression(Pitch, ScaleKind, Array[RomanNumeral], Duration) -> Track
 
 pub fn progression_with_roman(Key, Array[RomanNumeral], Duration) -> Track
@@ -298,6 +316,8 @@ pub fn seconds_to_ticks(Double, Double, Int) -> Int
 
 pub fn section(String, Array[Track]) -> Section
 
+pub fn signature_at_bar(TimeMap, Int) -> (Int, Int)
+
 pub fn sixteenth() -> Duration
 
 pub fn snare(Duration) -> MusicEvent
@@ -308,11 +328,21 @@ pub fn synth_pad_warm() -> Int
 
 pub fn tempo(Int) -> Tempo
 
+pub fn tempo_at_tick(TimeMap, Int) -> Double
+
+pub fn ticks_to_position(Int, TimeSignature, Int) -> Result[BarPosition, TimeError]
+
 pub fn ticks_to_quarter_beats(Int, Int) -> Rational
 
 pub fn ticks_to_seconds(Int, Double, Int) -> Result[Double, TimeError]
 
+pub fn ticks_to_seconds_timemap(Int, TimeMap) -> Result[Double, TimeError]
+
 pub fn time_signature(Int, Int) -> TimeSignature
+
+pub fn timeline_from_events(Array[NoteEvent], Int, Double) -> PlaybackTimeline
+
+pub fn timeline_from_score(Score) -> PlaybackTimeline
 
 pub fn track(Array[MusicEvent]) -> Track
 
@@ -502,6 +532,19 @@ pub(all) enum PitchClass {
 pub fn PitchClass::base_semitone(Self) -> Int
 pub fn PitchClass::to_string(Self) -> String
 
+pub(all) struct PlaybackTimeline {
+  events : Array[NoteEvent]
+  total_seconds : Double
+}
+pub fn PlaybackTimeline::at_second(Self, Double) -> Array[NoteEvent]
+pub fn PlaybackTimeline::at_second_channel(Self, Double, Int) -> Array[NoteEvent]
+pub fn PlaybackTimeline::duration(Self) -> Double
+pub fn PlaybackTimeline::event_count(Self) -> Int
+pub fn PlaybackTimeline::events_between(Self, Double, Double) -> Array[NoteEvent]
+pub fn PlaybackTimeline::is_empty(Self) -> Bool
+pub fn PlaybackTimeline::last_end(Self) -> Double
+pub fn PlaybackTimeline::to_string(Self) -> String
+
 pub(all) struct Rational {
   numerator : Int
   denominator : Int
@@ -589,6 +632,11 @@ pub(all) struct Tempo {
 pub fn Tempo::quarter_seconds(Self) -> Double
 pub fn Tempo::to_string(Self) -> String
 
+pub(all) struct TempoChange {
+  at_tick : Int
+  tempo_bpm : Double
+}
+
 pub(all) enum TheoryError {
   ParseError(String)
   InvalidPitch(String)
@@ -616,6 +664,21 @@ pub(all) enum TimeError {
   TimeUnsupported(String)
 }
 pub fn TimeError::to_string(Self) -> String
+
+pub(all) struct TimeMap {
+  ppq : Int
+  sig_num : Int
+  sig_den : Int
+  tempo_bpm : Double
+  tempo_changes : Array[TempoChange]
+  sig_changes : Array[TimeSigChange]
+}
+
+pub(all) struct TimeSigChange {
+  at_bar : Int
+  sig_num : Int
+  sig_den : Int
+}
 
 pub(all) struct TimeSignature {
   numerator : Int

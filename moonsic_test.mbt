@@ -2940,3 +2940,428 @@ test "ffi_parse_tempo_invalid_err" {
   assert_true(json.contains("error"))
   assert_true(json.contains("false"))
 }
+
+// ============================================================
+// 播放时间线测试 — PlaybackTimeline
+// ============================================================
+
+///|
+test "timeline_from_score_single_note" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  assert_eq(tl.event_count(), 1)
+  assert_true(tl.total_seconds > 0.49 && tl.total_seconds < 0.51)
+}
+
+///|
+test "timeline_from_score_empty" {
+  let score = @moonsic.score([])
+  let tl = @moonsic.timeline_from_score(score)
+  assert_eq(tl.event_count(), 0)
+  assert_eq(tl.duration(), 0.0)
+  assert_true(tl.is_empty())
+}
+
+///|
+test "timeline_at_second_active" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // t=0.0 应该捕获到事件
+  let active = tl.at_second(0.0)
+  assert_eq(active.length(), 1)
+  assert_eq(active[0].midi_note, 60)
+}
+
+///|
+test "timeline_at_second_at_boundary" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // t=0.5 是事件结束时刻，在半开区间 [start, end) 中不该被捕获
+  let at_exact_end = tl.at_second(0.5)
+  assert_eq(at_exact_end.length(), 0)
+  // t=0.499 接近结束但仍在区间内
+  let at_just_before = tl.at_second(0.499)
+  assert_eq(at_just_before.length(), 1)
+}
+
+///|
+test "timeline_at_second_empty" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // 事件在 [0.0, 0.5)，t=1.0 外
+  let active = tl.at_second(1.0)
+  assert_eq(active.length(), 0)
+}
+
+///|
+test "timeline_events_between_range" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // 第二拍: 0.5 ~ 1.0，D4 在此区间
+  let between = tl.events_between(0.5, 1.0)
+  assert_eq(between.length(), 1)
+  assert_eq(between[0].midi_note, 62)
+}
+
+///|
+test "timeline_events_between_overlap" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.half()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // 窗口 0.25 ~ 0.75，C4(half) 覆盖整个范围，D4 从 beat 2 开始（秒=1.0）不覆盖
+  let between = tl.events_between(0.25, 0.75)
+  assert_eq(between.length(), 1)
+  assert_eq(between[0].midi_note, 60)
+}
+
+///|
+test "timeline_at_second_chord" {
+  let evt = @moonsic.major(@moonsic.c(4), @moonsic.quarter())
+  let t = @moonsic.melody([evt])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // C major 和弦 3 音在 t=0
+  let active = tl.at_second(0.0)
+  assert_eq(active.length(), 3)
+}
+
+///|
+test "timeline_from_score_multi_track" {
+  let t1 = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.e(4), @moonsic.quarter())],
+    1,
+  )
+  let score = @moonsic.score([t1, t2])
+  let tl = @moonsic.timeline_from_score(score)
+  assert_eq(tl.event_count(), 2)
+  // 两个事件都在 t=0
+  let active = tl.at_second(0.0)
+  assert_eq(active.length(), 2)
+}
+
+///|
+test "timeline_from_score_custom_tempo" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score_with([t], 60, @moonsic.four_four())
+  let tl = @moonsic.timeline_from_score(score)
+  // 60bpm: quarter = 1.0s
+  assert_true(tl.total_seconds > 0.99 && tl.total_seconds < 1.01)
+  // 事件在 t=0
+  let active = tl.at_second(0.0)
+  assert_eq(active.length(), 1)
+}
+
+///|
+test "timeline_at_second_channel_filter" {
+  let t1 = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.c(4), @moonsic.quarter())],
+    0,
+  )
+  let t2 = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.e(4), @moonsic.quarter())],
+    1,
+  )
+  let score = @moonsic.score([t1, t2])
+  let tl = @moonsic.timeline_from_score(score)
+  // channel 0
+  let ch0 = tl.at_second_channel(0.0, 0)
+  assert_eq(ch0.length(), 1)
+  assert_eq(ch0[0].midi_note, 60)
+  // channel 1
+  let ch1 = tl.at_second_channel(0.0, 1)
+  assert_eq(ch1.length(), 1)
+  assert_eq(ch1[0].midi_note, 64)
+  // non-existent channel
+  let ch2 = tl.at_second_channel(0.0, 2)
+  assert_eq(ch2.length(), 0)
+}
+
+///|
+test "timeline_duration_beats_conversion" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.half()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ])
+  let score = @moonsic.score_with([t], 120, @moonsic.four_four())
+  let tl = @moonsic.timeline_from_score(score)
+  // 2 half = 4 beats = 2.0s at 120bpm
+  assert_eq(tl.duration(), 2.0)
+}
+
+///|
+test "timeline_event_start_is_seconds" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score_with([t], 120, @moonsic.four_four())
+  let tl = @moonsic.timeline_from_score(score)
+  // C4 在 [0.0, 0.5)，D4 在 [0.5, 1.0)，查询 [0.5, 0.6) 仅覆盖 D4
+  let events = tl.events_between(0.5, 0.6)
+  assert_eq(events.length(), 1)
+  assert_eq(events[0].midi_note, 62)
+}
+
+///|
+test "timeline_last_end" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ])
+  let score = @moonsic.score_with([t], 120, @moonsic.four_four())
+  let tl = @moonsic.timeline_from_score(score)
+  // C4 在 0.0 ~ 0.5, D4(half) 在 0.5 ~ 1.5
+  assert_true(tl.last_end() > 1.49 && tl.last_end() < 1.51)
+}
+
+///|
+test "timeline_last_end_empty" {
+  let score = @moonsic.score([])
+  let tl = @moonsic.timeline_from_score(score)
+  assert_eq(tl.last_end(), 0.0)
+}
+
+///|
+test "timeline_events_between_empty_range" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // 事件在 [0, 0.5)，查询 [10, 20) 无交集
+  let between = tl.events_between(10.0, 20.0)
+  assert_eq(between.length(), 0)
+}
+
+///|
+test "timeline_to_string" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  let s = tl.to_string()
+  assert_true(s.contains("PlaybackTimeline"))
+  assert_true(s.contains("1"))
+}
+
+// ============================================================
+// score_midi 测试 — MIDI 语义适配层
+// ============================================================
+
+///|
+test "score_midi_validate_midi_note" {
+  assert_true(@moonsic.validate_midi_note(0))
+  assert_true(@moonsic.validate_midi_note(60))
+  assert_true(@moonsic.validate_midi_note(127))
+  assert_false(@moonsic.validate_midi_note(-1))
+  assert_false(@moonsic.validate_midi_note(128))
+}
+
+///|
+test "score_midi_validate_channel" {
+  assert_true(@moonsic.validate_channel(0))
+  assert_true(@moonsic.validate_channel(15))
+  assert_false(@moonsic.validate_channel(-1))
+  assert_false(@moonsic.validate_channel(16))
+}
+
+///|
+test "score_midi_validate_velocity" {
+  assert_true(@moonsic.validate_velocity(0))
+  assert_true(@moonsic.validate_velocity(127))
+  assert_false(@moonsic.validate_velocity(-1))
+  assert_false(@moonsic.validate_velocity(128))
+}
+
+///|
+test "score_midi_validate_program" {
+  assert_true(@moonsic.validate_program(0))
+  assert_true(@moonsic.validate_program(127))
+  assert_false(@moonsic.validate_program(-1))
+  assert_false(@moonsic.validate_program(128))
+}
+
+///|
+test "score_midi_note_on_ok" {
+  let r = @moonsic.note_on(0, 0, 60, 100)
+  assert_true(r.is_ok())
+  let e = r.unwrap()
+  assert_eq(e.tick, 0)
+}
+
+///|
+test "score_midi_note_on_invalid_note" {
+  let r = @moonsic.note_on(0, 0, 128, 100)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_midi_note_on_invalid_channel" {
+  let r = @moonsic.note_on(0, 16, 60, 100)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_midi_program_change_ok" {
+  let r = @moonsic.program_change(0, 0, 40)
+  assert_true(r.is_ok())
+  let e = r.unwrap()
+  assert_eq(e.tick, 0)
+}
+
+///|
+test "score_midi_program_change_invalid" {
+  let r = @moonsic.program_change(0, 0, 128)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_midi_control_change_ok" {
+  let r = @moonsic.control_change(0, 0, 7, 100)
+  assert_true(r.is_ok())
+  let e = r.unwrap()
+  assert_eq(e.tick, 0)
+}
+
+///|
+test "score_midi_control_change_invalid_ctrl" {
+  let r = @moonsic.control_change(0, 0, 128, 100)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_midi_to_score_basic" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  assert_eq(ms.tracks.length(), 2)
+  assert_eq(ms.ppq, 480)
+  let music = ms.tracks[1]
+  assert_true(music.events.length() >= 4)
+}
+
+///|
+test "score_midi_to_score_with_instrument" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.instrument(t, @moonsic.violin())
+  let s = @moonsic.score1(t2)
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  assert_eq(ms.tracks.length(), 2)
+  assert_eq(ms.tracks[1].program, 40)
+}
+
+///|
+test "score_midi_sort_events_by_tick" {
+  let e1 = @moonsic.note_on(480, 0, 60, 100).unwrap()
+  let e2 = @moonsic.note_on(0, 0, 60, 100).unwrap()
+  let sorted = @moonsic.sort_midi_events([e1, e2])
+  assert_eq(sorted[0].tick, 0)
+  assert_eq(sorted[1].tick, 480)
+}
+
+///|
+test "score_midi_sort_events_same_tick_priority" {
+  let e1 = @moonsic.note_on(0, 0, 60, 100).unwrap()
+  let e2 = @moonsic.tempo_change(0, 120).unwrap()
+  let e3 = @moonsic.track_name(0, "Test").unwrap()
+  let sorted = @moonsic.sort_midi_events([e1, e2, e3])
+  assert_eq(sorted.length(), 3)
+  assert_eq(sorted[0].tick, 0)
+  assert_eq(sorted[1].tick, 0)
+  assert_eq(sorted[2].tick, 0)
+}
+
+///|
+test "score_midi_to_bytes_not_empty" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  let bytes = @moonsic.midi_score_to_bytes(ms)
+  assert_true(bytes.length() > 0)
+}
+
+///|
+test "score_midi_roundtrip" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let s = @moonsic.score1(t)
+  let bytes = @moonsic.score_to_midi_bytes(s, 480)
+  let file = @midi.parse(bytes)
+  assert_eq(file.tracks.length(), 2)
+  assert_eq(file.division, (480).to_uint16())
+}
+
+///|
+test "score_midi_to_score_two_tracks" {
+  let t1 = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.melody([@moonsic.n(@moonsic.e(4), @moonsic.quarter())])
+  let s = @moonsic.score([t1, t2])
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  assert_eq(ms.tracks.length(), 3)
+}
+
+///|
+test "score_midi_tempo_change_event" {
+  let r = @moonsic.tempo_change(0, 140)
+  assert_true(r.is_ok())
+  let e = r.unwrap()
+  assert_eq(e.tick, 0)
+}
+
+///|
+test "score_midi_tempo_change_invalid_bpm" {
+  let r = @moonsic.tempo_change(0, 0)
+  assert_true(r.is_err())
+}
+
+///|
+test "score_midi_end_of_track" {
+  let r = @moonsic.end_of_track(960)
+  assert_true(r.is_ok())
+  let e = r.unwrap()
+  assert_eq(e.tick, 960)
+}
+
+///|
+test "score_midi_multi_note_score" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.half()),
+  ])
+  let s = @moonsic.score1(t)
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  let music = ms.tracks[1]
+  assert_eq(music.events.length(), 8)
+}
+
+///|
+test "score_midi_chord_expands" {
+  let t = @moonsic.melody([@moonsic.major(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let ms = @moonsic.score_to_midi_score(s, 480)
+  let music = ms.tracks[1]
+  assert_eq(music.events.length(), 8)
+}
+
+///|
+test "score_midi_bytes_with_instrument" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.instrument(t, @moonsic.acoustic_grand_piano())
+  let s = @moonsic.score1(t2)
+  let bytes = @moonsic.score_to_midi_bytes(s, 480)
+  let file = @midi.parse(bytes)
+  assert_eq(file.tracks.length(), 2)
+}
