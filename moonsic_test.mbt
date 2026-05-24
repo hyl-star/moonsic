@@ -1001,7 +1001,7 @@ test "generate_melody_checked_basic" {
 /// 错误路径：空节奏模板 -> EmptyRhythmPattern
 test "generate_melody_checked_empty_rhythm" {
   let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
-  let rhythm = { units: [], accents: [], allow_rests: false }
+  let rhythm = { cells: [], total_beats: 0.0 }
   let config = {
     mode: @moonsic.MelodyOnly,
     contour: @moonsic.StepwiseUp,
