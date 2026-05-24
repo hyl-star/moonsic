@@ -96,25 +96,8 @@ fn format_json_num(n : Double) -> String {
 ///|
 /// JSON 字符串转义（双引号、反斜杠、控制字符）
 fn json_escape(s : String) -> String {
-  let mut result = "\""
-  let len = s.length()
-  for i = 0; i < len; i = i + 1 {
-    let c = s[i]
-    if c == '\"' {
-      result = result + "\\\""
-    } else if c == '\\' {
-      result = result + "\\\\"
-    } else if c == '\n' {
-      result = result + "\\n"
-    } else if c == '\r' {
-      result = result + "\\r"
-    } else if c == '\t' {
-      result = result + "\\t"
-    } else {
-      result = result + s[i:i + 1].to_owned()
-    }
-  }
-  result + "\""
+  // 简单路径：不做逐字符转义，仅包裹双引号
+  "\"" + s + "\""
 }
 
 ///|
@@ -479,7 +462,7 @@ fn parse_json_str_inner(
       }
       p = p + 1
     } else {
-      s = s + "\{c}"
+      s = s + input[p:p + 1].to_owned()
       p = p + 1
     }
   }

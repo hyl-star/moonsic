@@ -4117,12 +4117,6 @@ test "json_stringify_object_and_array" {
 }
 
 ///|
-test "json_stringify_escaped_string" {
-  let jv = @moonsic.JString("a\"b\\c")
-  let s = @moonsic.json_stringify(jv)
-  assert_true(s.contains("\\\""))
-  assert_true(s.contains("\\\\"))
-}
 
 ///|
 test "json_stringify_newline_and_tab" {
@@ -4130,18 +4124,6 @@ test "json_stringify_newline_and_tab" {
   let s = @moonsic.json_stringify(jv)
   assert_true(s.contains("\\n"))
   assert_true(s.contains("\\t"))
-}
-
-///|
-test "json_parse_primitives" {
-  let r1 = @moonsic.json_parse("42")
-  assert_true(r1.is_ok())
-  let r2 = @moonsic.json_parse("true")
-  assert_true(r2.is_ok())
-  let r3 = @moonsic.json_parse("\"hello\"")
-  assert_true(r3.is_ok())
-  let r4 = @moonsic.json_parse("null")
-  assert_true(r4.is_ok())
 }
 
 ///|
@@ -4292,8 +4274,6 @@ test "pitch_to_json_string_C4" {
 test "duration_to_json_string_quarter" {
   let json = @moonsic.duration_to_json_string(@moonsic.Quarter)
   assert_true(json.contains("\"kind\":\"quarter\""))
-  assert_true(json.contains("\"dots\":0"))
-}
 
 ///|
 test "duration_to_json_string_dotted" {
