@@ -3365,3 +3365,596 @@ test "score_midi_bytes_with_instrument" {
   let file = @midi.parse(bytes)
   assert_eq(file.tracks.length(), 2)
 }
+
+// ============================================================
+// 曲谱布局模块测试 — Measure/Voice/Staff/Part/ScoreLayout
+// ============================================================
+
+// --- Measure 构造 ---
+
+///|
+test "make_measure_valid" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let r = @moonsic.make_measure(0, Some(sig), events)
+  assert_true(r.is_ok())
+  let m = r.unwrap()
+  assert_eq(m.index, 0)
+  assert_eq(m.event_count(), 1)
+}
+
+///|
+test "make_measure_negative_index_err" {
+  let sig = @moonsic.four_four()
+  let r = @moonsic.make_measure(-1, Some(sig), [])
+  assert_true(r.is_err())
+}
+
+///|
+test "make_measure_invalid_time_sig_err" {
+  let bad_sig = @moonsic.time_signature(5, 3)
+  let r = @moonsic.make_measure(0, Some(bad_sig), [])
+  assert_true(r.is_err())
+}
+
+///|
+test "empty_measure_creates_basic" {
+  let m = @moonsic.empty_measure(3)
+  assert_eq(m.index, 3)
+  assert_eq(m.event_count(), 0)
+}
+
+// --- Voice 构造 ---
+
+///|
+test "make_voice_valid" {
+  let m = @moonsic.empty_measure(0)
+  let r = @moonsic.make_voice("RH", [m])
+  assert_true(r.is_ok())
+  let v = r.unwrap()
+  assert_eq(@moonsic.voice_measure_count(v), 1)
+}
+
+///|
+test "make_voice_empty_name_err" {
+  let r = @moonsic.make_voice("", [])
+  assert_true(r.is_err())
+}
+
+///|
+test "voice_add_measure_adds_one" {
+  let v = @moonsic.empty_voice("RH")
+  let m = @moonsic.empty_measure(0)
+  let r = @moonsic.voice_add_measure(v, m)
+  assert_true(r.is_ok())
+  let v2 = r.unwrap()
+  assert_eq(@moonsic.voice_measure_count(v2), 1)
+}
+
+///|
+test "empty_voice_creates_with_name" {
+  let v = @moonsic.empty_voice("Bass")
+  assert_eq(@moonsic.voice_measure_count(v), 0)
+}
+
+// --- Staff 构造 ---
+
+///|
+test "make_staff_valid" {
+  let v = @moonsic.empty_voice("RH")
+  let r = @moonsic.make_staff("Piano", Some(0), Some(0), Some("Grand Piano"), [
+    v,
+  ])
+  assert_true(r.is_ok())
+  let s = r.unwrap()
+  assert_eq(s.name, "Piano")
+}
+
+///|
+test "make_staff_invalid_channel_err" {
+  let r = @moonsic.make_staff("Piano", Some(16), None, None, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "make_staff_invalid_program_err" {
+  let r = @moonsic.make_staff("Piano", None, Some(128), None, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "staff_add_voice_adds_one" {
+  let s = @moonsic.empty_staff("Piano")
+  let v = @moonsic.empty_voice("RH")
+  let r = @moonsic.staff_add_voice(s, v)
+  assert_true(r.is_ok())
+}
+
+// --- Part 构造 ---
+
+///|
+test "make_part_valid" {
+  let s = @moonsic.empty_staff("Piano")
+  let r = @moonsic.make_part("Keyboard", [s])
+  assert_true(r.is_ok())
+}
+
+///|
+test "part_add_staff_adds_one" {
+  let p = @moonsic.empty_part("Keyboard")
+  let s = @moonsic.empty_staff("Piano")
+  let r = @moonsic.part_add_staff(p, s)
+  assert_true(r.is_ok())
+  let p2 = r.unwrap()
+  assert_eq(p2.staves.length(), 1)
+}
+
+// --- ScoreLayout 构造 ---
+
+///|
+test "make_score_layout_valid" {
+  let r = @moonsic.make_score_layout("My Song", 480, [])
+  assert_true(r.is_ok())
+  let sl = r.unwrap()
+  assert_eq(sl.title, "My Song")
+  assert_eq(sl.ppq, 480)
+}
+
+///|
+test "make_score_layout_invalid_ppq_zero_err" {
+  let r = @moonsic.make_score_layout("Bad", 0, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "empty_score_layout_creates_basic" {
+  let r = @moonsic.empty_score_layout("Empty", 480)
+  assert_true(r.is_ok())
+  let sl = r.unwrap()
+  assert_eq(sl.title, "Empty")
+  assert_eq(@moonsic.score_layout_measure_count(sl), 0)
+}
+
+///|
+test "layout_add_part_works" {
+  let r = @moonsic.empty_score_layout("Song", 480)
+  let sl = r.unwrap()
+  let p = @moonsic.empty_part("Piano")
+  let sl2 = @moonsic.layout_add_part(sl, p)
+  assert_eq(sl2.parts.length(), 1)
+}
+
+// --- 校验 ---
+
+///|
+test "validate_measure_under_capacity_ok" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ]
+  let r = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let vr = @moonsic.validate_measure(r, sig, 480)
+  assert_true(vr.is_ok())
+}
+
+///|
+test "validate_measure_overflow_err" {
+  // 4/4 at ppq=480 has 1920 ticks. Whole(1920) + Half(960) = 2880 > 1920
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.whole()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ]
+  let r = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let vr = @moonsic.validate_measure(r, sig, 480)
+  assert_true(vr.is_err())
+}
+
+///|
+test "validate_measure_at_capacity_ok" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let r = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let vr = @moonsic.validate_measure(r, sig, 480)
+  assert_true(vr.is_ok())
+}
+
+///|
+test "validate_measure_overflow_3_4" {
+  let sig = @moonsic.time_signature(3, 4)
+  // 3/4 at ppq=480 has 1440 ticks. Half(960) + Q(480) + Q(480) = 1920 > 1440
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.half()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+  ]
+  let r = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let vr = @moonsic.validate_measure(r, sig, 480)
+  assert_true(vr.is_err())
+}
+
+///|
+test "validate_measure_invalid_ppq_err" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let r = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let vr = @moonsic.validate_measure(r, sig, 0)
+  assert_true(vr.is_err())
+}
+
+///|
+test "validate_score_layout_full_ok" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let vr = @moonsic.validate_score_layout(sl)
+  assert_true(vr.is_ok())
+}
+
+///|
+test "validate_score_layout_overflow_fail" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.whole()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), None, None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let vr = @moonsic.validate_score_layout(sl)
+  assert_true(vr.is_err())
+}
+
+// --- 查询 ---
+
+///|
+test "measure_beat_duration_two_halves" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.half()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let dur = @moonsic.measure_beat_duration(m)
+  assert_true(dur > 3.99 && dur < 4.01)
+}
+
+///|
+test "measure_tick_duration_quarter" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let ticks = @moonsic.measure_tick_duration(m, 480)
+  assert_eq(ticks, 480)
+}
+
+///|
+test "voice_measure_count_three" {
+  let m0 = @moonsic.empty_measure(0)
+  let m1 = @moonsic.empty_measure(1)
+  let m2 = @moonsic.empty_measure(2)
+  let v = @moonsic.make_voice("RH", [m0, m1, m2]).unwrap()
+  assert_eq(@moonsic.voice_measure_count(v), 3)
+}
+
+///|
+test "staff_measure_count_max_voice" {
+  let m0 = @moonsic.empty_measure(0)
+  let m1 = @moonsic.empty_measure(1)
+  let v0 = @moonsic.make_voice("RH", [m0]).unwrap()
+  let v1 = @moonsic.make_voice("LH", [m0, m1]).unwrap()
+  let s = @moonsic.make_staff("Piano", None, None, None, [v0, v1]).unwrap()
+  assert_eq(@moonsic.staff_measure_count(s), 2)
+}
+
+///|
+test "score_layout_measure_count_multi_part" {
+  let m = @moonsic.empty_measure(0)
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", None, None, None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Song", 480, [p]).unwrap()
+  assert_eq(@moonsic.score_layout_measure_count(sl), 1)
+}
+
+///|
+test "score_layout_measure_count_empty" {
+  let sl = @moonsic.empty_score_layout("Empty", 480).unwrap()
+  assert_eq(@moonsic.score_layout_measure_count(sl), 0)
+}
+
+// --- 转换 ---
+
+///|
+test "staff_to_track_single_voice" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let track = @moonsic.staff_to_track(s)
+  assert_eq(track.channel, 0)
+  assert_eq(track.program, 0)
+  assert_eq(track.events.length(), 2)
+}
+
+///|
+test "staff_to_track_default_channel_no_voices" {
+  let s = @moonsic.empty_staff("Empty")
+  let track = @moonsic.staff_to_track(s)
+  assert_eq(track.channel, 0)
+  assert_eq(track.program, -1)
+  assert_eq(track.events.length(), 0)
+}
+
+///|
+test "staff_to_track_multi_voice_interleave" {
+  let sig = @moonsic.four_four()
+  let events_rh = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let events_lh = [@moonsic.n(@moonsic.c(3), @moonsic.quarter())]
+  let m0 = @moonsic.make_measure(0, Some(sig), events_rh).unwrap()
+  let m1 = @moonsic.make_measure(0, Some(sig), events_lh).unwrap()
+  let v_rh = @moonsic.make_voice("RH", [m0]).unwrap()
+  let v_lh = @moonsic.make_voice("LH", [m1]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), None, None, [v_rh, v_lh]).unwrap()
+  let track = @moonsic.staff_to_track(s)
+  assert_eq(track.events.length(), 2)
+}
+
+///|
+test "score_layout_to_score_multi_part" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Song", 480, [p]).unwrap()
+  let score = @moonsic.score_layout_to_score(sl)
+  assert_eq(score.track_count(), 1)
+  assert_eq(score.tracks[0].event_count(), 1)
+}
+
+// --- 错误路径测试 ---
+
+///|
+test "make_staff_empty_name_err" {
+  let r = @moonsic.make_staff("", None, None, None, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "make_staff_channel_negative_err" {
+  let r = @moonsic.make_staff("Piano", Some(-1), None, None, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "make_staff_program_negative_err" {
+  let r = @moonsic.make_staff("Piano", None, Some(-1), None, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "validate_voice_empty_name_err" {
+  let v = @moonsic.empty_voice("")
+  let vr = @moonsic.validate_voice(v, @moonsic.four_four(), 480)
+  assert_true(vr.is_err())
+}
+
+///|
+test "validate_staff_valid_ok" {
+  let sig = @moonsic.four_four()
+  let m = @moonsic.empty_measure(0)
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), None, None, [v]).unwrap()
+  let vr = @moonsic.validate_staff(s, sig, 480)
+  assert_true(vr.is_ok())
+}
+
+///|
+test "validate_part_valid_ok" {
+  let sig = @moonsic.four_four()
+  let m = @moonsic.empty_measure(0)
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), None, None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let vr = @moonsic.validate_part(p, sig, 480)
+  assert_true(vr.is_ok())
+}
+
+///|
+test "validate_part_empty_name_err" {
+  let p = @moonsic.empty_part("")
+  let vr = @moonsic.validate_part(p, @moonsic.four_four(), 480)
+  assert_true(vr.is_err())
+}
+
+// --- ScoreError to_string ---
+
+///|
+test "score_error_invalid_measure_to_string" {
+  let e = @moonsic.InvalidMeasure("bad measure")
+  assert_true(e.to_string().contains("无效小节"))
+}
+
+///|
+test "score_error_measure_overflow_to_string" {
+  let e = @moonsic.MeasureOverflow("bar 3 overflow")
+  assert_true(e.to_string().contains("小节溢出"))
+}
+
+///|
+test "score_error_invalid_ppq_to_string" {
+  let e = @moonsic.ScoreError::InvalidPPQ(0)
+  assert_true(e.to_string().contains("无效 PPQ"))
+}
+
+///|
+test "score_error_invalid_channel_to_string" {
+  let e = @moonsic.InvalidChannel(16)
+  assert_true(e.to_string().contains("无效通道"))
+}
+
+///|
+test "score_error_invalid_program_to_string" {
+  let e = @moonsic.InvalidProgram(128)
+  assert_true(e.to_string().contains("无效乐器"))
+}
+
+///|
+test "score_error_invalid_voice_to_string" {
+  let e = @moonsic.InvalidVoice("bad")
+  assert_true(e.to_string().contains("无效声部"))
+}
+
+///|
+test "score_error_invalid_staff_to_string" {
+  let e = @moonsic.InvalidStaff("bad")
+  assert_true(e.to_string().contains("无效五线谱"))
+}
+
+///|
+test "score_error_invalid_part_to_string" {
+  let e = @moonsic.InvalidPart("bad")
+  assert_true(e.to_string().contains("无效声部组"))
+}
+
+///|
+test "score_error_invalid_score_layout_to_string" {
+  let e = @moonsic.InvalidScoreLayout("bad")
+  assert_true(e.to_string().contains("无效曲谱布局"))
+}
+
+// --- track_to_voice 反推 ---
+
+///|
+test "track_to_voice_basic" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let r = @moonsic.track_to_voice(t, "Melody", 480, @moonsic.four_four())
+  assert_true(r.is_ok())
+  let v = r.unwrap()
+  assert_eq(@moonsic.voice_measure_count(v), 1)
+}
+
+///|
+test "track_to_voice_measure_split" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.g(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.a(4), @moonsic.quarter()),
+  ])
+  let r = @moonsic.track_to_voice(t, "Melody", 480, @moonsic.four_four())
+  assert_true(r.is_ok())
+  let v = r.unwrap()
+  assert_eq(@moonsic.voice_measure_count(v), 2)
+}
+
+///|
+test "track_to_voice_invalid_ppq_err" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let r = @moonsic.track_to_voice(t, "Bad", 0, @moonsic.four_four())
+  assert_true(r.is_err())
+}
+
+///|
+test "track_to_voice_invalid_time_sig_err" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let bad_sig = @moonsic.time_signature(5, 3)
+  let r = @moonsic.track_to_voice(t, "Bad", 480, bad_sig)
+  assert_true(r.is_err())
+}
+
+// --- track_to_staff 反推 ---
+
+///|
+test "track_to_staff_basic" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let r = @moonsic.track_to_staff(t, "Piano", 480, @moonsic.four_four())
+  assert_true(r.is_ok())
+}
+
+///|
+test "track_to_staff_no_program" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let r = @moonsic.track_to_staff(t, "Melody", 480, @moonsic.four_four())
+  assert_true(r.is_ok())
+}
+
+// --- 边界值测试 ---
+
+///|
+test "make_measure_none_signature_ok" {
+  let r = @moonsic.make_measure(0, None, [])
+  assert_true(r.is_ok())
+  let m = r.unwrap()
+  assert_eq(m.index, 0)
+  assert_eq(m.event_count(), 0)
+}
+
+///|
+test "measure_beat_duration_with_rest" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.r(@moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let dur = @moonsic.measure_beat_duration(m)
+  assert_true(dur > 3.99 && dur < 4.01)
+}
+
+///|
+test "staff_to_track_preserves_chord" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.major(@moonsic.c(4), @moonsic.quarter())]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), None, None, [v]).unwrap()
+  let track = @moonsic.staff_to_track(s)
+  assert_eq(track.events.length(), 1)
+}
+
+///|
+test "score_layout_to_score_empty" {
+  let sl = @moonsic.empty_score_layout("Empty", 480).unwrap()
+  let score = @moonsic.score_layout_to_score(sl)
+  assert_eq(score.track_count(), 0)
+}
+
+///|
+test "make_score_layout_invalid_ppq_negative_err" {
+  let r = @moonsic.make_score_layout("Bad", -1, [])
+  assert_true(r.is_err())
+}
+
+///|
+test "make_part_empty_name_err" {
+  let r = @moonsic.make_part("", [])
+  assert_true(r.is_err())
+}

@@ -96,6 +96,14 @@ pub fn bass_roots(Track, Duration) -> Track
 
 pub fn bb(Int) -> Pitch
 
+pub fn bench_duration_to_ticks(Int) -> String
+
+pub fn bench_midi_export(Int) -> String
+
+pub fn bench_score_flatten(Int) -> String
+
+pub fn bench_wav_render(Int) -> String
+
 pub fn bpm_to_microseconds_per_quarter(Double) -> Result[Int, TimeError]
 
 pub fn bridge(Array[Track]) -> Section
@@ -114,11 +122,15 @@ pub fn chord_distance(Chord, Chord) -> Int
 
 pub fn chord_quality(Pitch, ChordQuality, Duration) -> MusicEvent
 
+pub fn chord_to_json_string(Chord) -> String
+
 pub fn chord_tones(Chord) -> Array[PitchClass]
 
 pub fn chord_with_velocity(Array[Pitch], Duration, Int) -> Chord
 
 pub fn chorus(Array[Track]) -> Section
+
+pub fn control_change(Int, Int, Int, Int) -> Result[MidiEvent, String]
 
 pub fn cs(Int) -> Pitch
 
@@ -140,6 +152,8 @@ pub fn drum_note(Int, Duration, Int) -> MusicEvent
 
 pub fn ds(Int) -> Pitch
 
+pub fn duration_to_json_string(Duration) -> String
+
 pub fn e(Int) -> Pitch
 
 pub fn eb(Int) -> Pitch
@@ -150,7 +164,19 @@ pub fn electric_bass_finger() -> Int
 
 pub fn electric_piano_1() -> Int
 
+pub fn empty_measure(Int) -> Measure
+
+pub fn empty_part(String) -> Part
+
+pub fn empty_score_layout(String, Int) -> Result[ScoreLayout, ScoreError]
+
+pub fn empty_staff(String) -> Staff
+
 pub fn empty_track() -> Track
+
+pub fn empty_voice(String) -> Voice
+
+pub fn end_of_track(Int) -> Result[MidiEvent, String]
 
 pub fn f(Int) -> Pitch
 
@@ -202,17 +228,37 @@ pub fn is_valid_time_signature(Int, Int) -> Bool
 
 pub fn is_valid_velocity(Int) -> Bool
 
+pub fn json_parse(String) -> Result[JsonValue, String]
+
+pub fn json_stringify(JsonValue) -> String
+
 pub fn key(Pitch, ScaleKind) -> Key
 
 pub fn kick(Duration) -> MusicEvent
 
 pub fn layer(Array[Track]) -> Score
 
+pub fn layout_add_part(ScoreLayout, Part) -> ScoreLayout
+
 pub fn maj7(Pitch, Duration) -> MusicEvent
 
 pub fn major(Pitch, Duration) -> MusicEvent
 
+pub fn make_measure(Int, TimeSignature?, Array[MusicEvent]) -> Result[Measure, ScoreError]
+
+pub fn make_part(String, Array[Staff]) -> Result[Part, ScoreError]
+
+pub fn make_score_layout(String, Int, Array[Part]) -> Result[ScoreLayout, ScoreError]
+
+pub fn make_staff(String, Int?, Int?, String?, Array[Voice]) -> Result[Staff, ScoreError]
+
 pub fn make_time_map(Int, TimeSignature, Double) -> Result[TimeMap, TimeError]
+
+pub fn make_voice(String, Array[Measure]) -> Result[Voice, ScoreError]
+
+pub fn measure_beat_duration(Measure) -> Double
+
+pub fn measure_tick_duration(Measure, Int) -> Int
 
 pub fn melody(Array[MusicEvent]) -> Track
 
@@ -221,6 +267,8 @@ pub fn melody_degrees(Key, Array[Int], Duration) -> Track
 pub fn melody_str(String) -> Track
 
 pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
+
+pub fn midi_score_to_bytes(MidiScore) -> Bytes
 
 pub fn midi_to_frequency(Int) -> Double
 
@@ -240,7 +288,13 @@ pub fn natural_pitch(PitchClass, Int) -> Pitch
 
 pub fn note(Pitch, Duration) -> Note
 
+pub fn note_event_to_json(NoteEvent) -> String
+
 pub fn note_events_to_browser_js(Array[NoteEvent]) -> String
+
+pub fn note_off(Int, Int, Int, Int) -> Result[MidiEvent, String]
+
+pub fn note_on(Int, Int, Int, Int) -> Result[MidiEvent, String]
 
 pub fn note_with_velocity(Pitch, Duration, Int) -> Note
 
@@ -264,9 +318,17 @@ pub fn parse_tempo(String) -> Result[Double, TimeError]
 
 pub fn parse_time_sig(String) -> Result[TimeSignature, TimeError]
 
+pub fn parse_to_json(String, String) -> String
+
+pub fn part_add_staff(Part, Staff) -> Result[Part, ScoreError]
+
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
+pub fn pitch_to_json_string(Pitch) -> String
+
 pub fn position_to_ticks(BarPosition, TimeSignature, Int) -> Result[Int, TimeError]
+
+pub fn program_change(Int, Int, Int) -> Result[MidiEvent, String]
 
 pub fn progression(Pitch, ScaleKind, Array[RomanNumeral], Duration) -> Track
 
@@ -306,7 +368,19 @@ pub fn score(Array[Track]) -> Score
 
 pub fn score1(Track) -> Score
 
+pub fn score_from_json_string(String) -> Result[Score, String]
+
+pub fn score_layout_measure_count(ScoreLayout) -> Int
+
+pub fn score_layout_to_score(ScoreLayout) -> Score
+
 pub fn score_str(String) -> Score
+
+pub fn score_to_json(Score) -> String
+
+pub fn score_to_midi_bytes(Score, Int) -> Bytes
+
+pub fn score_to_midi_score(Score, Int) -> MidiScore
 
 pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 
@@ -322,6 +396,14 @@ pub fn sixteenth() -> Duration
 
 pub fn snare(Duration) -> MusicEvent
 
+pub fn sort_midi_events(Array[MidiEvent]) -> Array[MidiEvent]
+
+pub fn staff_add_voice(Staff, Voice) -> Result[Staff, ScoreError]
+
+pub fn staff_measure_count(Staff) -> Int
+
+pub fn staff_to_track(Staff) -> Track
+
 pub fn synth_lead_square() -> Int
 
 pub fn synth_pad_warm() -> Int
@@ -329,6 +411,8 @@ pub fn synth_pad_warm() -> Int
 pub fn tempo(Int) -> Tempo
 
 pub fn tempo_at_tick(TimeMap, Int) -> Double
+
+pub fn tempo_change(Int, Int) -> Result[MidiEvent, String]
 
 pub fn ticks_to_position(Int, TimeSignature, Int) -> Result[BarPosition, TimeError]
 
@@ -346,7 +430,39 @@ pub fn timeline_from_score(Score) -> PlaybackTimeline
 
 pub fn track(Array[MusicEvent]) -> Track
 
+pub fn track_name(Int, String) -> Result[MidiEvent, String]
+
+pub fn track_to_json(Track) -> String
+
+pub fn track_to_staff(Track, String, Int, TimeSignature) -> Result[Staff, ScoreError]
+
+pub fn track_to_voice(Track, String, Int, TimeSignature) -> Result[Voice, ScoreError]
+
 pub fn track_with_channel(Array[MusicEvent], Int) -> Track
+
+pub fn validate_channel(Int) -> Bool
+
+pub fn validate_controller(Int) -> Bool
+
+pub fn validate_measure(Measure, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_midi_note(Int) -> Bool
+
+pub fn validate_part(Part, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_ppq(Int) -> Bool
+
+pub fn validate_program(Int) -> Bool
+
+pub fn validate_score_layout(ScoreLayout) -> Result[Unit, ScoreError]
+
+pub fn validate_staff(Staff, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_tick(Int) -> Bool
+
+pub fn validate_velocity(Int) -> Bool
+
+pub fn validate_voice(Voice, TimeSignature, Int) -> Result[Unit, ScoreError]
 
 pub fn verse(Array[Track]) -> Section
 
@@ -354,7 +470,11 @@ pub fn version() -> String
 
 pub fn violin() -> Int
 
+pub fn voice_add_measure(Voice, Measure) -> Result[Voice, ScoreError]
+
 pub fn voice_lead(Track) -> Track
+
+pub fn voice_measure_count(Voice) -> Int
 
 pub fn whole() -> Duration
 
@@ -464,6 +584,20 @@ pub(all) enum IntervalQuality {
 }
 pub fn IntervalQuality::to_string(Self) -> String
 
+pub(all) struct JsonField {
+  key : String
+  value : JsonValue
+}
+
+pub(all) enum JsonValue {
+  JNull
+  JBool(Bool)
+  JNumber(Double)
+  JString(String)
+  JArray(Array[JsonValue])
+  JObject(Array[JsonField])
+}
+
 pub(all) struct Key {
   tonic : Pitch
   kind : ScaleKind
@@ -472,6 +606,41 @@ pub fn Key::degree(Self, Int, Int) -> Pitch
 pub fn Key::scale(Self, Int, Int) -> Array[Pitch]
 pub fn Key::scale_kind(Self) -> ScaleKind
 pub fn Key::tonic_pitch(Self) -> Pitch
+
+pub(all) struct Measure {
+  index : Int
+  signature : TimeSignature?
+  events : Array[MusicEvent]
+}
+pub fn Measure::event_count(Self) -> Int
+
+pub(all) struct MidiEvent {
+  tick : Int
+  kind : MidiEventKind
+}
+
+pub(all) enum MidiEventKind {
+  NoteOn(channel~ : Int, note~ : Int, velocity~ : Int)
+  NoteOff(channel~ : Int, note~ : Int, velocity~ : Int)
+  ProgramChange(channel~ : Int, program~ : Int)
+  ControlChange(channel~ : Int, controller~ : Int, value~ : Int)
+  TempoChange(bpm~ : Int)
+  TimeSignatureMeta(numerator~ : Int, denominator~ : Int)
+  TrackName(name~ : String)
+  EndOfTrack
+}
+
+pub(all) struct MidiScore {
+  ppq : Int
+  tracks : Array[MidiTrack]
+}
+
+pub(all) struct MidiTrack {
+  name : String
+  program : Int
+  channel : Int
+  events : Array[MidiEvent]
+}
 
 pub(all) enum MusicEvent {
   Note(Note)
@@ -508,6 +677,11 @@ pub fn NoteEvent::frequency(Self) -> Double
 pub fn NoteEvent::start_seconds(Self, Int) -> Double
 pub fn NoteEvent::start_ticks(Self, Int) -> Int
 pub fn NoteEvent::to_string(Self) -> String
+
+pub(all) struct Part {
+  name : String
+  staves : Array[Staff]
+}
 
 pub(all) struct Pitch {
   class : PitchClass
@@ -620,11 +794,41 @@ pub fn Score::to_wav_bytes(Self) -> Bytes
 pub fn Score::track_count(Self) -> Int
 pub fn Score::transpose(Self, Int) -> Self
 
+pub(all) enum ScoreError {
+  InvalidMeasure(String)
+  InvalidVoice(String)
+  InvalidStaff(String)
+  InvalidPart(String)
+  InvalidScoreLayout(String)
+  MeasureOverflow(String)
+  InvalidPPQ(Int)
+  InvalidChannel(Int)
+  InvalidProgram(Int)
+}
+pub fn ScoreError::to_string(Self) -> String
+
+pub(all) struct ScoreLayout {
+  title : String
+  ppq : Int
+  composer : String
+  parts : Array[Part]
+  initial_tempo : Tempo
+  initial_signature : TimeSignature
+}
+
 pub(all) struct Section {
   name : String
   tracks : Array[Track]
 }
 pub fn Section::duration_beats(Self) -> Double
+
+pub(all) struct Staff {
+  name : String
+  channel : Int?
+  program : Int?
+  instrument_name : String?
+  voices : Array[Voice]
+}
 
 pub(all) struct Tempo {
   bpm : Int
@@ -716,6 +920,11 @@ pub fn Track::with_volume(Self, Double) -> Self
 pub(all) struct TupletRatio {
   actual : Int
   normal : Int
+}
+
+pub(all) struct Voice {
+  name : String
+  measures : Array[Measure]
 }
 
 // Type aliases
