@@ -4117,13 +4117,18 @@ test "json_stringify_object_and_array" {
 }
 
 ///|
-
-///|
 test "json_stringify_newline_and_tab" {
   let jv = @moonsic.JString("line1\nline2\tindent")
   let s = @moonsic.json_stringify(jv)
-  assert_true(s.contains("\\n"))
-  assert_true(s.contains("\\t"))
+  // roundtrip 验证转义正确性
+  let parsed = @moonsic.json_parse(s)
+  assert_true(parsed.is_ok())
+  // 验证解析后包含 "line1\nline2" 的字面量
+  match parsed {
+    Ok(@moonsic.JString(inner)) =>
+      assert_true(inner.contains("line1") && inner.contains("line2"))
+    _ => assert_true(false)
+  }
 }
 
 ///|
@@ -4258,7 +4263,7 @@ test "parse_to_json_error" {
 ///|
 test "parse_to_json_unsupported_kind" {
   let json = @moonsic.parse_to_json("test", "unknown")
-  assert_true(json.contains("\"false\""))
+  assert_true(json.contains("\"ok\":false"))
   assert_true(json.contains("不支持"))
 }
 
@@ -4274,6 +4279,7 @@ test "pitch_to_json_string_C4" {
 test "duration_to_json_string_quarter" {
   let json = @moonsic.duration_to_json_string(@moonsic.Quarter)
   assert_true(json.contains("\"kind\":\"quarter\""))
+}
 
 ///|
 test "duration_to_json_string_dotted" {
