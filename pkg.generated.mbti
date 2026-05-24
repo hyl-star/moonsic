@@ -82,6 +82,8 @@ pub fn aug(Pitch, Duration) -> MusicEvent
 
 pub fn b(Int) -> Pitch
 
+pub fn bar_length_ticks(TimeSignature, Int) -> Result[Int, TimeError]
+
 pub fn basic_beat(Int) -> Score
 
 pub fn bass_from_progression(Track, BassStyle, Int) -> Track
@@ -89,6 +91,8 @@ pub fn bass_from_progression(Track, BassStyle, Int) -> Track
 pub fn bass_roots(Track, Duration) -> Track
 
 pub fn bb(Int) -> Pitch
+
+pub fn bpm_to_microseconds_per_quarter(Double) -> Result[Int, TimeError]
 
 pub fn bridge(Array[Track]) -> Section
 
@@ -230,6 +234,8 @@ pub fn outro(Array[Track]) -> Section
 
 pub fn parse_chord(String) -> Result[Chord, String]
 
+pub fn parse_dur_unit(String) -> Result[RhythmDuration, TimeError]
+
 pub fn parse_interval(String) -> Result[Interval, String]
 
 pub fn parse_pitch(String) -> Result[Pitch, String]
@@ -237,6 +243,10 @@ pub fn parse_pitch(String) -> Result[Pitch, String]
 pub fn parse_pitch_class(String) -> Result[PitchClass, String]
 
 pub fn parse_scale(String) -> Result[Scale, String]
+
+pub fn parse_tempo(String) -> Result[Double, TimeError]
+
+pub fn parse_time_sig(String) -> Result[TimeSignature, TimeError]
 
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
@@ -248,7 +258,27 @@ pub fn quarter() -> Duration
 
 pub fn r(Duration) -> MusicEvent
 
+pub fn rational(Int, Int) -> Result[Rational, TimeError]
+
+pub fn rational_add(Rational, Rational) -> Rational
+
+pub fn rational_div(Rational, Rational) -> Result[Rational, TimeError]
+
+pub fn rational_is_integer(Rational) -> Bool
+
+pub fn rational_mul(Rational, Rational) -> Rational
+
+pub fn rational_sub(Rational, Rational) -> Rational
+
+pub fn rational_to_double(Rational) -> Double
+
+pub fn rational_to_int(Rational) -> Result[Int, TimeError]
+
 pub fn rest(Duration) -> Rest
+
+pub fn rhythm_duration_to_fraction(RhythmDuration) -> Rational
+
+pub fn rhythm_duration_to_ticks(RhythmDuration, Int) -> Result[Int, TimeError]
 
 pub fn roman_progression(Key, String, Duration) -> Track
 
@@ -264,6 +294,8 @@ pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 
 pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
 
+pub fn seconds_to_ticks(Double, Double, Int) -> Int
+
 pub fn section(String, Array[Track]) -> Section
 
 pub fn sixteenth() -> Duration
@@ -275,6 +307,10 @@ pub fn synth_lead_square() -> Int
 pub fn synth_pad_warm() -> Int
 
 pub fn tempo(Int) -> Tempo
+
+pub fn ticks_to_quarter_beats(Int, Int) -> Rational
+
+pub fn ticks_to_seconds(Int, Double, Int) -> Result[Double, TimeError]
 
 pub fn time_signature(Int, Int) -> TimeSignature
 
@@ -319,6 +355,12 @@ pub(all) enum ArpStyle {
   Alberti
 }
 
+pub(all) struct BarPosition {
+  bar : Int
+  beat : Rational
+  offset : Rational
+}
+
 pub(all) enum BassStyle {
   Root
   RootFifth
@@ -349,6 +391,18 @@ pub(all) enum ChordQuality {
   Suspended4
 }
 pub fn ChordQuality::intervals(Self) -> Array[Int]
+
+pub(all) enum DurUnit {
+  DurWhole
+  DurHalf
+  DurQuarter
+  DurEighth
+  DurSixteenth
+  ThirtySecond
+  SixtyFourth
+  OneTwentyEighth
+}
+pub fn DurUnit::to_string(Self) -> String
 
 pub(all) enum Duration {
   Whole
@@ -448,11 +502,33 @@ pub(all) enum PitchClass {
 pub fn PitchClass::base_semitone(Self) -> Int
 pub fn PitchClass::to_string(Self) -> String
 
+pub(all) struct Rational {
+  numerator : Int
+  denominator : Int
+}
+pub fn Rational::to_string(Self) -> String
+
 pub(all) struct Rest {
   duration : Duration
 }
 pub fn Rest::stretch(Self, Double) -> Self
 pub fn Rest::to_string(Self) -> String
+
+pub(all) struct RhythmDuration {
+  unit : DurUnit
+  dots : Int
+  tuplet : TupletRatio?
+}
+
+pub(all) enum RhythmicKind {
+  NoteKind
+  RestKind
+}
+
+pub(all) struct RhythmicValue {
+  duration : RhythmDuration
+  kind : RhythmicKind
+}
 
 pub(all) enum RomanNumeral {
   I
@@ -524,6 +600,23 @@ pub(all) enum TheoryError {
 }
 pub fn TheoryError::to_string(Self) -> String
 
+pub(all) struct TickPosition {
+  ticks : Int
+}
+
+pub(all) enum TimeError {
+  InvalidRational(String)
+  InvalidTimeSignature(String)
+  InvalidDuration(String)
+  InvalidTempo(String)
+  InvalidPPQ(String)
+  InvalidTick(String)
+  TimeParseError(String)
+  NonIntegralTick(String)
+  TimeUnsupported(String)
+}
+pub fn TimeError::to_string(Self) -> String
+
 pub(all) struct TimeSignature {
   numerator : Int
   denominator : Int
@@ -556,6 +649,11 @@ pub fn Track::up_octave(Self) -> Self
 pub fn Track::with_mute(Self, Bool) -> Self
 pub fn Track::with_pan(Self, Double) -> Self
 pub fn Track::with_volume(Self, Double) -> Self
+
+pub(all) struct TupletRatio {
+  actual : Int
+  normal : Int
+}
 
 // Type aliases
 

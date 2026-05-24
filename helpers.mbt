@@ -98,27 +98,27 @@ pub fn bb(octave : Int) -> Pitch {
 
 ///|
 pub fn whole() -> Duration {
-  Whole
+  Duration::Whole
 }
 
 ///|
 pub fn half() -> Duration {
-  Half
+  Duration::Half
 }
 
 ///|
 pub fn quarter() -> Duration {
-  Quarter
+  Duration::Quarter
 }
 
 ///|
 pub fn eighth() -> Duration {
-  Eighth
+  Duration::Eighth
 }
 
 ///|
 pub fn sixteenth() -> Duration {
-  Sixteenth
+  Duration::Sixteenth
 }
 
 // --- 事件快捷构造 ---
@@ -376,15 +376,15 @@ fn parse_pitch_at(input : String, p : Int) -> (Pitch, Int) {
 ///|
 fn parse_dur(input : String, p : Int) -> (Duration, Int) {
   if p >= input.length() {
-    return (Quarter, p)
+    return (Duration::Quarter, p)
   }
   let base = match input[p] {
-    'w' => Whole
-    'h' => Half
-    'q' => Quarter
-    'e' => Eighth
-    's' => Sixteenth
-    _ => Quarter
+    'w' => Duration::Whole
+    'h' => Duration::Half
+    'q' => Duration::Quarter
+    'e' => Duration::Eighth
+    's' => Duration::Sixteenth
+    _ => Duration::Quarter
   }
   let n = p + 1
   if n < input.length() && input[n] == '.' {
