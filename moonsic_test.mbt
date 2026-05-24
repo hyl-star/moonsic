@@ -1981,3 +1981,693 @@ test "join_interleave" {
   assert_eq(joined.events[0].degree, 1)
   assert_eq(joined.events[1].degree, 5)
 }
+
+// ============================================================
+// 曲谱校验与问题报告模块测试 (validate.mbt)
+// ============================================================
+
+///|
+/// 校验：measure overflow — 4/4 小节放 whole + half 溢出
+test "validate_measure_overflow" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.whole()),
+    @moonsic.n(@moonsic.d(4), @moonsic.half()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_measure_report(m, sig, 480, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+  assert_eq(@moonsic.validation_report_error_count(report), 1)
+  assert_eq(@moonsic.validation_report_warning_count(report), 0)
+}
+
+///|
+/// 校验：measure underfilled — 严格模式下 4/4 小节只放 2 个 quarter
+test "validate_measure_underfilled_strict" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_measure_report(m, sig, 480, opts)
+  assert_true(@moonsic.validation_report_has_warnings(report))
+  assert_eq(@moonsic.validation_report_warning_count(report), 1)
+}
+
+///|
+/// 校验：measure at capacity — 4/4 小节 4 个 quarter 不报错
+test "validate_measure_at_capacity_ok" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_measure_report(m, sig, 480, opts)
+  assert_true(!@moonsic.validation_report_has_errors(report))
+  assert_true(!@moonsic.validation_report_has_warnings(report))
+}
+
+///|
+/// 校验：empty voice 产生 EmptyVoice warning
+test "validate_empty_voice_warning" {
+  let v = @moonsic.empty_voice("Empty")
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_voice_report(v, opts)
+  assert_true(@moonsic.validation_report_has_warnings(report))
+}
+
+///|
+/// 校验：empty voice 在严格模式下升级为 error
+test "validate_empty_voice_strict_error" {
+  let v = @moonsic.empty_voice("Empty")
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_voice_report(v, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：staff channel=16 产生 InvalidChannel error
+test "validate_staff_invalid_channel" {
+  let v = @moonsic.empty_voice("RH")
+  let s = @moonsic.make_staff("Bad", Some(16), None, None, [v]).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_staff_report(s, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：staff program=128 产生 InvalidProgram error
+test "validate_staff_invalid_program" {
+  let v = @moonsic.empty_voice("RH")
+  let s = @moonsic.make_staff("Bad", None, Some(128), None, [v]).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_staff_report(s, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：score 非法 PPQ=0 产生 InvalidPPQ fatal
+test "validate_score_invalid_ppq" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_score_report(s, 0, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：score 非法 track channel 产生 InvalidChannel
+test "validate_score_invalid_channel" {
+  let t = @moonsic.melody_with_channel(
+    [@moonsic.n(@moonsic.c(4), @moonsic.quarter())],
+    16,
+  )
+  let s = @moonsic.score1(t)
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_score_report(s, 480, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：report to_json 包含 error_count 和 issues 数组
+test "validate_report_to_json" {
+  let v = @moonsic.empty_voice("Empty")
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_voice_report(v, opts)
+  let json = @moonsic.validation_report_to_json(report)
+  assert_true(json.contains("error_count"))
+  assert_true(json.contains("warning_count"))
+  assert_true(json.contains("issues"))
+  assert_true(json.contains("EmptyVoice"))
+}
+
+///|
+/// 校验：report to_summary 包含中文描述
+test "validate_report_to_summary" {
+  let v = @moonsic.empty_voice("Empty")
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_voice_report(v, opts)
+  let summary = @moonsic.validation_report_to_summary(report)
+  assert_true(summary.contains("校验报告"))
+  assert_true(summary.contains("EmptyVoice"))
+  assert_true(summary.contains("建议"))
+}
+
+///|
+/// 校验：default/strict/export 三种 options 构造函数
+test "validate_options_constructors" {
+  let d = @moonsic.default_validation_options()
+  assert_true(!d.strict_measure_capacity)
+  assert_true(!d.empty_voice_is_error)
+
+  let s = @moonsic.strict_validation_options()
+  assert_true(s.strict_measure_capacity)
+  assert_true(s.empty_voice_is_error)
+
+  let e = @moonsic.export_validation_options()
+  assert_true(e.strict_measure_capacity)
+  assert_true(e.export_mode)
+}
+
+///|
+/// 校验：score layout 整体校验，合法 layout 不报错
+test "validate_score_layout_report_valid" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_score_layout_report(sl, opts)
+  assert_true(!@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验：score layout with voice alignment mismatch
+test "validate_score_layout_voice_alignment" {
+  let sig = @moonsic.four_four()
+  let m0 = @moonsic.empty_measure(0)
+  let m1 = @moonsic.empty_measure(1)
+  let v_rh = @moonsic.make_voice("RH", [m0]).unwrap()
+  let v_lh = @moonsic.make_voice("LH", [m0, m1]).unwrap()
+  let s = @moonsic.make_staff("Piano", None, None, None, [v_rh, v_lh]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_score_layout_report(sl, opts)
+  assert_true(@moonsic.validation_report_has_warnings(report))
+}
+
+///|
+/// 校验：FFI 合法 ScoreLayout JSON 返回 ok:true
+test "validate_ffi_valid_json" {
+  let input = "{\"title\":\"Test\",\"ppq\":480,\"composer\":\"\",\"parts\":[],\"initial_tempo\":{\"bpm\":120},\"initial_signature\":{\"numerator\":4,\"denominator\":4}}"
+  let result = @moonsic.ffi_validate_score_layout_json(input)
+  assert_true(result.contains("\"ok\":true"))
+  assert_true(result.contains("\"data\""))
+  assert_true(result.contains("error_count"))
+}
+
+///|
+/// 校验：FFI 非法 JSON 返回 ok:false
+test "validate_ffi_invalid_json" {
+  let result = @moonsic.ffi_validate_score_layout_json("not valid json")
+  assert_true(result.contains("\"ok\":false"))
+  assert_true(result.contains("\"error\""))
+
+  let result2 = @moonsic.ffi_validate_score_layout_json("{}")
+  assert_true(result2.contains("\"ok\":false"))
+}
+
+// ============================================================
+// 专业曲谱结构增强模块测试 (score_enhanced.mbt)
+// ============================================================
+
+// --- Section / Repeat ---
+
+///|
+/// 段落创建：Verse section measure 0-7
+test "score_enhanced: make_section_checked valid verse" {
+  let r = @moonsic.make_section_checked("Verse1", @moonsic.Verse, 0, 7)
+  assert_true(r is Ok(_))
+  let s = r.unwrap()
+  assert_eq(s.name, "Verse1")
+  assert_eq(s.start_measure, 0)
+  assert_eq(s.end_measure, 7)
+  assert_true(s.kind is @moonsic.Verse)
+}
+
+///|
+/// 空 section name -> Err(InvalidSection)
+test "score_enhanced: make_section_checked empty name fails" {
+  let r = @moonsic.make_section_checked("", @moonsic.Verse, 0, 7)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidSection(_)) => ()
+    _ => abort("expected InvalidSection")
+  }
+}
+
+///|
+/// 小节范围非法：end < start -> Err
+test "score_enhanced: make_section_checked end_lt_start fails" {
+  let r = @moonsic.make_section_checked("Bad", @moonsic.Verse, 7, 0)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidSection(_)) => ()
+    _ => abort("expected InvalidSection")
+  }
+}
+
+///|
+/// RepeatStart / RepeatEnd 创建
+test "score_enhanced: make_repeat_checked start_and_end" {
+  let start = @moonsic.make_repeat_checked(@moonsic.RepeatStart, 0, None)
+  assert_true(start is Ok(_))
+  let s = start.unwrap()
+  assert_eq(s.measure_index, 0)
+  assert_true(s.kind is @moonsic.RepeatStart)
+
+  let end = @moonsic.make_repeat_checked(@moonsic.RepeatEnd, 7, None)
+  assert_true(end is Ok(_))
+  let e = end.unwrap()
+  assert_eq(e.measure_index, 7)
+  assert_true(e.kind is @moonsic.RepeatEnd)
+}
+
+///|
+/// Negative measure_index -> Err
+test "score_enhanced: make_repeat_checked negative_index fails" {
+  let r = @moonsic.make_repeat_checked(@moonsic.RepeatStart, -1, None)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidRepeat(_)) => ()
+    _ => abort("expected InvalidRepeat")
+  }
+}
+
+// --- Ending ---
+
+///|
+/// FirstEnding 创建
+test "score_enhanced: make_ending_checked first ending" {
+  let r = @moonsic.make_ending_checked(1, 8, 15, @moonsic.FirstEnding)
+  assert_true(r is Ok(_))
+  let eb = r.unwrap()
+  assert_eq(eb.number, 1)
+  assert_eq(eb.start_measure, 8)
+  assert_eq(eb.end_measure, 15)
+}
+
+///|
+/// Ending number=0 -> Err(InvalidEnding)
+test "score_enhanced: make_ending_checked number 0 fails" {
+  let r = @moonsic.make_ending_checked(0, 0, 7, @moonsic.FirstEnding)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidEnding(_)) => ()
+    _ => abort("expected InvalidEnding")
+  }
+}
+
+///|
+/// Ending number negative -> Err
+test "score_enhanced: make_ending_checked negative number fails" {
+  let r = @moonsic.make_ending_checked(-1, 0, 7, @moonsic.SecondEnding)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidEnding(_)) => ()
+    _ => abort("expected InvalidEnding")
+  }
+}
+
+// --- Lyrics / Notation ---
+
+///|
+/// 歌词 + 演奏记号 + structured note
+test "score_enhanced: structured_note_checked with lyric and notation" {
+  let l = @moonsic.make_lyric_checked("hello", 0, @moonsic.Single)
+  assert_true(l is Ok(_))
+  let lyric = l.unwrap()
+  assert_eq(lyric.text, "hello")
+  assert_eq(lyric.verse, 0)
+
+  let n = @moonsic.make_notation_checked(
+    @moonsic.Articulation(@moonsic.Staccato),
+    @moonsic.Above,
+  )
+  assert_true(n is Ok(_))
+  let notation = n.unwrap()
+
+  let note = @moonsic.n(@moonsic.c(4), @moonsic.quarter())
+  let se = @moonsic.structured_note_checked(
+    note,
+    [notation],
+    Some(lyric),
+    @moonsic.NoTie,
+  )
+  assert_true(se is Ok(_))
+  let event = se.unwrap()
+  // Verify the raw note is preserved
+  match event.event {
+    @moonsic.Note(nn) => assert_eq(nn.pitch.to_midi(), 60)
+    _ => abort("expected Note")
+  }
+  assert_eq(event.notations.length(), 1)
+  assert_true(event.lyric is Some(_))
+  assert_true(event.tie is @moonsic.NoTie)
+}
+
+///|
+/// 空歌词文本 -> Err
+test "score_enhanced: make_lyric_checked empty text fails" {
+  let r = @moonsic.make_lyric_checked("", 0, @moonsic.Single)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidLyric(_)) => ()
+    _ => abort("expected InvalidLyric")
+  }
+}
+
+///|
+/// Negative verse number -> Err
+test "score_enhanced: make_lyric_checked negative verse fails" {
+  let r = @moonsic.make_lyric_checked("text", -1, @moonsic.Single)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidLyric(_)) => ()
+    _ => abort("expected InvalidLyric")
+  }
+}
+
+// --- Pickup / Cross-measure Tie ---
+
+///|
+/// Pickup measure 创建：role=PickupMeasure，内容小于 4/4 容量
+test "score_enhanced: enhanced_measure_checked pickup measure" {
+  let sig = @moonsic.four_four()
+  let empty_se : Array[@moonsic.StructuredEvent] = []
+  let r = @moonsic.enhanced_measure_checked(
+    0,
+    Some(sig),
+    @moonsic.PickupMeasure,
+    empty_se,
+  )
+  assert_true(r is Ok(_))
+  let m = r.unwrap()
+  assert_eq(m.index, 0)
+  assert_true(m.role is @moonsic.PickupMeasure)
+}
+
+///|
+/// Cross-measure tie: TieStart on measure 0, TieStop on measure 1
+test "score_enhanced: structured_note_checked tie_start_stop" {
+  let n1 = @moonsic.n(@moonsic.c(4), @moonsic.quarter())
+  let se1 = @moonsic.structured_note_checked(n1, [], None, @moonsic.TieStart)
+  assert_true(se1 is Ok(_))
+
+  let n2 = @moonsic.n(@moonsic.c(4), @moonsic.quarter())
+  let se2 = @moonsic.structured_note_checked(n2, [], None, @moonsic.TieStop)
+  assert_true(se2 is Ok(_))
+
+  let m0 = @moonsic.enhanced_measure_checked(
+    0,
+    Some(@moonsic.four_four()),
+    @moonsic.NormalMeasure,
+    [se1.unwrap()],
+  )
+  assert_true(m0 is Ok(_))
+
+  let m1 = @moonsic.enhanced_measure_checked(1, None, @moonsic.NormalMeasure, [
+    se2.unwrap(),
+  ])
+  assert_true(m1 is Ok(_))
+}
+
+// --- Track to EnhancedVoice ---
+
+///|
+/// 4/4 ppq=480 四个 quarter -> 1 measure 4 events
+test "score_enhanced: track_to_enhanced_voice_checked four quarters" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ])
+  let r = @moonsic.track_to_enhanced_voice_checked(
+    t,
+    @moonsic.four_four(),
+    480,
+    "Melody",
+  )
+  assert_true(r is Ok(_))
+  let v = r.unwrap()
+  assert_eq(v.name, "Melody")
+  assert_eq(v.measures.length(), 1)
+  assert_eq(v.measures[0].events.length(), 4)
+}
+
+///|
+/// Track to EnhancedVoice: 6 quarter notes split into 2 measures
+test "score_enhanced: track_to_enhanced_voice_checked measure split" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.g(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.a(4), @moonsic.quarter()),
+  ])
+  let r = @moonsic.track_to_enhanced_voice_checked(
+    t,
+    @moonsic.four_four(),
+    480,
+    "Melody",
+  )
+  assert_true(r is Ok(_))
+  let v = r.unwrap()
+  assert_eq(v.measures.length(), 2)
+  // 1st measure: 4 notes, 2nd: 2 notes
+  assert_eq(v.measures[0].events.length(), 4)
+  assert_eq(v.measures[1].events.length(), 2)
+}
+
+// --- Error paths ---
+
+///|
+/// Staff channel=16 -> Err(InvalidStaff)
+test "score_enhanced: enhanced_staff_checked channel 16 fails" {
+  let r = @moonsic.enhanced_staff_checked("Staff", 16, 0, [])
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidStaff(_)) => ()
+    _ => abort("expected InvalidStaff")
+  }
+}
+
+///|
+/// Staff program negative -> Err
+test "score_enhanced: enhanced_staff_checked program negative fails" {
+  let r = @moonsic.enhanced_staff_checked("Staff", 0, -1, [])
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidStaff(_)) => ()
+    _ => abort("expected InvalidStaff")
+  }
+}
+
+///|
+/// PPQ=0 -> Err(InvalidPPQ)
+test "score_enhanced: enhanced_score_layout_checked ppq 0 fails" {
+  let r = @moonsic.enhanced_score_layout_checked([], [], [], [], 0)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidPPQ(_)) => ()
+    _ => abort("expected InvalidPPQ")
+  }
+}
+
+// --- Score to Enhanced Layout round-trip ---
+
+///|
+/// Score -> EnhancedScoreLayout -> Score round-trip
+test "score_enhanced: score_to_enhanced_layout round trip" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let layout_r = @moonsic.score_to_enhanced_layout_checked(s, 480)
+  assert_true(layout_r is Ok(_))
+  let layout = layout_r.unwrap()
+  assert_eq(layout.ppq, 480)
+  assert_eq(layout.parts.length(), 1)
+
+  let back_r = @moonsic.enhanced_layout_to_score_checked(layout)
+  assert_true(back_r is Ok(_))
+  let back = back_r.unwrap()
+  assert_eq(back.track_count(), 1)
+  assert_eq(back.tracks[0].event_count(), 1)
+}
+
+// --- EnhancedVoice/Staff/Part construction ---
+
+///|
+/// EnhancedVoice checked: valid name and measures
+test "score_enhanced: enhanced_voice_checked valid" {
+  let empty_se : Array[@moonsic.StructuredEvent] = []
+  let m = @moonsic.enhanced_measure_checked(
+    0,
+    Some(@moonsic.four_four()),
+    @moonsic.NormalMeasure,
+    empty_se,
+  ).unwrap()
+  let r = @moonsic.enhanced_voice_checked("Voice1", [m])
+  assert_true(r is Ok(_))
+  let v = r.unwrap()
+  assert_eq(v.name, "Voice1")
+  assert_eq(v.measures.length(), 1)
+}
+
+///|
+/// EnhancedVoice empty name -> Err
+test "score_enhanced: enhanced_voice_checked empty name fails" {
+  let r = @moonsic.enhanced_voice_checked("", [])
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidVoice(_)) => ()
+    _ => abort("expected InvalidVoice")
+  }
+}
+
+///|
+/// EnhancedPart checked: valid name
+test "score_enhanced: enhanced_part_checked valid" {
+  let r = @moonsic.enhanced_part_checked("Part1", [])
+  assert_true(r is Ok(_))
+  let p = r.unwrap()
+  assert_eq(p.name, "Part1")
+}
+
+///|
+/// EnhancedPart empty name -> Err
+test "score_enhanced: enhanced_part_checked empty name fails" {
+  let r = @moonsic.enhanced_part_checked("", [])
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.InvalidPart(_)) => ()
+    _ => abort("expected InvalidPart")
+  }
+}
+
+// --- ScoreStructureError to_string ---
+
+///|
+/// ScoreStructureError to_string coverage
+test "score_enhanced: score_structure_error to_string" {
+  let e1 = @moonsic.InvalidSection("test")
+  assert_true(e1.to_string().contains("无效段落"))
+
+  let e2 = @moonsic.InvalidRepeat("test")
+  assert_true(e2.to_string().contains("无效反复"))
+
+  let e3 = @moonsic.InvalidEnding("test")
+  assert_true(e3.to_string().contains("无效结尾"))
+
+  let e4 = @moonsic.InvalidNotation("test")
+  assert_true(e4.to_string().contains("无效演奏记号"))
+
+  let e5 = @moonsic.InvalidLyric("test")
+  assert_true(e5.to_string().contains("无效歌词"))
+
+  let e6 = @moonsic.InvalidPickup("test")
+  assert_true(e6.to_string().contains("无效弱起小节"))
+
+  let e7 = @moonsic.InvalidTie("test")
+  assert_true(e7.to_string().contains("无效连音"))
+
+  let e8 = @moonsic.ScoreStructureUnsupported("test")
+  assert_true(e8.to_string().contains("不支持"))
+}
+
+// --- Rule table functions ---
+
+///|
+/// Rule tables: SectionKind default_label
+test "score_enhanced: section_kind default_label" {
+  assert_eq(@moonsic.Verse.default_label(), "Verse")
+  assert_eq(@moonsic.Chorus.default_label(), "Chorus")
+  assert_eq(@moonsic.Intro.default_label(), "Intro")
+  assert_eq(@moonsic.Outro.default_label(), "Outro")
+  assert_eq(@moonsic.Bridge.default_label(), "Bridge")
+  assert_eq(@moonsic.Solo.default_label(), "Solo")
+  assert_eq(@moonsic.CustomSection.default_label(), "Custom")
+}
+
+///|
+/// Rule tables: DynamicMark velocity_hint
+test "score_enhanced: dynamic_mark velocity_hint" {
+  assert_eq(@moonsic.Pianissimo.velocity_hint(), 40)
+  assert_eq(@moonsic.Piano.velocity_hint(), 55)
+  assert_eq(@moonsic.MezzoPiano.velocity_hint(), 70)
+  assert_eq(@moonsic.MezzoForte.velocity_hint(), 85)
+  assert_eq(@moonsic.Forte.velocity_hint(), 105)
+  assert_eq(@moonsic.Fortissimo.velocity_hint(), 120)
+}
+
+///|
+/// Rule tables: TieKind behavior
+test "score_enhanced: tie_kind behavior" {
+  assert_eq(@moonsic.NoTie.behavior(), "独立音符")
+  assert_eq(@moonsic.TieStart.behavior(), "与后续音符相连")
+  assert_eq(@moonsic.TieContinue.behavior(), "从前一音延续并继续")
+  assert_eq(@moonsic.TieStop.behavior(), "结束连音")
+  assert_eq(
+    @moonsic.TieStartStop.behavior(),
+    "同时结束前一 tie 并开启下一 tie",
+  )
+}
+
+// --- Convenience API ---
+
+///|
+/// Convenience: lyric() creates Single syllable verse 0
+test "score_enhanced: convenience lyric" {
+  let l = @moonsic.lyric("hello")
+  assert_eq(l.text, "hello")
+  assert_eq(l.verse, 0)
+  assert_true(l.syllable is @moonsic.Single)
+}
+
+///|
+/// Convenience: notation() creates Above placement
+test "score_enhanced: convenience notation" {
+  let n = @moonsic.notation(@moonsic.Articulation(@moonsic.Staccato))
+  assert_true(n.placement is @moonsic.Above)
+  assert_true(n.text is None)
+}
+
+///|
+/// Convenience: enhanced_voice() fallbacks to "Untitled"
+test "score_enhanced: convenience enhanced_voice empty name" {
+  let v = @moonsic.enhanced_voice("", [])
+  assert_eq(v.name, "Untitled")
+}
+
+///|
+/// Convenience: enhanced_voice() keeps non-empty name
+test "score_enhanced: convenience enhanced_voice valid name" {
+  let v = @moonsic.enhanced_voice("MyVoice", [])
+  assert_eq(v.name, "MyVoice")
+}
+
+// --- FFI ---
+
+///|
+/// FFI: basic valid JSON returns ok:true
+test "score_enhanced: ffi_score_structure_summary_json valid" {
+  let input = "{\"ppq\":480,\"parts\":[],\"sections\":[],\"repeats\":[],\"endings\":[]}"
+  let result = @moonsic.ffi_score_structure_summary_json(input)
+  assert_true(result.contains("\"ok\":true"))
+  assert_true(result.contains("\"data\""))
+  assert_true(result.contains("\"ppq\":480"))
+}
+
+///|
+/// FFI: ppq=0 returns ok:false
+test "score_enhanced: ffi_score_structure_summary_json invalid ppq" {
+  let input = "{\"ppq\":0}"
+  let result = @moonsic.ffi_score_structure_summary_json(input)
+  assert_true(result.contains("\"ok\":false"))
+  assert_true(result.contains("InvalidPPQ"))
+}
