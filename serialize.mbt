@@ -30,11 +30,6 @@ pub(all) struct JsonField {
 // ============================================================
 
 ///|
-fn jv_null() -> JsonValue {
-  JNull
-}
-
-///|
 fn jv_bool(b : Bool) -> JsonValue {
   JBool(b)
 }
@@ -503,7 +498,6 @@ fn parse_json_num_inner(
   if p < len && input[p] == '-' {
     p = p + 1
   }
-  let start = p
   let mut has_digit = false
   while p < len && input[p] >= '0' && input[p] <= '9' {
     has_digit = true
