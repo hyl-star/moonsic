@@ -1498,7 +1498,18 @@ pub fn make_loop_cue_checked(
     intensity_level: segment.intensity_level,
     tags: segment.tags,
   }
-  game_cue_checked(id, name, LoopCue, [segment_with_loop])
+  Ok({
+    id,
+    name,
+    kind: LoopCue,
+    segments: [segment_with_loop],
+    entry_points: [],
+    exit_points: [],
+    default_loop: Some(loop_r),
+    layers: [],
+    tags: [],
+    metadata: empty_game_metadata(),
+  })
 }
 
 ///|

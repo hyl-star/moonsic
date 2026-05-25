@@ -6178,3 +6178,617 @@ test "playback_stable: past_timeline_end" {
   let between = tl.events_between(tl.duration() + 1.0, tl.duration() + 2.0)
   assert_eq(between.length(), 0)
 }
+
+// ============================================================
+// Game Music IR 测试 (game_music.mbt)
+// ============================================================
+
+///|
+/// GameCueKind: loop 类型 is_default_loop=true
+test "game_music: cue_kind_is_default_loop" {
+  assert_true(@moonsic.LoopCue.is_default_loop())
+  assert_true(@moonsic.CombatCue.is_default_loop())
+  assert_true(@moonsic.AmbienceCue.is_default_loop())
+  assert_true(@moonsic.MenuCue.is_default_loop())
+  assert_false(@moonsic.LinearCue.is_default_loop())
+  assert_false(@moonsic.StingerCue.is_default_loop())
+  assert_false(@moonsic.TransitionCue.is_default_loop())
+}
+
+///|
+/// GameMusicError to_string 覆盖率
+test "game_music: game_music_error_to_string" {
+  let e1 = @moonsic.InvalidProjectId("test")
+  assert_true(e1.to_string().contains("无效项目ID"))
+  let e2 = @moonsic.DuplicateCueId("dup")
+  assert_true(e2.to_string().contains("重复CueID"))
+  let e3 = @moonsic.InvalidLoopRegion("bad")
+  assert_true(e3.to_string().contains("无效循环区域"))
+  let e4 = @moonsic.MissingTransitionTarget("no")
+  assert_true(e4.to_string().contains("缺少过渡目标"))
+  let e5 = @moonsic.ValidationFailed("fail")
+  assert_true(e5.to_string().contains("校验失败"))
+}
+
+///|
+/// game_cue_checked: 合法构造
+test "game_music: game_cue_checked_valid" {
+  let r = @moonsic.game_cue_checked("cue1", "Test Cue", @moonsic.LoopCue, [])
+  assert_true(r is Ok(_))
+  let cue = r.unwrap()
+  assert_eq(cue.id, "cue1")
+  assert_eq(cue.name, "Test Cue")
+  assert_true(cue.kind is @moonsic.LoopCue)
+  assert_eq(cue.segments.length(), 0)
+}
+
+///|
+/// game_cue_checked: 空 ID 返回 Err
+test "game_music: game_cue_checked_empty_id_err" {
+  let r = @moonsic.game_cue_checked("", "Test", @moonsic.LinearCue, [])
+  assert_true(r is Err(@moonsic.InvalidCue(_)))
+}
+
+///|
+/// game_project_checked: 合法构造
+test "game_music: game_project_checked_valid" {
+  let cue = @moonsic.game_cue_checked(
+    "exploration",
+    "Exploration",
+    @moonsic.LoopCue,
+    [],
+  ).unwrap()
+  let r = @moonsic.game_project_checked("proj1", "Level 1", [cue])
+  assert_true(r is Ok(_))
+  let proj = r.unwrap()
+  assert_eq(proj.id, "proj1")
+  assert_eq(proj.cues.length(), 1)
+}
+
+///|
+/// game_project_checked: 重复 cue id 返回 Err
+test "game_music: game_project_checked_duplicate_cue_err" {
+  let cue1 = @moonsic.game_cue_checked("loop1", "Loop 1", @moonsic.LoopCue, []).unwrap()
+  let cue2 = @moonsic.game_cue_checked(
+    "loop1",
+    "Loop 1 Dup",
+    @moonsic.CombatCue,
+    [],
+  ).unwrap()
+  let r = @moonsic.game_project_checked("p", "Test", [cue1, cue2])
+  assert_true(r is Err(@moonsic.DuplicateCueId(_)))
+}
+
+///|
+/// game_project_checked: 空 ID 返回 Err
+test "game_music: game_project_checked_empty_id_err" {
+  let r = @moonsic.game_project_checked("", "Test", [])
+  assert_true(r is Err(@moonsic.InvalidProjectId(_)))
+}
+
+///|
+/// loop_region_checked: 合法循环区域
+test "game_music: loop_region_checked_valid" {
+  let start = @moonsic.musical_time_zero()
+  let end = @moonsic.musical_time(4, 0.0, 0)
+  let r = @moonsic.loop_region_checked("loop1", start, end, @moonsic.NextBar)
+  assert_true(r is Ok(_))
+  let lr = r.unwrap()
+  assert_eq(lr.id, "loop1")
+  assert_eq(lr.end.bar, 4)
+}
+
+///|
+/// loop_region_checked: end <= start 返回 Err
+test "game_music: loop_region_checked_invalid_range_err" {
+  let start = @moonsic.musical_time(4, 0.0, 0)
+  let end = @moonsic.musical_time(2, 0.0, 0)
+  let r = @moonsic.loop_region_checked("bad", start, end, @moonsic.Immediate)
+  assert_true(r is Err(@moonsic.InvalidLoopRegion(_)))
+}
+
+///|
+/// loop_region_with_repeats_checked: 合法带重复次数
+test "game_music: loop_region_with_repeats_checked_valid" {
+  let start = @moonsic.musical_time_zero()
+  let end = @moonsic.musical_time(8, 0.0, 0)
+  let r = @moonsic.loop_region_with_repeats_checked(
+    "loop8",
+    start,
+    end,
+    @moonsic.NextBar,
+    4,
+  )
+  assert_true(r is Ok(_))
+  let lr = r.unwrap()
+  assert_eq(lr.max_repeats, Some(4))
+}
+
+///|
+/// loop_region_with_repeats_checked: max_repeats=0 返回 Err
+test "game_music: loop_region_with_repeats_zero_err" {
+  let start = @moonsic.musical_time_zero()
+  let end = @moonsic.musical_time(4, 0.0, 0)
+  let r = @moonsic.loop_region_with_repeats_checked(
+    "bad",
+    start,
+    end,
+    @moonsic.Immediate,
+    0,
+  )
+  assert_true(r is Err(@moonsic.InvalidLoopRegion(_)))
+}
+
+///|
+/// game_segment_from_fragment_checked: 合法构造
+test "game_music: game_segment_from_fragment_checked_valid" {
+  let t = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let frag = @moonsic.score_fragment_from_track(t, 0, 4)
+  let r = @moonsic.game_segment_from_fragment_checked(
+    "seg1", "Melody", frag, 4.0,
+  )
+  assert_true(r is Ok(_))
+  let seg = r.unwrap()
+  assert_eq(seg.id, "seg1")
+  assert_true(seg.source is @moonsic.ScoreFragmentSource(_))
+}
+
+///|
+/// game_segment_from_fragment_checked: 空 ID 返回 Err
+test "game_music: game_segment_from_fragment_checked_empty_id_err" {
+  let frag = @moonsic.score_fragment_empty()
+  let r = @moonsic.game_segment_from_fragment_checked("", "M", frag, 4.0)
+  assert_true(r is Err(@moonsic.EmptySegment(_)))
+}
+
+///|
+/// game_segment_from_fragment_checked: duration<=0 返回 Err
+test "game_music: game_segment_from_fragment_checked_neg_err" {
+  let frag = @moonsic.score_fragment_empty()
+  let r = @moonsic.game_segment_from_fragment_checked("s", "M", frag, -1.0)
+  assert_true(r is Err(@moonsic.InvalidSegmentDuration(_)))
+}
+
+///|
+/// transition_rule_checked: 合法规则
+test "game_music: transition_rule_checked_valid" {
+  let r = @moonsic.transition_rule_checked(
+    "tr1",
+    "explore",
+    "combat",
+    @moonsic.TriggerImmediate,
+    @moonsic.NextBar,
+    @moonsic.Cut,
+  )
+  assert_true(r is Ok(_))
+  let tr = r.unwrap()
+  assert_eq(tr.from_cue, "explore")
+  assert_eq(tr.to_cue, "combat")
+}
+
+///|
+/// transition_rule_checked: from==to 返回 Err
+test "game_music: transition_rule_checked_same_cue_err" {
+  let r = @moonsic.transition_rule_checked(
+    "tr1",
+    "self",
+    "self",
+    @moonsic.TriggerImmediate,
+    @moonsic.Immediate,
+    @moonsic.Cut,
+  )
+  assert_true(r is Err(@moonsic.InvalidTransitionRule(_)))
+}
+
+///|
+/// transition_rule_checked: 空 from_cue 返回 Err
+test "game_music: transition_rule_checked_empty_from_err" {
+  let r = @moonsic.transition_rule_checked(
+    "tr1",
+    "",
+    "combat",
+    @moonsic.TriggerImmediate,
+    @moonsic.Immediate,
+    @moonsic.Cut,
+  )
+  assert_true(r is Err(@moonsic.InvalidTransitionRule(_)))
+}
+
+///|
+/// stinger_checked: 合法构造
+test "game_music: stinger_checked_valid" {
+  let t = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.eighth())])
+  let frag = @moonsic.score_fragment_from_track(t, 0, 1)
+  let seg = @moonsic.game_segment_from_fragment_checked(
+    "seg1", "Sting", frag, 1.0,
+  ).unwrap()
+  let r = @moonsic.stinger_checked(
+    "sting1",
+    @moonsic.TriggerImmediate,
+    seg,
+    @moonsic.Immediate,
+    10,
+  )
+  assert_true(r is Ok(_))
+  let s = r.unwrap()
+  assert_eq(s.id, "sting1")
+  assert_eq(s.priority, 10)
+}
+
+///|
+/// stinger_checked: 负优先级返回 Err
+test "game_music: stinger_checked_neg_priority_err" {
+  let seg = @moonsic.game_segment_from_fragment_checked(
+    "seg1",
+    "S",
+    @moonsic.score_fragment_empty(),
+    4.0,
+  ).unwrap()
+  let r = @moonsic.stinger_checked(
+    "bad",
+    @moonsic.TriggerImmediate,
+    seg,
+    @moonsic.Immediate,
+    -1,
+  )
+  assert_true(r is Err(@moonsic.InvalidParameter(_)))
+}
+
+///|
+/// validate_game_project_report: empty segment cue 产生 CueHasNoSegments
+test "game_music: validate_empty_segment_cue" {
+  let cue = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let proj = @moonsic.game_project_checked("p1", "Test", [cue.unwrap()])
+  let report = @moonsic.validate_game_project_report(proj.unwrap())
+  assert_true(@moonsic.game_validation_report_has_errors(report))
+  assert_true(@moonsic.game_validation_report_is_export_blocking(report))
+}
+
+///|
+/// validate: 重复 cue 构造时检测
+test "game_music: validate_duplicate_cue_constructor" {
+  let cue1 = @moonsic.game_cue_checked("s1", "S1", @moonsic.LinearCue, []).unwrap()
+  let cue2 = @moonsic.game_cue_checked("s1", "S1dup", @moonsic.CombatCue, [])
+  let proj = @moonsic.game_project_checked("p1", "Test", [cue1, cue2.unwrap()])
+  assert_true(proj is Err(@moonsic.DuplicateCueId(_)))
+}
+
+///|
+/// validate: 缺少 transition target
+test "game_music: validate_missing_transition_target" {
+  let cue1 = @moonsic.game_cue_checked("explore", "E", @moonsic.LoopCue, [])
+  let tr = @moonsic.transition_rule_checked(
+    "tr1",
+    "explore",
+    "missing_cue",
+    @moonsic.TriggerImmediate,
+    @moonsic.Immediate,
+    @moonsic.Cut,
+  )
+  let proj = @moonsic.game_project_full_checked(
+    "p1",
+    "Test",
+    [cue1.unwrap()],
+    [],
+    [],
+    [tr.unwrap()],
+  )
+  assert_true(proj is Err(@moonsic.MissingTransitionTarget(_)))
+}
+
+///|
+/// make_loop_cue_checked: 从 ScoreFragment 创建 loop cue
+test "game_music: make_loop_cue_checked_basic" {
+  let t = @moonsic.track([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let frag = @moonsic.score_fragment_from_track(t, 0, 4)
+  let r = @moonsic.make_loop_cue_checked("explore", "Explore", frag, 4)
+  assert_true(r is Ok(_))
+  let cue = r.unwrap()
+  assert_true(cue.kind is @moonsic.LoopCue)
+  assert_eq(cue.segments.length(), 1)
+  let has_loop = match cue.default_loop {
+    Some(_) => true
+    None => false
+  }
+  assert_true(has_loop)
+}
+
+///|
+/// make_loop_cue_checked: bars=0 返回 Err
+test "game_music: make_loop_cue_checked_bars_zero_err" {
+  let frag = @moonsic.score_fragment_empty()
+  let r = @moonsic.make_loop_cue_checked("bad", "Bad", frag, 0)
+  assert_true(r is Err(@moonsic.InvalidCue(_)))
+}
+
+///|
+/// make_stinger_cue_checked: 创建 stinger cue
+test "game_music: make_stinger_cue_checked_basic" {
+  let t = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.eighth())])
+  let frag = @moonsic.score_fragment_from_track(t, 0, 1)
+  let r = @moonsic.make_stinger_cue_checked("victory", "Victory", frag)
+  assert_true(r is Ok(_))
+  assert_true(r.unwrap().kind is @moonsic.StingerCue)
+}
+
+///|
+/// make_transition_cue_checked: 创建 transition cue
+test "game_music: make_transition_cue_checked_basic" {
+  let t1 = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.track([@moonsic.n(@moonsic.g(4), @moonsic.quarter())])
+  let frag1 = @moonsic.score_fragment_from_track(t1, 0, 2)
+  let frag2 = @moonsic.score_fragment_from_track(t2, 0, 2)
+  let r = @moonsic.make_transition_cue_checked("t", "Trans", frag1, frag2)
+  assert_true(r is Ok(_))
+  assert_eq(r.unwrap().segments.length(), 2)
+}
+
+///|
+/// GameValidationReport: 空报告 API
+test "game_music: empty_validation_report" {
+  let r = @moonsic.empty_game_validation_report()
+  assert_eq(r.summary.total_issues, 0)
+  assert_false(@moonsic.game_validation_report_has_errors(r))
+  assert_false(@moonsic.game_validation_report_is_export_blocking(r))
+  let json = @moonsic.game_validation_report_to_json(r)
+  assert_true(json.contains("error_count"))
+}
+
+///|
+/// game_project_to_json_checked: 基本导出
+test "game_music: game_project_to_json_checked_basic" {
+  let cue = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let proj = @moonsic.game_project_checked("p1", "Test", [cue.unwrap()]).unwrap()
+  let opts = @moonsic.default_game_export_options()
+  let r = @moonsic.game_project_to_json_checked(proj, opts)
+  assert_true(r is Ok(_))
+  assert_true(r.unwrap().contains("schema_version"))
+}
+
+///|
+/// game_project_to_json_checked: strict 模式有错误返回 Err
+test "game_music: game_project_to_json_strict_err" {
+  let cue = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let proj = @moonsic.game_project_checked("p1", "Test", [cue.unwrap()]).unwrap()
+  let opts = @moonsic.GameExportOptions::{
+    schema_version: "2.0",
+    include_timelines: false,
+    include_validation_report: true,
+    strict: true,
+  }
+  let r = @moonsic.game_project_to_json_checked(proj, opts)
+  assert_true(r is Err(@moonsic.ValidationFailed(_)))
+}
+
+///|
+/// game_project_to_export_document_checked: 导出文档
+test "game_music: game_project_to_export_document_checked" {
+  let seg = @moonsic.game_segment_from_fragment_checked(
+    "seg1",
+    "S",
+    @moonsic.score_fragment_from_track(
+      @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.quarter())]),
+      0,
+      1,
+    ),
+    1.0,
+  ).unwrap()
+  let cue = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LinearCue, [seg])
+  let proj = @moonsic.game_project_checked("p1", "Test", [cue.unwrap()]).unwrap()
+  let opts = @moonsic.default_game_export_options()
+  let r = @moonsic.game_project_to_export_document_checked(proj, opts)
+  assert_true(r is Ok(_))
+  let doc = r.unwrap()
+  assert_eq(doc.schema_version, "2.0")
+  assert_eq(doc.project_id, "p1")
+}
+
+///|
+/// game_timeline_from_track: 从 Track 创建 timeline
+test "game_music: game_timeline_from_track_basic" {
+  let t = @moonsic.track([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let tl = @moonsic.game_timeline_from_track(t, 480)
+  assert_eq(tl.entries.length(), 2)
+  assert_eq(tl.ppq, 480)
+  assert_true(tl.total_ticks > 0)
+}
+
+///|
+/// game_segment_from_timeline_checked: 从 timeline 创建 segment
+test "game_music: game_segment_from_timeline_checked_valid" {
+  let t = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let tl = @moonsic.game_timeline_from_track(t, 480)
+  let r = @moonsic.game_segment_from_timeline_checked("seg1", "T", tl)
+  assert_true(r is Ok(_))
+  assert_true(r.unwrap().source is @moonsic.TimelineSource(_))
+}
+
+///|
+/// game_cue_to_timeline_checked: 无 segment 返回 Err
+test "game_music: game_cue_to_timeline_checked_empty_err" {
+  let cue = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let opts = @moonsic.default_game_timeline_options()
+  let r = @moonsic.game_cue_to_timeline_checked(cue.unwrap(), opts)
+  assert_true(r is Err(@moonsic.TimelineConversionFailed(_)))
+}
+
+///|
+/// game_project_to_browser_events: 缺失 cue 返回 Err
+test "game_music: browser_events_missing_cue_err" {
+  let proj = @moonsic.game_project_checked("p1", "Test", []).unwrap()
+  let opts = @moonsic.GameBrowserExportOptions::{
+    ppq: 480,
+    enable_loop: false,
+    include_markers: false,
+  }
+  let r = @moonsic.game_project_to_browser_events_checked(
+    proj, "no_such_cue", opts,
+  )
+  assert_true(r is Err(@moonsic.MissingCue(_)))
+}
+
+///|
+/// score_fragment_to_game_segment: 空轨道返回 Err
+test "game_music: score_fragment_to_segment_empty_err" {
+  let r = @moonsic.score_fragment_to_game_segment_checked(
+    @moonsic.score_fragment_empty(),
+    @moonsic.default_game_segment_options(),
+  )
+  assert_true(r is Err(@moonsic.EmptySegment(_)))
+}
+
+///|
+/// ParameterCompare / GameIssueSeverity to_string
+test "game_music: param_compare_severity_to_strings" {
+  assert_eq(@moonsic.Equal.to_string(), "==")
+  assert_eq(@moonsic.GreaterThan.to_string(), ">")
+  assert_eq(@moonsic.GameError.to_string(), "Error")
+  assert_eq(@moonsic.GameWarning.to_string(), "Warning")
+  assert_eq(@moonsic.GameInfo.to_string(), "Info")
+}
+
+///|
+/// GameIssueCode default_severity error 级别
+test "game_music: issue_code_severity_error" {
+  assert_true(
+    @moonsic.CueHasNoSegments.default_severity() is @moonsic.GameError,
+  )
+  assert_true(@moonsic.DuplicateCue.default_severity() is @moonsic.GameError)
+  assert_true(
+    @moonsic.TransitionTargetMissing.default_severity() is @moonsic.GameError,
+  )
+}
+
+///|
+/// GameIssueCode default_severity warning 级别
+test "game_music: issue_code_severity_warning" {
+  assert_true(
+    @moonsic.MissingDefaultCue.default_severity() is @moonsic.GameWarning,
+  )
+  assert_true(
+    @moonsic.LoopNotBarAligned.default_severity() is @moonsic.GameWarning,
+  )
+}
+
+///|
+/// game_cue_to_json_checked: 基础导出
+test "game_music: game_cue_to_json_checked_basic" {
+  let cue = @moonsic.game_cue_checked("c1", "Base", @moonsic.LinearCue, [])
+  let opts = @moonsic.default_game_export_options()
+  let r = @moonsic.game_cue_to_json_checked(cue.unwrap(), opts)
+  assert_true(r is Ok(_))
+  assert_true(r.unwrap().contains("cue_count"))
+}
+
+///|
+/// ScoreFragment 桥接辅助
+test "game_music: score_fragment_helpers" {
+  let t = @moonsic.track([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let frag = @moonsic.score_fragment_from_track(t, 0, 4)
+  assert_eq(frag.tracks.length(), 1)
+  assert_eq(frag.start_bar, 0)
+  assert_eq(frag.length_bars, 4)
+  let e = @moonsic.score_fragment_empty()
+  assert_eq(e.tracks.length(), 0)
+}
+
+///|
+/// TransitionQuantization/CueKind/LayerRole/MarkerKind to_string
+test "game_music: display_to_string_coverage" {
+  assert_eq(@moonsic.Immediate.to_string(), "immediate")
+  assert_eq(@moonsic.NextBeat.to_string(), "next-beat")
+  assert_eq(@moonsic.LoopCue.to_string(), "loop")
+  assert_eq(@moonsic.CombatCue.to_string(), "combat")
+  assert_eq(@moonsic.LayerMelody.to_string(), "melody")
+  assert_eq(@moonsic.LayerBass.to_string(), "bass")
+  assert_eq(@moonsic.EntryMarker.to_string(), "entry")
+  assert_eq(@moonsic.LoopStartMarker.to_string(), "loop-start")
+  assert_eq(@moonsic.CustomMarker("j").to_string(), "custom:j")
+}
+
+///|
+/// game_project_full_checked: 完整构造
+test "game_music: game_project_full_checked_all" {
+  let cue1 = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let state1 = @moonsic.MusicState::{
+    id: "explore",
+    name: "E",
+    default_cue: "cue1",
+    tags: [],
+  }
+  let param1 = @moonsic.MusicParameter::{
+    id: "i",
+    name: "Intensity",
+    kind: @moonsic.Continuous,
+    default_value: 0.5,
+    min_value: 0.0,
+    max_value: 1.0,
+  }
+  let cue2 = @moonsic.game_cue_checked("cue2", "C2", @moonsic.CombatCue, [])
+  let tr1 = @moonsic.transition_rule_checked(
+    "tr1",
+    "cue1",
+    "cue2",
+    @moonsic.TriggerImmediate,
+    @moonsic.Immediate,
+    @moonsic.Cut,
+  )
+  let tr2 = @moonsic.transition_rule_checked(
+    "tr2",
+    "cue2",
+    "cue1",
+    @moonsic.TriggerOnState("combat"),
+    @moonsic.NextBar,
+    @moonsic.Crossfade(1.0),
+  )
+  let r = @moonsic.game_project_full_checked(
+    "proj1",
+    "Full",
+    [cue1.unwrap(), cue2.unwrap()],
+    [state1],
+    [param1],
+    [tr1.unwrap(), tr2.unwrap()],
+  )
+  assert_true(r is Ok(_))
+  let proj = r.unwrap()
+  assert_eq(proj.cues.length(), 2)
+  assert_eq(proj.states.length(), 1)
+  assert_eq(proj.parameters.length(), 1)
+  assert_eq(proj.transitions.length(), 2)
+}
+
+///|
+/// game_project_full_checked: state default_cue 不存在返回 Err
+test "game_music: full_checked_missing_default_cue_err" {
+  let cue1 = @moonsic.game_cue_checked("cue1", "C1", @moonsic.LoopCue, [])
+  let state = @moonsic.MusicState::{
+    id: "bad",
+    name: "B",
+    default_cue: "no_such_cue",
+    tags: [],
+  }
+  let r = @moonsic.game_project_full_checked(
+    "p1",
+    "Test",
+    [cue1.unwrap()],
+    [state],
+    [],
+    [],
+  )
+  assert_true(r is Err(@moonsic.MissingCue(_)))
+}
+
+///|
+/// empty_game_metadata 构造
+test "game_music: empty_game_metadata_defaults" {
+  let m = @moonsic.empty_game_metadata()
+  assert_eq(m.author, "")
+  assert_eq(m.description, "")
+  assert_eq(m.intensity, 0.5)
+}

@@ -144,6 +144,12 @@ pub fn d(Int) -> Pitch
 
 pub fn db(Int) -> Pitch
 
+pub fn default_game_export_options() -> GameExportOptions
+
+pub fn default_game_segment_options() -> GameSegmentOptions
+
+pub fn default_game_timeline_options() -> GameTimelineOptions
+
 pub fn default_musicxml_export_options() -> MusicXmlExportOptions
 
 pub fn default_tempo() -> Tempo
@@ -179,6 +185,10 @@ pub fn eighth() -> Duration
 pub fn electric_bass_finger() -> Int
 
 pub fn electric_piano_1() -> Int
+
+pub fn empty_game_metadata() -> GameMusicMetadata
+
+pub fn empty_game_validation_report() -> GameValidationReport
 
 pub fn empty_measure(Int) -> Measure
 
@@ -264,7 +274,37 @@ pub fn fs(Int) -> Pitch
 
 pub fn g(Int) -> Pitch
 
+pub fn game_cue_checked(String, String, GameCueKind, Array[GameSegment]) -> Result[GameCue, GameMusicError]
+
+pub fn game_cue_to_json_checked(GameCue, GameExportOptions) -> Result[String, GameMusicError]
+
+pub fn game_cue_to_timeline_checked(GameCue, GameTimelineOptions) -> Result[GameTimelineSource, GameMusicError]
+
 pub fn game_export_validation_options() -> ValidationOptions
+
+pub fn game_project_checked(String, String, Array[GameCue]) -> Result[GameMusicProject, GameMusicError]
+
+pub fn game_project_full_checked(String, String, Array[GameCue], Array[MusicState], Array[MusicParameter], Array[TransitionRule]) -> Result[GameMusicProject, GameMusicError]
+
+pub fn game_project_to_browser_events_checked(GameMusicProject, String, GameBrowserExportOptions) -> Result[BrowserEventDocument, GameMusicError]
+
+pub fn game_project_to_export_document_checked(GameMusicProject, GameExportOptions) -> Result[GameMusicExportDocument, GameMusicError]
+
+pub fn game_project_to_json_checked(GameMusicProject, GameExportOptions) -> Result[String, GameMusicError]
+
+pub fn game_project_to_timelines_checked(GameMusicProject, GameTimelineOptions) -> Result[Array[GameTimelineExport], GameMusicError]
+
+pub fn game_segment_from_fragment_checked(String, String, ScoreFragment, Double) -> Result[GameSegment, GameMusicError]
+
+pub fn game_segment_from_timeline_checked(String, String, GameTimelineSource) -> Result[GameSegment, GameMusicError]
+
+pub fn game_timeline_from_track(Track, Int) -> GameTimelineSource
+
+pub fn game_validation_report_has_errors(GameValidationReport) -> Bool
+
+pub fn game_validation_report_is_export_blocking(GameValidationReport) -> Bool
+
+pub fn game_validation_report_to_json(GameValidationReport) -> String
 
 pub fn gb(Int) -> Pitch
 
@@ -340,6 +380,10 @@ pub fn layer(Array[Track]) -> Score
 
 pub fn layout_add_part(ScoreLayout, Part) -> ScoreLayout
 
+pub fn loop_region_checked(String, MusicalTime, MusicalTime, TransitionQuantization) -> Result[LoopRegion, GameMusicError]
+
+pub fn loop_region_with_repeats_checked(String, MusicalTime, MusicalTime, TransitionQuantization, Int) -> Result[LoopRegion, GameMusicError]
+
 pub fn lyric(String) -> Lyric
 
 pub fn maj7(Pitch, Duration) -> MusicEvent
@@ -347,6 +391,8 @@ pub fn maj7(Pitch, Duration) -> MusicEvent
 pub fn major(Pitch, Duration) -> MusicEvent
 
 pub fn make_ending_checked(Int, Int, Int, EndingKind) -> Result[EndingBracket, ScoreStructureError]
+
+pub fn make_loop_cue_checked(String, String, ScoreFragment, Int) -> Result[GameCue, GameMusicError]
 
 pub fn make_lyric_checked(String, Int, LyricSyllableKind) -> Result[Lyric, ScoreStructureError]
 
@@ -364,7 +410,11 @@ pub fn make_section_checked(String, SectionKind, Int, Int) -> Result[ScoreSectio
 
 pub fn make_staff(String, Int?, Int?, String?, Array[Voice]) -> Result[Staff, ScoreError]
 
+pub fn make_stinger_cue_checked(String, String, ScoreFragment) -> Result[GameCue, GameMusicError]
+
 pub fn make_time_map(Int, TimeSignature, Double) -> Result[TimeMap, TimeError]
+
+pub fn make_transition_cue_checked(String, String, ScoreFragment, ScoreFragment) -> Result[GameCue, GameMusicError]
 
 pub fn make_voice(String, Array[Measure]) -> Result[Voice, ScoreError]
 
@@ -405,6 +455,10 @@ pub fn motif(Array[Int], RhythmPattern) -> Motif
 pub fn motif_checked(Array[Int], RhythmPattern) -> Result[Motif, MotifError]
 
 pub fn motif_to_track_checked(Motif, Key, Int, Duration) -> Result[Track, MotifError]
+
+pub fn musical_time(Int, Double, Int) -> MusicalTime
+
+pub fn musical_time_zero() -> MusicalTime
 
 pub fn musicxml_clef_from_kind(MusicXmlClefKind) -> MusicXmlClef
 
@@ -536,6 +590,12 @@ pub fn score1(Track) -> Score
 
 pub fn score_context_from_score(Score, Int) -> ScoreContext
 
+pub fn score_fragment_empty() -> ScoreFragment
+
+pub fn score_fragment_from_track(Track, Int, Int) -> ScoreFragment
+
+pub fn score_fragment_to_game_segment_checked(ScoreFragment, GameSegmentOptions) -> Result[GameSegment, GameMusicError]
+
 pub fn score_from_json_string(String) -> Result[Score, SerializeError]
 
 pub fn score_layout_measure_count(ScoreLayout) -> Int
@@ -588,6 +648,8 @@ pub fn staff_measure_count(Staff) -> Int
 
 pub fn staff_to_track(Staff) -> Track
 
+pub fn stinger_checked(String, GameTrigger, GameSegment, TransitionQuantization, Int) -> Result[Stinger, GameMusicError]
+
 pub fn strict_validation_options() -> ValidationOptions
 
 pub fn structured_note_checked(Note, Array[Notation], Lyric?, TieKind) -> Result[StructuredEvent, ScoreStructureError]
@@ -634,6 +696,8 @@ pub fn track_with_channel(Array[MusicEvent], Int) -> Track
 
 pub fn transform_motif_checked(Motif, MotifTransform) -> Result[Motif, MotifError]
 
+pub fn transition_rule_checked(String, String, String, GameTrigger, TransitionQuantization, TransitionBehavior) -> Result[TransitionRule, GameMusicError]
+
 pub fn transpose_pitch(Pitch, Int) -> Result[Pitch, TheoryError]
 
 pub fn validate_channel(Int) -> Bool
@@ -641,6 +705,8 @@ pub fn validate_channel(Int) -> Bool
 pub fn validate_controller(Int) -> Bool
 
 pub fn validate_game_export_ready(ScoreLayout) -> ValidationReport
+
+pub fn validate_game_project_report(GameMusicProject) -> GameValidationReport
 
 pub fn validate_generation_patch(GenerationPatch, ScoreContext) -> Result[Unit, ExternalGenerationError]
 
@@ -805,6 +871,12 @@ pub(all) enum ArticulationKind {
 }
 pub fn ArticulationKind::playback_hint(Self) -> String
 
+pub(all) struct AudioAssetRef {
+  uri : String
+  asset_type : String
+  format : String
+}
+
 pub(all) struct BarPosition {
   bar : Int
   beat : Rational
@@ -816,6 +888,15 @@ pub(all) enum BassStyle {
   RootFifth
   Octave
   Walking
+}
+
+pub(all) struct BrowserEventDocument {
+  events : Array[GameTimelineEntry]
+  ppq : Int
+  tempo_bpm : Int
+  loop_enabled : Bool
+  loop_start_ticks : Int
+  loop_end_ticks : Int
 }
 
 pub(all) struct Chord {
@@ -845,6 +926,21 @@ pub fn ChordQuality::intervals(Self) -> Array[Int]
 
 pub(all) struct CodaMark {
   measure_index : Int
+}
+
+pub(all) struct CueEntryPoint {
+  id : String
+  label : String
+  position : MusicalTime
+  conditions : Array[TransitionCondition]
+}
+
+pub(all) struct CueExitPoint {
+  id : String
+  label : String
+  position : MusicalTime
+  target_cue : String
+  transition_behavior : TransitionBehavior
 }
 
 pub(all) enum DurUnit {
@@ -952,6 +1048,262 @@ pub(all) enum ExternalGeneratorKind {
   RemoteModelProvider
   HumanPluginProvider
   MockProvider
+}
+
+pub(all) struct GameAssetExport {
+  asset_id : String
+  asset_type : String
+  uri : String
+}
+
+pub(all) struct GameBrowserExportOptions {
+  ppq : Int
+  enable_loop : Bool
+  include_markers : Bool
+}
+
+pub(all) struct GameCue {
+  id : String
+  name : String
+  kind : GameCueKind
+  segments : Array[GameSegment]
+  entry_points : Array[CueEntryPoint]
+  exit_points : Array[CueExitPoint]
+  default_loop : LoopRegion?
+  layers : Array[GameLayer]
+  tags : Array[String]
+  metadata : GameMusicMetadata
+}
+
+pub(all) enum GameCueKind {
+  LinearCue
+  LoopCue
+  StingerCue
+  TransitionCue
+  LayeredCue
+  AdaptiveCue
+  MenuCue
+  CombatCue
+  AmbienceCue
+}
+pub fn GameCueKind::is_default_loop(Self) -> Bool
+pub fn GameCueKind::to_string(Self) -> String
+
+pub(all) struct GameExportOptions {
+  schema_version : String
+  include_timelines : Bool
+  include_validation_report : Bool
+  strict : Bool
+}
+
+pub(all) enum GameIssueCode {
+  CueHasNoSegments
+  DuplicateCue
+  MissingDefaultCue
+  InvalidLoopRange
+  LoopNotBarAligned
+  TransitionTargetMissing
+  TransitionUnreachable
+  MarkerOutsideSegment
+  LayerTrackMissing
+  ParameterOutOfRange
+  UnsupportedRuntimeBehavior
+}
+pub fn GameIssueCode::default_severity(Self) -> GameIssueSeverity
+pub fn GameIssueCode::to_string(Self) -> String
+
+pub(all) enum GameIssueSeverity {
+  GameInfo
+  GameWarning
+  GameError
+}
+pub fn GameIssueSeverity::to_string(Self) -> String
+
+pub(all) struct GameLayer {
+  id : String
+  name : String
+  source_track_id : String
+  role : GameLayerRole
+  default_gain : Double
+  parameter_binding : LayerParameterBinding?
+}
+
+pub(all) struct GameLayerFade {
+  fade_in_layers : Array[String]
+  fade_out_layers : Array[String]
+  crossfade_seconds : Double
+}
+
+pub(all) enum GameLayerRole {
+  LayerMelody
+  LayerHarmony
+  LayerBass
+  LayerDrums
+  LayerPercussion
+  LayerPad
+  LayerFx
+  LayerCustom(String)
+}
+pub fn GameLayerRole::to_string(Self) -> String
+
+pub(all) struct GameMarker {
+  id : String
+  kind : GameMarkerKind
+  position : MusicalTime
+  label : String
+}
+
+pub(all) enum GameMarkerKind {
+  EntryMarker
+  ExitMarker
+  LoopStartMarker
+  LoopEndMarker
+  PhraseStartMarker
+  PhraseEndMarker
+  SyncMarker
+  CustomMarker(String)
+}
+pub fn GameMarkerKind::to_string(Self) -> String
+
+pub(all) enum GameMusicError {
+  InvalidProjectId(String)
+  DuplicateCueId(String)
+  MissingCue(String)
+  InvalidCue(String)
+  EmptyCue(String)
+  EmptySegment(String)
+  InvalidSegmentDuration(String)
+  InvalidLoopRegion(String)
+  InvalidMarkerPosition(String)
+  DuplicateMarkerId(String)
+  InvalidTransitionRule(String)
+  MissingTransitionTarget(String)
+  InvalidTrigger(String)
+  InvalidParameter(String)
+  InvalidLayer(String)
+  UnsupportedGameFeature(String)
+  TimelineConversionFailed(String)
+  ValidationFailed(String)
+  SerializationFailed(String)
+}
+pub fn GameMusicError::to_string(Self) -> String
+
+pub(all) struct GameMusicExportDocument {
+  schema_version : String
+  project_id : String
+  project_name : String
+  timelines : Array[GameTimelineExport]
+  assets : Array[GameAssetExport]
+  validation : GameValidationReport
+}
+
+pub(all) struct GameMusicMetadata {
+  author : String
+  description : String
+  mood : String
+  intensity : Double
+}
+
+pub(all) struct GameMusicProject {
+  id : String
+  name : String
+  tempo_bpm : Int
+  time_signature : TimeSignature
+  cues : Array[GameCue]
+  states : Array[MusicState]
+  parameters : Array[MusicParameter]
+  transitions : Array[TransitionRule]
+  metadata : GameMusicMetadata
+}
+
+pub(all) struct GameScoreLayoutRef {
+  title : String
+  ppq : Int
+  part_count : Int
+}
+
+pub(all) struct GameSegment {
+  id : String
+  label : String
+  source : GameSegmentSource
+  start : MusicalTime
+  duration_beats : Double
+  loop_region : LoopRegion?
+  markers : Array[GameMarker]
+  layers : Array[GameLayer]
+  intensity_level : Int
+  tags : Array[String]
+}
+
+pub(all) struct GameSegmentOptions {
+  label : String
+  intensity : Int
+  tags : Array[String]
+}
+
+pub(all) enum GameSegmentSource {
+  ScoreFragmentSource(ScoreFragment)
+  ScoreLayoutSource(GameScoreLayoutRef)
+  TimelineSource(GameTimelineSource)
+  ExternalAssetSource(AudioAssetRef)
+  EmptySegmentSource
+}
+
+pub(all) struct GameTimelineEntry {
+  tick : Int
+  channel : Int
+  note : Int
+  velocity : Int
+  is_note_on : Bool
+  duration_ticks : Int
+}
+
+pub(all) struct GameTimelineExport {
+  cue_id : String
+  timeline : GameTimelineSource
+  loop_enabled : Bool
+  loop_start_ticks : Int
+  loop_end_ticks : Int
+}
+
+pub(all) struct GameTimelineOptions {
+  ppq : Int
+  enable_loop : Bool
+  include_markers : Bool
+}
+
+pub(all) struct GameTimelineSource {
+  entries : Array[GameTimelineEntry]
+  ppq : Int
+  total_ticks : Int
+}
+
+pub(all) enum GameTrigger {
+  TriggerImmediate
+  TriggerOnState(String)
+  TriggerOnParameter(String, ParameterCompare, Double)
+  TriggerOnMarker(String)
+  TriggerManual(String)
+}
+
+pub(all) struct GameValidationIssue {
+  severity : GameIssueSeverity
+  code : GameIssueCode
+  path : String
+  message : String
+  suggestion : String
+}
+
+pub(all) struct GameValidationReport {
+  issues : Array[GameValidationIssue]
+  summary : GameValidationSummary
+}
+
+pub(all) struct GameValidationSummary {
+  total_issues : Int
+  error_count : Int
+  warning_count : Int
+  info_count : Int
 }
 
 pub(all) enum GenerateError {
@@ -1139,6 +1491,21 @@ pub fn Key::scale(Self, Int, Int) -> Array[Pitch]
 pub fn Key::scale_kind(Self) -> ScaleKind
 pub fn Key::tonic_pitch(Self) -> Pitch
 
+pub(all) struct LayerParameterBinding {
+  parameter_id : String
+  min_value : Double
+  max_value : Double
+  response : Double
+}
+
+pub(all) struct LoopRegion {
+  id : String
+  start : MusicalTime
+  end : MusicalTime
+  quantization : TransitionQuantization
+  max_repeats : Int?
+}
+
 pub(all) struct Lyric {
   text : String
   verse : Int
@@ -1278,6 +1645,28 @@ pub fn MusicEvent::stretch(Self, Double) -> Self
 pub fn MusicEvent::to_string(Self) -> String
 pub fn MusicEvent::transpose(Self, Int) -> Self
 pub fn MusicEvent::transpose_checked(Self, Int) -> Result[Self, TheoryError]
+
+pub(all) struct MusicParameter {
+  id : String
+  name : String
+  kind : MusicParameterKind
+  default_value : Double
+  min_value : Double
+  max_value : Double
+}
+
+pub(all) enum MusicParameterKind {
+  Continuous
+  Discrete
+  Boolean
+}
+
+pub(all) struct MusicState {
+  id : String
+  name : String
+  default_cue : String
+  tags : Array[String]
+}
 
 pub(all) enum MusicXmlAccidental {
   FlatFlat
@@ -1433,6 +1822,12 @@ pub(all) struct MusicXmlScore {
   divisions : Int
 }
 
+pub(all) struct MusicalTime {
+  bar : Int
+  beat : Double
+  tick : Int
+}
+
 pub(all) struct Notation {
   kind : NotationKind
   placement : NotationPlacement
@@ -1482,6 +1877,16 @@ pub fn NoteEvent::frequency(Self) -> Double
 pub fn NoteEvent::start_seconds(Self, Int) -> Double
 pub fn NoteEvent::start_ticks(Self, Int) -> Int
 pub fn NoteEvent::to_string(Self) -> String
+
+pub(all) enum ParameterCompare {
+  Equal
+  NotEqual
+  GreaterThan
+  GreaterOrEqual
+  LessThan
+  LessOrEqual
+}
+pub fn ParameterCompare::to_string(Self) -> String
 
 pub(all) struct Part {
   name : String
@@ -1802,6 +2207,21 @@ pub(all) struct Staff {
   voices : Array[Voice]
 }
 
+pub(all) struct Stinger {
+  id : String
+  trigger : GameTrigger
+  segment : GameSegment
+  quantization : TransitionQuantization
+  priority : Int
+  policy : StingerPolicy
+}
+
+pub(all) enum StingerPolicy {
+  InterruptCurrent
+  PlayToEndThenSwitch
+  OverlayAndFade
+}
+
 pub(all) struct StructuredEvent {
   event : MusicEvent
   notations : Array[Notation]
@@ -1913,6 +2333,42 @@ pub fn Track::up_octave(Self) -> Self
 pub fn Track::with_mute(Self, Bool) -> Self
 pub fn Track::with_pan(Self, Double) -> Self
 pub fn Track::with_volume(Self, Double) -> Self
+
+pub(all) enum TransitionBehavior {
+  Cut
+  Crossfade(Double)
+  PlayStingerThenSwitch(String)
+  WaitThenSwitch(Double)
+  LayerFade(GameLayerFade)
+}
+
+pub(all) enum TransitionCondition {
+  Always
+  OnState(String)
+  OnParam(String, ParameterCompare, Double)
+  OnMarker(String)
+  AfterLoops(Int)
+}
+
+pub(all) enum TransitionQuantization {
+  Immediate
+  NextBeat
+  NextBar
+  NextPhrase(Int)
+  AtMarker(String)
+}
+pub fn TransitionQuantization::to_string(Self) -> String
+
+pub(all) struct TransitionRule {
+  id : String
+  from_cue : String
+  to_cue : String
+  trigger : GameTrigger
+  quantization : TransitionQuantization
+  behavior : TransitionBehavior
+  condition : TransitionCondition
+  priority : Int
+}
 
 pub(all) struct TupletRatio {
   actual : Int
