@@ -327,7 +327,7 @@ pub fn motif_to_track_checked(
   motif : Motif,
   key : Key,
   start_octave : Int,
-  dur_fallback : Duration,
+  _dur_fallback : Duration,
 ) -> Result[Track, MotifError] {
   if motif.events.length() == 0 {
     return Err(InvalidMotif("动机事件为空"))

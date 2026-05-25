@@ -285,3 +285,49 @@ pub fn midi_note_compare(a : Int, b : Int) -> Int {
     0
   }
 }
+
+// --- Pitch checked/safe variants ---
+
+///|
+/// Safe MIDI conversion. Returns MidiOutOfRange when the pitch is outside 0..127.
+pub fn Pitch::to_midi_checked(self : Pitch) -> Result[Int, TheoryError] {
+  let midi = self.to_midi()
+  if is_valid_midi_note(midi) {
+    Ok(midi)
+  } else {
+    Err(MidiOutOfRange(midi))
+  }
+}
+
+///|
+/// Function-style safe MIDI conversion for wrapper layers.
+pub fn pitch_to_midi(p : Pitch) -> Result[Int, TheoryError] {
+  p.to_midi_checked()
+}
+
+///|
+/// Safe transposition. The old transpose method is kept for compatibility.
+pub fn Pitch::transpose_checked(
+  self : Pitch,
+  semitones : Int,
+) -> Result[Pitch, TheoryError] {
+  midi_to_pitch_checked(self.to_midi() + semitones)
+}
+
+///|
+/// Function-style safe transposition for callers that prefer Result APIs.
+pub fn transpose_pitch(
+  p : Pitch,
+  semitones : Int,
+) -> Result[Pitch, TheoryError] {
+  p.transpose_checked(semitones)
+}
+
+///|
+/// Safe MIDI number to Pitch conversion. Uses sharp spelling.
+pub fn midi_to_pitch_checked(midi : Int) -> Result[Pitch, TheoryError] {
+  if !is_valid_midi_note(midi) {
+    return Err(MidiOutOfRange(midi))
+  }
+  Ok(midi_to_pitch(midi))
+}

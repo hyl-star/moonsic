@@ -896,14 +896,14 @@ pub fn game_project_full_checked(
   }
   // 校验 transition 的 from/to cue 存在
   for tr in transitions {
-    if not(_array_contains_string(cue_ids, tr.from_cue)) {
+    if !_array_contains_string(cue_ids, tr.from_cue) {
       return Err(
         MissingTransitionTarget(
           "transition 来源 cue 不存在: " + tr.from_cue,
         ),
       )
     }
-    if not(_array_contains_string(cue_ids, tr.to_cue)) {
+    if !_array_contains_string(cue_ids, tr.to_cue) {
       return Err(
         MissingTransitionTarget("transition 目标 cue 不存在: " + tr.to_cue),
       )
@@ -911,8 +911,7 @@ pub fn game_project_full_checked(
   }
   // 校验 state 的 default_cue 存在
   for s in states {
-    if s.default_cue != "" &&
-      not(_array_contains_string(cue_ids, s.default_cue)) {
+    if s.default_cue != "" && !_array_contains_string(cue_ids, s.default_cue) {
       return Err(MissingCue("state 默认cue不存在: " + s.default_cue))
     }
   }
@@ -1278,7 +1277,7 @@ pub fn validate_game_project_report(
 
   // 4. 检查 transition from/to cue 存在
   for tr in project.transitions {
-    if not(_array_contains_string(cue_ids, tr.from_cue)) {
+    if !_array_contains_string(cue_ids, tr.from_cue) {
       issues.push(GameValidationIssue::{
         severity: TransitionTargetMissing.default_severity(),
         code: TransitionTargetMissing,
@@ -1287,7 +1286,7 @@ pub fn validate_game_project_report(
         suggestion: "检查 from_cue 是否正确",
       })
     }
-    if not(_array_contains_string(cue_ids, tr.to_cue)) {
+    if !_array_contains_string(cue_ids, tr.to_cue) {
       issues.push(GameValidationIssue::{
         severity: TransitionTargetMissing.default_severity(),
         code: TransitionTargetMissing,
@@ -1322,8 +1321,7 @@ pub fn validate_game_project_report(
 
   // 6. state default_cue 检查
   for s in project.states {
-    if s.default_cue != "" &&
-      not(_array_contains_string(cue_ids, s.default_cue)) {
+    if s.default_cue != "" && !_array_contains_string(cue_ids, s.default_cue) {
       issues.push(GameValidationIssue::{
         severity: MissingDefaultCue.default_severity(),
         code: MissingDefaultCue,

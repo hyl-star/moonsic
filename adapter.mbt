@@ -347,7 +347,7 @@ fn patch_target_to_tag(t : PatchTargetKind) -> String {
 }
 
 ///|
-fn constraint_kind_name(c : GenerationConstraint) -> String {
+fn _constraint_kind_name(c : GenerationConstraint) -> String {
   match c {
     MinBars(_) => "MinBars"
     MaxBars(_) => "MaxBars"
@@ -362,7 +362,7 @@ fn constraint_kind_name(c : GenerationConstraint) -> String {
 }
 
 ///|
-fn generator_kind_to_tag(k : ExternalGeneratorKind) -> String {
+fn _generator_kind_to_tag(k : ExternalGeneratorKind) -> String {
   match k {
     LocalRuleProvider => "LocalRuleProvider"
     LocalModelProvider => "LocalModelProvider"
@@ -419,7 +419,7 @@ fn parse_determinism_from_tag(
 }
 
 ///|
-fn parse_capability_from_tag(
+fn _parse_capability_from_tag(
   s : String,
 ) -> Result[GenerationCapability, ExternalGenerationError] {
   match s {

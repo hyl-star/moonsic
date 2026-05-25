@@ -26,88 +26,6 @@ pub const MIN_CHANNEL : Int = 0
 ///|
 pub const MAX_CHANNEL : Int = 15
 
-// --- 音阶种类 ---
-
-///|
-pub(all) enum ScaleKind {
-  Major
-  NaturalMinor
-  MajorPentatonic
-  MinorPentatonic
-  HarmonicMinor
-  MelodicMinor
-  Dorian
-  Phrygian
-  Lydian
-  Mixolydian
-  Locrian
-  Chromatic
-}
-
-///|
-pub fn ScaleKind::intervals(self : ScaleKind) -> Array[Int] {
-  match self {
-    Major => [0, 2, 4, 5, 7, 9, 11]
-    NaturalMinor => [0, 2, 3, 5, 7, 8, 10]
-    MajorPentatonic => [0, 2, 4, 7, 9]
-    MinorPentatonic => [0, 3, 5, 7, 10]
-    HarmonicMinor => [0, 2, 3, 5, 7, 8, 11]
-    MelodicMinor => [0, 2, 3, 5, 7, 9, 11]
-    Dorian => [0, 2, 3, 5, 7, 9, 10]
-    Phrygian => [0, 1, 3, 5, 7, 8, 10]
-    Lydian => [0, 2, 4, 6, 7, 9, 11]
-    Mixolydian => [0, 2, 4, 5, 7, 9, 10]
-    Locrian => [0, 1, 3, 5, 6, 8, 10]
-    Chromatic => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-  }
-}
-
-// --- 音高 Pitch (checked/safe variants; core types in pitch_core.mbt) ---
-
-///|
-/// Safe MIDI conversion. Returns MidiOutOfRange when the pitch is outside 0..127.
-pub fn Pitch::to_midi_checked(self : Pitch) -> Result[Int, TheoryError] {
-  let midi = self.to_midi()
-  if is_valid_midi_note(midi) {
-    Ok(midi)
-  } else {
-    Err(MidiOutOfRange(midi))
-  }
-}
-
-///|
-/// Function-style safe MIDI conversion for wrapper layers.
-pub fn pitch_to_midi(p : Pitch) -> Result[Int, TheoryError] {
-  p.to_midi_checked()
-}
-
-///|
-/// Safe transposition. The old transpose method is kept for compatibility.
-pub fn Pitch::transpose_checked(
-  self : Pitch,
-  semitones : Int,
-) -> Result[Pitch, TheoryError] {
-  midi_to_pitch_checked(self.to_midi() + semitones)
-}
-
-///|
-/// Function-style safe transposition for callers that prefer Result APIs.
-pub fn transpose_pitch(
-  p : Pitch,
-  semitones : Int,
-) -> Result[Pitch, TheoryError] {
-  p.transpose_checked(semitones)
-}
-
-///|
-/// Safe MIDI number to Pitch conversion. Uses sharp spelling.
-pub fn midi_to_pitch_checked(midi : Int) -> Result[Pitch, TheoryError] {
-  if !is_valid_midi_note(midi) {
-    return Err(MidiOutOfRange(midi))
-  }
-  Ok(midi_to_pitch(midi))
-}
-
 // --- 时值 Duration ---
 
 ///|
@@ -268,11 +186,6 @@ pub fn is_valid_time_signature(numerator : Int, denominator : Int) -> Bool {
 ///|
 pub fn is_valid_velocity(v : Int) -> Bool {
   v >= MIN_VELOCITY && v <= MAX_VELOCITY
-}
-
-///|
-pub fn is_valid_midi_note(n : Int) -> Bool {
-  n >= MIN_MIDI_NOTE && n <= MAX_MIDI_NOTE
 }
 
 ///|

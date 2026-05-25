@@ -3,6 +3,11 @@
 //
 
 ///|
+pub fn is_valid_midi_note(n : Int) -> Bool {
+  n >= MIN_MIDI_NOTE && n <= MAX_MIDI_NOTE
+}
+
+///|
 pub fn midi_to_frequency(midi : Int) -> Double {
   let exponent = (midi - A4_MIDI).to_double() / 12.0
   A4_FREQ * pow2(exponent)
