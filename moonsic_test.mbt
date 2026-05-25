@@ -3159,3 +3159,400 @@ test "time_boundary: ticks_to_position_tick_zero" {
   assert_eq(pos.beat.numerator, 0)
   assert_eq(pos.offset.numerator, 0)
 }
+
+// ============================================================
+// Chord/Scale/Key 稳定化 — 边界与 spelling 测试 (v2)
+// ============================================================
+
+///|
+/// ChordQuality intervals 全部 11 种品质 — 验证半音间隔模式
+test "chord_v2: chord_quality_intervals_all" {
+  // Triads
+  assert_eq(@moonsic.MajorTriad.intervals(), [0, 4, 7])
+  assert_eq(@moonsic.MinorTriad.intervals(), [0, 3, 7])
+  assert_eq(@moonsic.DiminishedTriad.intervals(), [0, 3, 6])
+  assert_eq(@moonsic.AugmentedTriad.intervals(), [0, 4, 8])
+  assert_eq(@moonsic.Suspended2.intervals(), [0, 2, 7])
+  assert_eq(@moonsic.Suspended4.intervals(), [0, 5, 7])
+  // Sevenths
+  assert_eq(@moonsic.DominantSeventh.intervals(), [0, 4, 7, 10])
+  assert_eq(@moonsic.MajorSeventh.intervals(), [0, 4, 7, 11])
+  assert_eq(@moonsic.MinorSeventh.intervals(), [0, 3, 7, 10])
+  assert_eq(@moonsic.HalfDiminished7.intervals(), [0, 3, 6, 10])
+  assert_eq(@moonsic.Diminished7.intervals(), [0, 3, 6, 9])
+}
+
+///|
+/// ScaleKind intervals 全部 12 种 — 验证音阶间隔模式
+/// 注：Major/Minor 在 ScaleKind 和 IntervalQuality 中均有定义，通过类型注解消歧义
+test "chord_v2: scale_kind_intervals_all" {
+  let major_kind : @moonsic.ScaleKind = @moonsic.ScaleKind::Major
+  assert_eq(major_kind.intervals(), [0, 2, 4, 5, 7, 9, 11])
+  assert_eq(@moonsic.NaturalMinor.intervals(), [0, 2, 3, 5, 7, 8, 10])
+  assert_eq(@moonsic.MajorPentatonic.intervals(), [0, 2, 4, 7, 9])
+  assert_eq(@moonsic.MinorPentatonic.intervals(), [0, 3, 5, 7, 10])
+  assert_eq(@moonsic.HarmonicMinor.intervals(), [0, 2, 3, 5, 7, 8, 11])
+  assert_eq(@moonsic.MelodicMinor.intervals(), [0, 2, 3, 5, 7, 9, 11])
+  assert_eq(@moonsic.Dorian.intervals(), [0, 2, 3, 5, 7, 9, 10])
+  assert_eq(@moonsic.Phrygian.intervals(), [0, 1, 3, 5, 7, 8, 10])
+  assert_eq(@moonsic.Lydian.intervals(), [0, 2, 4, 6, 7, 9, 11])
+  assert_eq(@moonsic.Mixolydian.intervals(), [0, 2, 4, 5, 7, 9, 10])
+  assert_eq(@moonsic.Locrian.intervals(), [0, 1, 3, 5, 6, 8, 10])
+  assert_eq(@moonsic.Chromatic.intervals(), [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+  ])
+}
+
+///|
+/// chord_quality_letter_steps 全部品质 — 验证字母步进
+test "chord_v2: chord_quality_letter_steps_all" {
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.MajorTriad), [0, 2, 4])
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.MinorTriad), [0, 2, 4])
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.Diminished7), [
+    0, 2, 4, 6,
+  ])
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.Suspended2), [0, 1, 4])
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.Suspended4), [0, 3, 4])
+  assert_eq(@moonsic.chord_quality_letter_steps(@moonsic.DominantSeventh), [
+    0, 2, 4, 6,
+  ])
+}
+
+///|
+/// parse_chord_quality_checked: 合法别名全部匹配
+test "chord_v2: parse_chord_quality_checked_valid_aliases" {
+  assert_true(
+    @moonsic.parse_chord_quality_checked("maj7").unwrap()
+    is @moonsic.MajorSeventh,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("M7").unwrap() is @moonsic.MajorSeventh,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("dim7").unwrap()
+    is @moonsic.Diminished7,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("o7").unwrap() is @moonsic.Diminished7,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("m7b5").unwrap()
+    is @moonsic.HalfDiminished7,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("min7").unwrap()
+    is @moonsic.MinorSeventh,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("m7").unwrap() is @moonsic.MinorSeventh,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("dim").unwrap()
+    is @moonsic.DiminishedTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("o").unwrap()
+    is @moonsic.DiminishedTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("aug").unwrap()
+    is @moonsic.AugmentedTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("+").unwrap()
+    is @moonsic.AugmentedTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("min").unwrap() is @moonsic.MinorTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("m").unwrap() is @moonsic.MinorTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("7").unwrap()
+    is @moonsic.DominantSeventh,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("").unwrap() is @moonsic.MajorTriad,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("sus2").unwrap() is @moonsic.Suspended2,
+  )
+  assert_true(
+    @moonsic.parse_chord_quality_checked("sus4").unwrap() is @moonsic.Suspended4,
+  )
+}
+
+///|
+/// parse_chord_quality_checked: 非法后缀返回 Err
+test "chord_v2: parse_chord_quality_checked_invalid" {
+  let r = @moonsic.parse_chord_quality_checked("???")
+  assert_true(r is Err(@moonsic.InvalidChord(_)))
+  // trailing suffix
+  let r2 = @moonsic.parse_chord_quality_checked("mxxx")
+  assert_true(r2 is Err(@moonsic.InvalidChord(_)))
+}
+
+///|
+/// parse_scale_kind_checked: 合法别名全部匹配
+test "chord_v2: parse_scale_kind_checked_valid_aliases" {
+  assert_true(
+    @moonsic.parse_scale_kind_checked("major").unwrap() is @moonsic.Major,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("ionian").unwrap() is @moonsic.Major,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("minor").unwrap() is @moonsic.NaturalMinor,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("natural minor").unwrap()
+    is @moonsic.NaturalMinor,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("aeolian").unwrap()
+    is @moonsic.NaturalMinor,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("dorian").unwrap() is @moonsic.Dorian,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("phrygian").unwrap() is @moonsic.Phrygian,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("lydian").unwrap() is @moonsic.Lydian,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("mixolydian").unwrap()
+    is @moonsic.Mixolydian,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("locrian").unwrap() is @moonsic.Locrian,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("chromatic").unwrap()
+    is @moonsic.Chromatic,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("harmonic minor").unwrap()
+    is @moonsic.HarmonicMinor,
+  )
+  assert_true(
+    @moonsic.parse_scale_kind_checked("melodic minor").unwrap()
+    is @moonsic.MelodicMinor,
+  )
+}
+
+///|
+/// parse_scale_kind_checked: 空字符串返回 Err
+test "chord_v2: parse_scale_kind_checked_empty_err" {
+  let r = @moonsic.parse_scale_kind_checked("")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// parse_scale_kind_checked: 非法音阶品质返回 Err
+test "chord_v2: parse_scale_kind_checked_invalid" {
+  let r = @moonsic.parse_scale_kind_checked("blues")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// parse_scale_kind_checked: 尾随后缀返回 Err
+test "chord_v2: parse_scale_kind_checked_trailing_err" {
+  let r = @moonsic.parse_scale_kind_checked("major xxx")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// key_degree_checked: F# major 第 7 级 = E#4（不是 F4）
+/// 这是 key-aware spelling 的核心测试 — 调号感知拼写
+test "chord_v2: key_degree_checked_f_sharp_major_degree_7_is_e_sharp" {
+  let k = @moonsic.key(
+    @moonsic.pitch(@moonsic.F, @moonsic.Sharp, 4),
+    @moonsic.Major,
+  )
+  let r = k.key_degree_checked(7, 4)
+  assert_true(r is Ok(_))
+  let p = r.unwrap()
+  // E#4 MIDI = 65（等音于 F4）
+  assert_eq(p.to_midi(), 65)
+  // Spelling 必须是 E# 不是 F
+  assert_eq(p.to_string(), "E#4")
+}
+
+///|
+/// key_degree_checked: Bb minor 第 3 级 = Db4（不是 C#4）
+test "chord_v2: key_degree_checked_bb_minor_degree_3_is_db" {
+  let k = @moonsic.key(
+    @moonsic.pitch(@moonsic.B, @moonsic.Flat, 4),
+    @moonsic.Major,
+  )
+  // Bb major degree 3 = D4, but Bb major has Eb/Bb, so degree 3 = D natural
+  let r = k.key_degree_checked(3, 4)
+  assert_true(r is Ok(_))
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 62) // D4
+  assert_eq(p.to_string(), "D4")
+}
+
+///|
+/// key_degree_checked: degree <= 0 返回 Err(InvalidInterval)
+test "chord_v2: key_degree_checked_degree_zero_err" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let r = k.key_degree_checked(0, 4)
+  assert_true(r is Err(@moonsic.InvalidInterval(_)))
+}
+
+///|
+/// key_degree_checked: degree 负数返回 Err
+test "chord_v2: key_degree_checked_degree_negative_err" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let r = k.key_degree_checked(-1, 4)
+  assert_true(r is Err(@moonsic.InvalidInterval(_)))
+}
+
+///|
+/// key_degree_checked: C major 全部 7 个音级 — 验证拼写与 MIDI
+test "chord_v2: key_degree_checked_c_major_all_degrees" {
+  let k = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  // degree 1 = C4 (60)
+  let p1 = k.key_degree_checked(1, 4).unwrap()
+  assert_eq(p1.to_midi(), 60)
+  assert_eq(p1.to_string(), "C4")
+  // degree 3 = E4 (64)
+  let p3 = k.key_degree_checked(3, 4).unwrap()
+  assert_eq(p3.to_midi(), 64)
+  assert_eq(p3.to_string(), "E4")
+  // degree 5 = G4 (67)
+  let p5 = k.key_degree_checked(5, 4).unwrap()
+  assert_eq(p5.to_midi(), 67)
+  assert_eq(p5.to_string(), "G4")
+  // degree 8 = C5 (72)
+  let p8 = k.key_degree_checked(8, 4).unwrap()
+  assert_eq(p8.to_midi(), 72)
+  assert_eq(p8.to_string(), "C5")
+}
+
+///|
+/// key_degree_checked: G major 第 7 级 = F#4（不是 Gb4）
+test "chord_v2: key_degree_checked_g_major_degree_7_is_f_sharp" {
+  let k = @moonsic.key(@moonsic.g(4), @moonsic.Major)
+  let r = k.key_degree_checked(7, 4)
+  assert_true(r is Ok(_))
+  let p = r.unwrap()
+  assert_eq(p.to_midi(), 66) // F#4
+  assert_eq(p.to_string(), "F#4")
+}
+
+///|
+/// parse_chord: 空字符串 -> Err
+test "chord_v2: parse_chord_empty_err" {
+  let r = @moonsic.parse_chord("")
+  assert_true(r is Err(@moonsic.InvalidChord(_)))
+}
+
+///|
+/// parse_chord: 非法根音 -> Err
+test "chord_v2: parse_chord_invalid_root_H" {
+  let r = @moonsic.parse_chord("H7")
+  assert_true(r is Err(@moonsic.InvalidChord(_)))
+}
+
+///|
+/// parse_chord: 非法后缀 -> Err（"C???"）
+test "chord_v2: parse_chord_trailing_garbage" {
+  let r = @moonsic.parse_chord("C???")
+  assert_true(r is Err(@moonsic.InvalidChord(_)))
+}
+
+///|
+/// parse_chord: F#maj7 拼写验证（F# A# C# E#）
+test "chord_v2: parse_chord_f_sharp_maj7_spelling" {
+  let r = @moonsic.parse_chord("F#maj7")
+  assert_true(r is Ok(_))
+  let chord = r.unwrap()
+  assert_eq(chord.pitches.length(), 4)
+  // F#4 (66), A#4 (70), C#5 (73), E#5 (77)
+  assert_eq(chord.pitches[0].to_midi(), 66)
+  assert_eq(chord.pitches[0].to_string(), "F#4")
+  assert_eq(chord.pitches[1].to_midi(), 70)
+  assert_eq(chord.pitches[1].to_string(), "A#4")
+  assert_eq(chord.pitches[2].to_midi(), 73)
+  assert_eq(chord.pitches[2].to_string(), "C#5")
+  assert_eq(chord.pitches[3].to_midi(), 77)
+  assert_eq(chord.pitches[3].to_string(), "E#5")
+}
+
+///|
+/// parse_chord: Bdim7 拼写验证（B D F Ab）
+test "chord_v2: parse_chord_b_dim7_spelling" {
+  let r = @moonsic.parse_chord("Bdim7")
+  assert_true(r is Ok(_))
+  let chord = r.unwrap()
+  assert_eq(chord.pitches.length(), 4)
+  // B4 (71), D5 (74), F5 (77), Ab5 (80)
+  assert_eq(chord.pitches[0].to_midi(), 71)
+  assert_eq(chord.pitches[0].to_string(), "B4")
+  assert_eq(chord.pitches[1].to_midi(), 74)
+  assert_eq(chord.pitches[1].to_string(), "D5")
+  assert_eq(chord.pitches[2].to_midi(), 77)
+  assert_eq(chord.pitches[2].to_string(), "F5")
+  assert_eq(chord.pitches[3].to_midi(), 80)
+  assert_eq(chord.pitches[3].to_string(), "Ab5")
+}
+
+///|
+/// parse_scale: 空字符串 -> Err
+test "chord_v2: parse_scale_empty_err" {
+  let r = @moonsic.parse_scale("")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// parse_scale: 尾随后缀 -> Err（"C major xxx"）
+test "chord_v2: parse_scale_trailing_suffix_err" {
+  let r = @moonsic.parse_scale("C major xxx")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// parse_scale: "H major" 非法根音 -> Err
+test "chord_v2: parse_scale_invalid_root_H_err" {
+  let r = @moonsic.parse_scale("H major")
+  assert_true(r is Err(@moonsic.InvalidScale(_)))
+}
+
+///|
+/// parse_scale: F# major 拼写验证（F# G# A# B C# D# E#）
+test "chord_v2: parse_scale_f_sharp_major_spelling" {
+  let r = @moonsic.parse_scale("F# major")
+  assert_true(r is Ok(_))
+  let scale = r.unwrap()
+  assert_eq(scale.spelled_tones.length(), 7)
+  // F# G# A# B C# D# E#
+  assert_eq(scale.spelled_tones[0].to_string(), "F#4")
+  assert_eq(scale.spelled_tones[1].to_string(), "G#4")
+  assert_eq(scale.spelled_tones[2].to_string(), "A#4")
+  assert_eq(scale.spelled_tones[3].to_string(), "B4")
+  assert_eq(scale.spelled_tones[4].to_string(), "C#5")
+  assert_eq(scale.spelled_tones[5].to_string(), "D#5")
+  assert_eq(scale.spelled_tones[6].to_string(), "E#5")
+}
+
+///|
+/// parse_scale: Bb minor 拼写验证（Bb C Db Eb F Gb Ab）
+test "chord_v2: parse_scale_bb_minor_spelling" {
+  let r = @moonsic.parse_scale("Bb minor")
+  assert_true(r is Ok(_))
+  let scale = r.unwrap()
+  assert_eq(scale.spelled_tones.length(), 7)
+  // Bb C Db Eb F Gb Ab
+  assert_eq(scale.spelled_tones[0].to_string(), "Bb4")
+  assert_eq(scale.spelled_tones[1].to_string(), "C5")
+  assert_eq(scale.spelled_tones[2].to_string(), "Db5")
+  assert_eq(scale.spelled_tones[3].to_string(), "Eb5")
+  assert_eq(scale.spelled_tones[4].to_string(), "F5")
+  assert_eq(scale.spelled_tones[5].to_string(), "Gb5")
+  assert_eq(scale.spelled_tones[6].to_string(), "Ab5")
+}

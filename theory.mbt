@@ -341,7 +341,7 @@ pub fn parse_chord_quality_checked(
   input : String,
 ) -> Result[ChordQuality, TheoryError] {
   if input.length() == 0 {
-    return Err(InvalidChord("empty chord quality"))
+    return Ok(MajorTriad)
   }
   let (quality, end_pos) = parse_chord_quality_internal(input, 0)
   if end_pos != input.length() {
@@ -454,56 +454,39 @@ fn parse_scale_kind_internal(
   input : String,
   pos : Int,
 ) -> Result[(ScaleKind, Int), TheoryError] {
-  if match_at(input, pos, "major pentatonic") {
+  if match_chord_str(input, pos, "major pentatonic") {
     Ok((MajorPentatonic, pos + "major pentatonic".length()))
-  } else if match_at(input, pos, "minor pentatonic") {
+  } else if match_chord_str(input, pos, "minor pentatonic") {
     Ok((MinorPentatonic, pos + "minor pentatonic".length()))
-  } else if match_at(input, pos, "harmonic minor") {
+  } else if match_chord_str(input, pos, "harmonic minor") {
     Ok((HarmonicMinor, pos + "harmonic minor".length()))
-  } else if match_at(input, pos, "melodic minor") {
+  } else if match_chord_str(input, pos, "melodic minor") {
     Ok((MelodicMinor, pos + "melodic minor".length()))
-  } else if match_at(input, pos, "natural minor") {
+  } else if match_chord_str(input, pos, "natural minor") {
     Ok((NaturalMinor, pos + "natural minor".length()))
-  } else if match_at(input, pos, "major") {
+  } else if match_chord_str(input, pos, "major") {
     Ok((Major, pos + "major".length()))
-  } else if match_at(input, pos, "ionian") {
+  } else if match_chord_str(input, pos, "ionian") {
     Ok((Major, pos + "ionian".length()))
-  } else if match_at(input, pos, "minor") {
+  } else if match_chord_str(input, pos, "minor") {
     Ok((NaturalMinor, pos + "minor".length()))
-  } else if match_at(input, pos, "aeolian") {
+  } else if match_chord_str(input, pos, "aeolian") {
     Ok((NaturalMinor, pos + "aeolian".length()))
-  } else if match_at(input, pos, "dorian") {
+  } else if match_chord_str(input, pos, "dorian") {
     Ok((Dorian, pos + "dorian".length()))
-  } else if match_at(input, pos, "phrygian") {
+  } else if match_chord_str(input, pos, "phrygian") {
     Ok((Phrygian, pos + "phrygian".length()))
-  } else if match_at(input, pos, "lydian") {
+  } else if match_chord_str(input, pos, "lydian") {
     Ok((Lydian, pos + "lydian".length()))
-  } else if match_at(input, pos, "mixolydian") {
+  } else if match_chord_str(input, pos, "mixolydian") {
     Ok((Mixolydian, pos + "mixolydian".length()))
-  } else if match_at(input, pos, "locrian") {
+  } else if match_chord_str(input, pos, "locrian") {
     Ok((Locrian, pos + "locrian".length()))
-  } else if match_at(input, pos, "chromatic") {
+  } else if match_chord_str(input, pos, "chromatic") {
     Ok((Chromatic, pos + "chromatic".length()))
   } else {
     Err(InvalidScale("unknown scale type: \{input}"))
   }
-}
-
-///|
-/// 内部：检查字符串从 pos 开始是否匹配 target
-fn match_at(s : String, pos : Int, target : String) -> Bool {
-  let len = target.length()
-  if pos + len > s.length() {
-    return false
-  }
-  let mut i = 0
-  while i < len {
-    if s[pos + i] != target[i] {
-      return false
-    }
-    i = i + 1
-  }
-  true
 }
 
 ///|

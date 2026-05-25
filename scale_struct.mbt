@@ -52,8 +52,12 @@ fn parse_scale_kind_at(
     Ok((NaturalMinor, pos + "natural minor".length()))
   } else if match_at(input, pos, "major") {
     Ok((Major, pos + "major".length()))
+  } else if match_at(input, pos, "ionian") {
+    Ok((Major, pos + "ionian".length()))
   } else if match_at(input, pos, "minor") {
     Ok((NaturalMinor, pos + "minor".length()))
+  } else if match_at(input, pos, "aeolian") {
+    Ok((NaturalMinor, pos + "aeolian".length()))
   } else if match_at(input, pos, "dorian") {
     Ok((Dorian, pos + "dorian".length()))
   } else if match_at(input, pos, "phrygian") {

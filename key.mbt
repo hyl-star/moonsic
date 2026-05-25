@@ -35,6 +35,7 @@ fn key_spelling(tonic_midi : Int) -> Array[Accidental] {
     9 => [Natural, Natural, Sharp, Natural, Natural, Sharp, Sharp] // A:F#C#G#
     4 => [Natural, Sharp, Sharp, Natural, Natural, Sharp, Sharp] // E:F#C#G#D#
     11 => [Sharp, Sharp, Sharp, Natural, Natural, Sharp, Sharp] // B:F#C#G#D#A#
+    6 => [Sharp, Sharp, Sharp, Natural, Sharp, Sharp, Sharp] // F#:F#G#A#BC#D#E#
     // Flat 调
     5 => [Natural, Natural, Natural, Flat, Natural, Natural, Natural] // F:Bb
     10 => [Flat, Natural, Natural, Flat, Natural, Natural, Natural] // Bb:BbEb
@@ -48,7 +49,7 @@ fn key_spelling(tonic_midi : Int) -> Array[Accidental] {
 ///|
 /// Legacy degree accessor. Prefer `key_degree_checked` for checked API.
 pub fn Key::degree(self : Key, deg : Int, base_octave : Int) -> Pitch {
-  match key_degree_checked(self, deg, base_octave) {
+  match self.key_degree_checked(deg, base_octave) {
     Ok(p) => p
     Err(e) => abort(e.to_string())
   }
