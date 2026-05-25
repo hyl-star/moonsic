@@ -68,7 +68,7 @@ pub fn scale(
 // --- 音级 ---
 
 ///|
-/// Legacy scale-degree helper. Prefer `degree_checked` when invalid input must be reported.
+/// @deprecated Use degree_checked instead.
 pub fn degree(root : Pitch, kind : ScaleKind, deg : Int) -> Pitch {
   match degree_checked(root, kind, deg) {
     Ok(p) => p

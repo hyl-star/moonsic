@@ -6792,3 +6792,25 @@ test "game_music: empty_game_metadata_defaults" {
   assert_eq(m.description, "")
   assert_eq(m.intensity, 0.5)
 }
+
+///|
+test "game_music: json_escape_special_chars" {
+  let cue = @moonsic.game_cue_checked("cue1", "Cq", @moonsic.LoopCue, []).unwrap()
+  let r = @moonsic.game_project_full_checked(
+    "proj_x",
+    "Name with quotes",
+    [cue],
+    [],
+    [],
+    [],
+  )
+  assert_true(r is Ok(_))
+  let json = @moonsic.game_project_to_json_checked(
+    r.unwrap(),
+    @moonsic.default_game_export_options(),
+  )
+  assert_true(json is Ok(_))
+  let s = json.unwrap()
+  let parsed = @moonsic.json_parse(s)
+  assert_true(parsed is Ok(_))
+}
