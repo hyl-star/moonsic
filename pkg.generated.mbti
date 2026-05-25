@@ -126,6 +126,8 @@ pub fn chord_distance(Chord, Chord) -> Int
 
 pub fn chord_quality(Pitch, ChordQuality, Duration) -> MusicEvent
 
+pub fn chord_quality_letter_steps(ChordQuality) -> Array[Int]
+
 pub fn chord_to_json_string(Chord) -> String
 
 pub fn chord_tones(Chord) -> Array[PitchClass]
@@ -428,6 +430,8 @@ pub fn outro(Array[Track]) -> Section
 
 pub fn parse_chord(String) -> Result[Chord, TheoryError]
 
+pub fn parse_chord_quality_checked(String) -> Result[ChordQuality, TheoryError]
+
 pub fn parse_dur_unit(String) -> Result[RhythmDuration, TimeError]
 
 pub fn parse_interval(String) -> Result[Interval, TheoryError]
@@ -439,6 +443,8 @@ pub fn parse_pitch_class(String) -> Result[PitchClass, TheoryError]
 pub fn parse_rhythm_pattern(String) -> Result[RhythmPattern, MotifError]
 
 pub fn parse_scale(String) -> Result[Scale, TheoryError]
+
+pub fn parse_scale_kind_checked(String) -> Result[ScaleKind, TheoryError]
 
 pub fn parse_tempo(String) -> Result[Double, TimeError]
 
@@ -1068,6 +1074,7 @@ pub(all) struct Key {
   kind : ScaleKind
 }
 pub fn Key::degree(Self, Int, Int) -> Pitch
+pub fn Key::key_degree_checked(Self, Int, Int) -> Result[Pitch, TheoryError]
 pub fn Key::scale(Self, Int, Int) -> Array[Pitch]
 pub fn Key::scale_kind(Self) -> ScaleKind
 pub fn Key::tonic_pitch(Self) -> Pitch

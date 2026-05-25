@@ -3556,3 +3556,388 @@ test "chord_v2: parse_scale_bb_minor_spelling" {
   assert_eq(scale.spelled_tones[5].to_string(), "Gb5")
   assert_eq(scale.spelled_tones[6].to_string(), "Ab5")
 }
+
+// ============================================================
+// ScoreLayout 稳定化测试 (v2 — score_layout.mbt + score_enhanced.mbt)
+// ============================================================
+
+// --- Score → EnhancedScoreLayout 转换 ---
+
+///|
+/// Score→EnhancedScoreLayout→Score round-trip：事件数量保留
+test "score_layout_stable: enhanced_roundtrip_event_count" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let s = @moonsic.score1(t)
+  let layout_r = @moonsic.score_to_enhanced_layout_checked(s, 480)
+  assert_true(layout_r is Ok(_))
+  let layout = layout_r.unwrap()
+  assert_eq(layout.ppq, 480)
+
+  let back_r = @moonsic.enhanced_layout_to_score_checked(layout)
+  assert_true(back_r is Ok(_))
+  let back = back_r.unwrap()
+  assert_eq(back.track_count(), 1)
+  assert_eq(back.tracks[0].event_count(), 2)
+}
+
+///|
+/// Score→EnhancedScoreLayout→Score round-trip：和弦事件保留
+test "score_layout_stable: enhanced_roundtrip_with_chord" {
+  let t = @moonsic.melody([
+    @moonsic.major(@moonsic.c(4), @moonsic.half()),
+    @moonsic.n(@moonsic.g(4), @moonsic.quarter()),
+  ])
+  let s = @moonsic.score1(t)
+  let layout_r = @moonsic.score_to_enhanced_layout_checked(s, 480)
+  assert_true(layout_r is Ok(_))
+  let layout = layout_r.unwrap()
+
+  let back_r = @moonsic.enhanced_layout_to_score_checked(layout)
+  assert_true(back_r is Ok(_))
+  let back = back_r.unwrap()
+  assert_eq(back.tracks[0].event_count(), 2)
+}
+
+///|
+/// Score→EnhancedScoreLayout→Score round-trip：休止符事件保留
+test "score_layout_stable: enhanced_roundtrip_with_rest" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.r(@moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let s = @moonsic.score1(t)
+  let layout_r = @moonsic.score_to_enhanced_layout_checked(s, 480)
+  assert_true(layout_r is Ok(_))
+  let layout = layout_r.unwrap()
+
+  let back_r = @moonsic.enhanced_layout_to_score_checked(layout)
+  assert_true(back_r is Ok(_))
+  let back = back_r.unwrap()
+  assert_eq(back.tracks[0].event_count(), 3)
+}
+
+///|
+/// Score→EnhancedScoreLayout：双轨道分别转换为独立 Part
+test "score_layout_stable: enhanced_two_tracks_two_parts" {
+  let t1 = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let t2 = @moonsic.melody([@moonsic.n(@moonsic.g(3), @moonsic.half())])
+  let s = @moonsic.score([t1, t2])
+  let layout_r = @moonsic.score_to_enhanced_layout_checked(s, 480)
+  assert_true(layout_r is Ok(_))
+  let layout = layout_r.unwrap()
+  assert_eq(layout.parts.length(), 2)
+}
+
+// --- 小节容量 (Measure Capacity) ---
+
+///|
+/// 小节容量：3/4 小节恰好 3 个 quarter 不溢出
+test "score_layout_stable: measure_capacity_3_4_exact" {
+  let sig = @moonsic.time_signature(3, 4)
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let r = @moonsic.validate_measure(m, sig, 480)
+  assert_true(r is Ok(_))
+}
+
+///|
+/// 小节容量：3/4 小节 4 个 quarter 溢出
+test "score_layout_stable: measure_capacity_3_4_overflow" {
+  let sig = @moonsic.time_signature(3, 4)
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let r = @moonsic.validate_measure(m, sig, 480)
+  assert_true(r is Err(_))
+  match r {
+    Err(@moonsic.LayoutMeasureOverflow(_)) => ()
+    _ => abort("expected LayoutMeasureOverflow")
+  }
+}
+
+///|
+/// 小节容量：6/8 小节恰好 6 个 eighth 不溢出
+test "score_layout_stable: measure_capacity_6_8_exact" {
+  let sig = @moonsic.time_signature(6, 8)
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.eighth()),
+    @moonsic.n(@moonsic.d(4), @moonsic.eighth()),
+    @moonsic.n(@moonsic.e(4), @moonsic.eighth()),
+    @moonsic.n(@moonsic.f(4), @moonsic.eighth()),
+    @moonsic.n(@moonsic.g(4), @moonsic.eighth()),
+    @moonsic.n(@moonsic.a(4), @moonsic.eighth()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let r = @moonsic.validate_measure(m, sig, 480)
+  assert_true(r is Ok(_))
+}
+
+///|
+/// 小节容量：validate_measure 的 ppq=0 返回 InvalidPPQ
+test "score_layout_stable: validate_measure_ppq_zero" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let r = @moonsic.validate_measure(m, sig, 0)
+  assert_true(r is Err(@moonsic.InvalidPPQ(0)))
+}
+
+// --- 声部对齐 (Voice Alignment) ---
+
+///|
+/// 声部对齐：同 Staff 内两声部小节数不同 → voice alignment mismatch
+test "score_layout_stable: voice_alignment_two_voices_mismatch" {
+  let m0 = @moonsic.empty_measure(0)
+  let m1 = @moonsic.empty_measure(1)
+  // RH: 1 measure, LH: 2 measures
+  let v_rh = @moonsic.make_voice("RH", [m0]).unwrap()
+  let v_lh = @moonsic.make_voice("LH", [m0, m1]).unwrap()
+  let s = @moonsic.make_staff("Piano", None, None, None, [v_rh, v_lh]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_score_layout_report(sl, opts)
+  assert_true(@moonsic.validation_report_has_warnings(report))
+}
+
+///|
+/// 声部对齐：同 Staff 内两声部小节数相同 → 无 voice alignment mismatch warning
+test "score_layout_stable: voice_alignment_matched_no_warning" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m0 = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let m1 = @moonsic.make_measure(1, None, events).unwrap()
+  let v_rh = @moonsic.make_voice("RH", [m0, m1]).unwrap()
+  let v_lh = @moonsic.make_voice("LH", [m0, m1]).unwrap()
+  let s = @moonsic.make_staff("Piano", None, None, None, [v_rh, v_lh]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_score_layout_report(sl, opts)
+  // voice alignment matched → no voice-alignment miscount warning
+  assert_true(!@moonsic.validation_report_has_errors(report))
+}
+
+// --- Staff / Track 通道与乐器保留 ---
+
+///|
+/// Staff→Track：channel 和 program 保留
+test "score_layout_stable: staff_to_track_preserves_channel_program" {
+  let v = @moonsic.empty_voice("RH")
+  let s = @moonsic.make_staff("Staff", Some(3), Some(42), None, [v]).unwrap()
+  let t = @moonsic.staff_to_track(s)
+  assert_eq(t.channel, 3)
+  assert_eq(t.program, 42)
+}
+
+///|
+/// Track→Staff→Track round-trip：channel 保留（通过 track_with_channel）
+test "score_layout_stable: track_to_staff_roundtrip_channel" {
+  let t = @moonsic.track_with_channel(
+    [@moonsic.n(@moonsic.c(4), @moonsic.quarter())],
+    7,
+  )
+  let stf_r = @moonsic.track_to_staff(t, "Staff", 480, @moonsic.four_four())
+  assert_true(stf_r is Ok(_))
+  let stf = stf_r.unwrap()
+  match stf.channel {
+    Some(ch) => assert_eq(ch, 7)
+    None => abort("expected channel Some(7)")
+  }
+}
+
+///|
+/// Staff→Track→Staff round-trip：program 保留
+test "score_layout_stable: staff_track_staff_roundtrip_program" {
+  let v = @moonsic.empty_voice("V")
+  let s = @moonsic.make_staff("S", None, Some(24), None, [v]).unwrap()
+  let t = @moonsic.staff_to_track(s)
+  assert_eq(t.program, 24)
+  let stf_r = @moonsic.track_to_staff(t, "S", 480, @moonsic.four_four())
+  assert_true(stf_r is Ok(_))
+  let stf = stf_r.unwrap()
+  match stf.program {
+    Some(prog) => assert_eq(prog, 24)
+    None => abort("expected program Some(24)")
+  }
+}
+
+// --- ScoreLayout → Score 多声部组转换 ---
+
+///|
+/// ScoreLayout→Score：2 Part × 2 Staff 结构保留轨道数量
+test "score_layout_stable: score_layout_to_score_multi_part" {
+  let s1 = @moonsic.empty_staff("S1")
+  let s2 = @moonsic.empty_staff("S2")
+  let s3 = @moonsic.empty_staff("S3")
+  let s4 = @moonsic.empty_staff("S4")
+  let p1 = @moonsic.empty_part("P1")
+  let p2 = @moonsic.empty_part("P2")
+  let p1 = @moonsic.part_add_staff(p1, s1).unwrap()
+  let p1 = @moonsic.part_add_staff(p1, s2).unwrap()
+  let p2 = @moonsic.part_add_staff(p2, s3).unwrap()
+  let p2 = @moonsic.part_add_staff(p2, s4).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p1, p2]).unwrap()
+  let score = @moonsic.score_layout_to_score(sl)
+  assert_eq(score.track_count(), 4)
+}
+
+///|
+/// ScoreLayout→Score：空 layout 产生 0 轨道
+test "score_layout_stable: empty_score_layout_zero_tracks" {
+  let sl = @moonsic.make_score_layout("Empty", 480, []).unwrap()
+  let score = @moonsic.score_layout_to_score(sl)
+  assert_eq(score.track_count(), 0)
+}
+
+// --- 边界与不可变性 ---
+
+///|
+/// 空 layout 小节计数 = 0
+test "score_layout_stable: empty_layout_measure_count_zero" {
+  let sl = @moonsic.make_score_layout("Empty", 480, []).unwrap()
+  assert_eq(@moonsic.score_layout_measure_count(sl), 0)
+}
+
+///|
+/// measure_beat_duration 混合事件总拍数
+test "score_layout_stable: measure_beat_duration_mixed" {
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.r(@moonsic.eighth()),
+    @moonsic.major(@moonsic.g(4), @moonsic.half()),
+  ]
+  let m = @moonsic.make_measure(0, None, events).unwrap()
+  let beats = @moonsic.measure_beat_duration(m)
+  // quarter(1.0) + eighth(0.5) + half(2.0) = 3.5
+  assert_true(beats > 3.49 && beats < 3.51)
+}
+
+///|
+/// voice_add_measure 不可变性：原 Voice 不变
+test "score_layout_stable: voice_add_measure_immutable" {
+  let m0 = @moonsic.empty_measure(0)
+  let v = @moonsic.empty_voice("V")
+  let v2 = @moonsic.voice_add_measure(v, m0).unwrap()
+  // 原 voice 仍为 0 小节
+  assert_eq(@moonsic.voice_measure_count(v), 0)
+  // 新 voice 有 1 小节
+  assert_eq(@moonsic.voice_measure_count(v2), 1)
+}
+
+///|
+/// staff_add_voice 不可变性：原 Staff 不变
+test "score_layout_stable: staff_add_voice_immutable" {
+  let v = @moonsic.empty_voice("V")
+  let s = @moonsic.empty_staff("S")
+  let s2 = @moonsic.staff_add_voice(s, v).unwrap()
+  // 原 staff 的 voices 为空
+  assert_eq(s.voices.length(), 0)
+  // 新 staff 有 1 个 voice
+  assert_eq(s2.voices.length(), 1)
+}
+
+// --- 错误路径 ---
+
+///|
+/// Track→Voice：ppq <= 0 返回 InvalidPPQ
+test "score_layout_stable: track_to_voice_invalid_ppq" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let r = @moonsic.track_to_voice(t, "V", 0, @moonsic.four_four())
+  assert_true(r is Err(@moonsic.InvalidPPQ(0)))
+}
+
+///|
+/// Track→Voice：无效拍号 5/3 返回 LayoutInvalidMeasure
+test "score_layout_stable: track_to_voice_invalid_time_signature" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let sig = @moonsic.time_signature(5, 3)
+  let r = @moonsic.track_to_voice(t, "V", 480, sig)
+  assert_true(r is Err(@moonsic.LayoutInvalidMeasure(_)))
+}
+
+///|
+/// make_measure：负索引返回 LayoutInvalidMeasure
+test "score_layout_stable: make_measure_negative_index" {
+  let r = @moonsic.make_measure(-1, None, [])
+  assert_true(r is Err(@moonsic.LayoutInvalidMeasure(_)))
+}
+
+///|
+/// make_staff：空名称返回 LayoutInvalidStaff
+test "score_layout_stable: make_staff_empty_name" {
+  let r = @moonsic.make_staff("", None, None, None, [])
+  assert_true(r is Err(@moonsic.LayoutInvalidStaff(_)))
+}
+
+///|
+/// make_staff：非法 channel=16 返回 LayoutInvalidChannel
+test "score_layout_stable: make_staff_channel_16" {
+  let r = @moonsic.make_staff("S", Some(16), None, None, [])
+  assert_true(r is Err(@moonsic.LayoutInvalidChannel(16)))
+}
+
+///|
+/// make_staff：非法 program=128 返回 LayoutInvalidProgram
+test "score_layout_stable: make_staff_program_128" {
+  let r = @moonsic.make_staff("S", None, Some(128), None, [])
+  assert_true(r is Err(@moonsic.LayoutInvalidProgram(128)))
+}
+
+///|
+/// make_voice：空名称返回 LayoutInvalidVoice
+test "score_layout_stable: make_voice_empty_name" {
+  let r = @moonsic.make_voice("", [])
+  assert_true(r is Err(@moonsic.LayoutInvalidVoice(_)))
+}
+
+///|
+/// make_part：空名称返回 LayoutInvalidPart
+test "score_layout_stable: make_part_empty_name" {
+  let r = @moonsic.make_part("", [])
+  assert_true(r is Err(@moonsic.LayoutInvalidPart(_)))
+}
+
+///|
+/// ScoreError to_string 覆盖全部 variant
+test "score_layout_stable: score_error_to_string_all" {
+  let e1 = @moonsic.LayoutInvalidMeasure("test")
+  assert_true(e1.to_string().contains("无效小节"))
+  let e2 = @moonsic.LayoutInvalidVoice("test")
+  assert_true(e2.to_string().contains("无效声部"))
+  let e3 = @moonsic.LayoutInvalidStaff("test")
+  assert_true(e3.to_string().contains("无效五线谱"))
+  let e4 = @moonsic.LayoutInvalidPart("test")
+  assert_true(e4.to_string().contains("无效声部组"))
+  let e5 = @moonsic.LayoutMeasureOverflow("test")
+  assert_true(e5.to_string().contains("小节溢出"))
+  let e6 = @moonsic.InvalidScoreLayout("test")
+  assert_true(e6.to_string().contains("无效曲谱布局"))
+  let e7 = @moonsic.ScoreError::InvalidPPQ(0)
+  assert_true(e7.to_string().contains("无效 PPQ"))
+  let e8 = @moonsic.LayoutInvalidChannel(16)
+  assert_true(e8.to_string().contains("无效通道"))
+  let e9 = @moonsic.LayoutInvalidProgram(128)
+  assert_true(e9.to_string().contains("无效乐器程序号"))
+}
+
+// ============================================================
+// ScoreLayout 稳定化测试结束
+// ============================================================
