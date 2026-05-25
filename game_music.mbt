@@ -695,27 +695,29 @@ pub fn game_validation_report_has_errors(report : GameValidationReport) -> Bool 
 }
 
 ///|
+/// 内部：GameValidationReport → JsonValue（供 _game_project_to_json_string 复用）
+fn _game_validation_report_jv(report : GameValidationReport) -> JsonValue {
+  JObject([
+    {
+      key: "error_count",
+      value: JNumber(report.summary.error_count.to_double()),
+    },
+    {
+      key: "warning_count",
+      value: JNumber(report.summary.warning_count.to_double()),
+    },
+    { key: "info_count", value: JNumber(report.summary.info_count.to_double()) },
+    {
+      key: "total_issues",
+      value: JNumber(report.summary.total_issues.to_double()),
+    },
+    { key: "issues", value: JArray([]) },
+  ])
+}
+
+///|
 pub fn game_validation_report_to_json(report : GameValidationReport) -> String {
-  let mut result = "{"
-  result = result +
-    "\"error_count\":" +
-    report.summary.error_count.to_string() +
-    ","
-  result = result +
-    "\"warning_count\":" +
-    report.summary.warning_count.to_string() +
-    ","
-  result = result +
-    "\"info_count\":" +
-    report.summary.info_count.to_string() +
-    ","
-  result = result +
-    "\"total_issues\":" +
-    report.summary.total_issues.to_string() +
-    ","
-  result = result + "\"issues\":[]"
-  result = result + "}"
-  result
+  json_stringify(_game_validation_report_jv(report))
 }
 
 ///|
@@ -1377,32 +1379,33 @@ fn _game_project_to_json_string(
   project : GameMusicProject,
   options : GameExportOptions,
 ) -> String {
-  let mut result = "{"
-  result = result + "\"schema_version\":\"" + options.schema_version + "\","
-  result = result + "\"project\":{"
-  result = result + "\"id\":\"" + project.id + "\","
-  result = result + "\"name\":\"" + project.name + "\","
-  result = result + "\"tempo_bpm\":" + project.tempo_bpm.to_string() + ","
-  result = result + "\"cue_count\":" + project.cues.length().to_string() + ","
-  result = result +
-    "\"state_count\":" +
-    project.states.length().to_string() +
-    ","
-  result = result +
-    "\"parameter_count\":" +
-    project.parameters.length().to_string() +
-    ","
-  result = result +
-    "\"transition_count\":" +
-    project.transitions.length().to_string()
-  result = result + "}"
+  let project_fields : Array[JsonField] = [
+    { key: "id", value: JString(project.id) },
+    { key: "name", value: JString(project.name) },
+    { key: "tempo_bpm", value: JNumber(project.tempo_bpm.to_double()) },
+    { key: "cue_count", value: JNumber(project.cues.length().to_double()) },
+    { key: "state_count", value: JNumber(project.states.length().to_double()) },
+    {
+      key: "parameter_count",
+      value: JNumber(project.parameters.length().to_double()),
+    },
+    {
+      key: "transition_count",
+      value: JNumber(project.transitions.length().to_double()),
+    },
+  ]
+  let root_fields : Array[JsonField] = [
+    { key: "schema_version", value: JString(options.schema_version) },
+    { key: "project", value: JObject(project_fields) },
+  ]
   if options.include_validation_report {
     let report = validate_game_project_report(project)
-    let rpt_json = game_validation_report_to_json(report)
-    result = result + ",\"validation\":" + rpt_json
+    root_fields.push({
+      key: "validation",
+      value: _game_validation_report_jv(report),
+    })
   }
-  result = result + "}"
-  result
+  json_stringify(JObject(root_fields))
 }
 
 ///|
