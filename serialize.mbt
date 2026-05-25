@@ -25,6 +25,20 @@ pub(all) struct JsonField {
   value : JsonValue
 }
 
+///|
+pub(all) enum SerializeError {
+  JsonParseError(String)
+  JsonDecodeError(String)
+}
+
+///|
+pub fn SerializeError::to_string(self : SerializeError) -> String {
+  match self {
+    JsonParseError(msg) => "JSON parse error: \{msg}"
+    JsonDecodeError(msg) => "JSON decode error: \{msg}"
+  }
+}
+
 // ============================================================
 // JSON 构造快捷函数
 // ============================================================
@@ -96,8 +110,53 @@ fn format_json_num(n : Double) -> String {
 ///|
 /// JSON 字符串转义（双引号、反斜杠、控制字符）
 fn json_escape(s : String) -> String {
-  // 简单路径：不做逐字符转义，仅包裹双引号
-  "\"" + s + "\""
+  // Escape the JSON string body and wrap it in quotes.
+  let mut out = "\""
+  for i = 0; i < s.length(); i = i + 1 {
+    let c = s[i]
+    if c == '\"' {
+      out = out + "\\\""
+    } else if c == '\\' {
+      out = out + "\\\\"
+    } else if c == '\n' {
+      out = out + "\\n"
+    } else if c == '\r' {
+      out = out + "\\r"
+    } else if c == '\t' {
+      out = out + "\\t"
+    } else if c.to_int() < 32 {
+      out = out +
+        "\\u00" +
+        hex_digit(c.to_int() / 16) +
+        hex_digit(c.to_int() % 16)
+    } else {
+      out = out + s[i:i + 1].to_owned()
+    }
+  }
+  out + "\""
+}
+
+///|
+fn hex_digit(n : Int) -> String {
+  match n {
+    0 => "0"
+    1 => "1"
+    2 => "2"
+    3 => "3"
+    4 => "4"
+    5 => "5"
+    6 => "6"
+    7 => "7"
+    8 => "8"
+    9 => "9"
+    10 => "a"
+    11 => "b"
+    12 => "c"
+    13 => "d"
+    14 => "e"
+    15 => "f"
+    _ => "0"
+  }
 }
 
 ///|
@@ -526,45 +585,7 @@ fn parse_json_num_inner(
 ///|
 /// 解析字符串为 Double
 fn parse_double_str(s : String) -> Result[Double, String] {
-  let len = s.length()
-  if len == 0 {
-    return Err("空数字字符串")
-  }
-  let mut i = 0
-  let mut neg = false
-  if s[0] == '-' {
-    neg = true
-    i = 1
-  }
-  if i >= len {
-    return Err("空数字：\{s}")
-  }
-  let mut int_part : Int = 0
-  let mut has_digit = false
-  while i < len && s[i] >= '0' && s[i] <= '9' {
-    int_part = int_part * 10 + (s[i].to_int() - '0'.to_int())
-    has_digit = true
-    i = i + 1
-  }
-  if !has_digit {
-    return Err("无数字：\{s}")
-  }
-  let mut result = int_part.to_double()
-  if i < len && s[i] == '.' {
-    i = i + 1
-    let mut frac : Double = 0.0
-    let mut div : Double = 10.0
-    while i < len && s[i] >= '0' && s[i] <= '9' {
-      frac = frac + (s[i].to_int() - '0'.to_int()).to_double() / div
-      div = div * 10.0
-      i = i + 1
-    }
-    result = result + frac
-  }
-  if neg {
-    result = -result
-  }
-  Ok(result)
+  parse_ascii_double(s)
 }
 
 ///|
@@ -1020,11 +1041,19 @@ fn track_from_jv(v : JsonValue) -> Result[Track, String] {
 
 ///|
 /// 从 JSON 字符串反序列化为 Score
-pub fn score_from_json_string(input : String) -> Result[Score, String] {
-  let root = match json_parse(input) {
-    Ok(jv) => jv
-    Err(e) => return Err(e)
+pub fn score_from_json_string(input : String) -> Result[Score, SerializeError] {
+  match json_parse(input) {
+    Ok(root) =>
+      match score_from_json_value(root) {
+        Ok(score) => Ok(score)
+        Err(e) => Err(JsonDecodeError(e))
+      }
+    Err(e) => Err(JsonParseError(e))
   }
+}
+
+///|
+fn score_from_json_value(root : JsonValue) -> Result[Score, String] {
   let root_fields = match jv_get_fields(root) {
     Ok(f) => f
     Err(e) => return Err(e)
@@ -1123,23 +1152,23 @@ pub fn parse_to_json(input : String, kind : String) -> String {
     "tempo" => wrap_tempo_to_json(input)
     "melody" => wrap_melody_to_json(input)
     "score" => wrap_score_str_to_json(input)
-    _ => "{\"ok\":false,\"error\":\"不支持的类型：\{kind}\"}"
+    _ => ffi_error("UnsupportedKind", "unsupported parse kind: \{kind}")
   }
 }
 
 ///|
 fn wrap_pitch_to_json(input : String) -> String {
   match parse_pitch(input) {
-    Ok(p) => "{\"ok\":true,\"data\":" + json_stringify(pitch_to_jv(p)) + "}"
-    Err(e) => "{\"ok\":false,\"error\":\"\{e}\"}"
+    Ok(p) => ffi_ok_data(json_stringify(pitch_to_jv(p)))
+    Err(e) => ffi_error("InvalidPitch", e.to_string())
   }
 }
 
 ///|
 fn wrap_chord_to_json(input : String) -> String {
   match parse_chord(input) {
-    Ok(c) => "{\"ok\":true,\"data\":" + chord_to_json_string(c) + "}"
-    Err(e) => "{\"ok\":false,\"error\":\"\{e}\"}"
+    Ok(c) => ffi_ok_data(chord_to_json_string(c))
+    Err(e) => ffi_error("InvalidChord", e.to_string())
   }
 }
 
@@ -1148,19 +1177,22 @@ fn wrap_scale_to_json(input : String) -> String {
   match parse_scale(input) {
     Ok(s) => {
       let tone_strs = []
-      for t in s.tones {
-        tone_strs.push(jv_str(t.to_string()))
+      for t in s.spelled_tones {
+        tone_strs.push(jv_str(t.class.to_string() + t.accidental.to_string()))
       }
       let data = json_stringify(
         jv_obj([
-          jv_field("root", jv_str(s.root.to_string())),
+          jv_field(
+            "root",
+            jv_str(s.root.to_string() + s.root_accidental.to_string()),
+          ),
           jv_field("scale_type", jv_str(scale_kind_name(s.scale_type))),
           jv_field("tones", jv_arr(tone_strs)),
         ]),
       )
-      "{\"ok\":true,\"data\":" + data + "}"
+      ffi_ok_data(data)
     }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e}\"}"
+    Err(e) => ffi_error("InvalidScale", e.to_string())
   }
 }
 
@@ -1193,9 +1225,9 @@ fn wrap_interval_to_json(input : String) -> String {
           jv_field("semitones", jv_int(iv.semitones)),
         ]),
       )
-      "{\"ok\":true,\"data\":" + data + "}"
+      ffi_ok_data(data)
     }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e}\"}"
+    Err(e) => ffi_error("InvalidInterval", e.to_string())
   }
 }
 
@@ -1204,9 +1236,9 @@ fn wrap_time_sig_to_json(input : String) -> String {
   match parse_time_sig(input) {
     Ok(ts) => {
       let data = json_stringify(time_sig_to_jv(ts))
-      "{\"ok\":true,\"data\":" + data + "}"
+      ffi_ok_data(data)
     }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -1215,9 +1247,9 @@ fn wrap_tempo_to_json(input : String) -> String {
   match parse_tempo(input) {
     Ok(bpm) => {
       let data = "{\"bpm\":" + bpm.to_string() + "}"
-      "{\"ok\":true,\"data\":" + data + "}"
+      ffi_ok_data(data)
     }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -1225,12 +1257,12 @@ fn wrap_tempo_to_json(input : String) -> String {
 fn wrap_melody_to_json(input : String) -> String {
   let track = melody_str(input)
   let json = track_to_json(track)
-  "{\"ok\":true,\"data\":" + json + "}"
+  ffi_ok_data(json)
 }
 
 ///|
 fn wrap_score_str_to_json(input : String) -> String {
   let s = score_str(input)
   let json = score_to_json(s)
-  "{\"ok\":true,\"data\":" + json + "}"
+  ffi_ok_data(json)
 }

@@ -38,8 +38,8 @@ pub(all) enum GenerateMode {
   MelodyOnly
   ChordsOnly
   BassOnly
-  Accompaniment
-  GameLoop
+  AccompanimentMode
+  GameLoopMode
 }
 
 // --- MelodyContour ---

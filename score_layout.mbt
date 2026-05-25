@@ -10,30 +10,30 @@
 ///|
 /// 曲谱布局模块的错误类型
 pub(all) enum ScoreError {
-  InvalidMeasure(String)
-  InvalidVoice(String)
-  InvalidStaff(String)
-  InvalidPart(String)
+  LayoutInvalidMeasure(String)
+  LayoutInvalidVoice(String)
+  LayoutInvalidStaff(String)
+  LayoutInvalidPart(String)
   InvalidScoreLayout(String)
-  MeasureOverflow(String)
+  LayoutMeasureOverflow(String)
   InvalidPPQ(Int)
-  InvalidChannel(Int)
-  InvalidProgram(Int)
+  LayoutInvalidChannel(Int)
+  LayoutInvalidProgram(Int)
 }
 
 ///|
 /// 转为可读的错误消息（中文）
 pub fn ScoreError::to_string(self : ScoreError) -> String {
   match self {
-    InvalidMeasure(msg) => "无效小节：\{msg}"
-    InvalidVoice(msg) => "无效声部：\{msg}"
-    InvalidStaff(msg) => "无效五线谱：\{msg}"
-    InvalidPart(msg) => "无效声部组：\{msg}"
+    LayoutInvalidMeasure(msg) => "无效小节：\{msg}"
+    LayoutInvalidVoice(msg) => "无效声部：\{msg}"
+    LayoutInvalidStaff(msg) => "无效五线谱：\{msg}"
+    LayoutInvalidPart(msg) => "无效声部组：\{msg}"
     InvalidScoreLayout(msg) => "无效曲谱布局：\{msg}"
-    MeasureOverflow(msg) => "小节溢出：\{msg}"
+    LayoutMeasureOverflow(msg) => "小节溢出：\{msg}"
     InvalidPPQ(ppq) => "无效 PPQ：\{ppq}（必须 > 0）"
-    InvalidChannel(ch) => "无效通道：\{ch}（合法范围 0-15）"
-    InvalidProgram(prog) =>
+    LayoutInvalidChannel(ch) => "无效通道：\{ch}（合法范围 0-15）"
+    LayoutInvalidProgram(prog) =>
       "无效乐器程序号：\{prog}（合法范围 0-127）"
   }
 }
@@ -60,13 +60,17 @@ pub fn make_measure(
   events : Array[MusicEvent],
 ) -> Result[Measure, ScoreError] {
   if index < 0 {
-    return Err(InvalidMeasure("小节索引必须 >= 0，当前：\{index}"))
+    return Err(
+      LayoutInvalidMeasure("小节索引必须 >= 0，当前：\{index}"),
+    )
   }
   match signature {
     Some(sig) =>
       if !is_valid_time_signature(sig.numerator, sig.denominator) {
         return Err(
-          InvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
+          LayoutInvalidMeasure(
+            "无效拍号：\{sig.numerator}/\{sig.denominator}",
+          ),
         )
       }
     None => ()
@@ -104,7 +108,7 @@ pub fn make_voice(
   measures : Array[Measure],
 ) -> Result[Voice, ScoreError] {
   if name.length() == 0 {
-    return Err(InvalidVoice("声部名称不能为空"))
+    return Err(LayoutInvalidVoice("声部名称不能为空"))
   }
   Ok({ name, measures })
 }
@@ -155,16 +159,19 @@ pub fn make_staff(
   voices : Array[Voice],
 ) -> Result[Staff, ScoreError] {
   if name.length() == 0 {
-    return Err(InvalidStaff("五线谱名称不能为空"))
+    return Err(LayoutInvalidStaff("五线谱名称不能为空"))
   }
   match channel {
-    Some(ch) => if ch < 0 || ch > MAX_CHANNEL { return Err(InvalidChannel(ch)) }
+    Some(ch) =>
+      if ch < 0 || ch > MAX_CHANNEL {
+        return Err(LayoutInvalidChannel(ch))
+      }
     None => ()
   }
   match program {
     Some(prog) =>
       if prog < 0 || prog > MAX_MIDI_NOTE {
-        return Err(InvalidProgram(prog))
+        return Err(LayoutInvalidProgram(prog))
       }
     None => ()
   }
@@ -216,7 +223,7 @@ pub fn make_part(
   staves : Array[Staff],
 ) -> Result[Part, ScoreError] {
   if name.length() == 0 {
-    return Err(InvalidPart("声部组名称不能为空"))
+    return Err(LayoutInvalidPart("声部组名称不能为空"))
   }
   Ok({ name, staves })
 }
@@ -326,7 +333,9 @@ pub fn validate_measure(
   }
   if measure.index < 0 {
     return Err(
-      InvalidMeasure("小节索引必须 >= 0，当前：\{measure.index}"),
+      LayoutInvalidMeasure(
+        "小节索引必须 >= 0，当前：\{measure.index}",
+      ),
     )
   }
   let sig = match measure.signature {
@@ -335,12 +344,12 @@ pub fn validate_measure(
   }
   if !is_valid_time_signature(sig.numerator, sig.denominator) {
     return Err(
-      InvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
+      LayoutInvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
     )
   }
   let bar_ticks = match bar_length_ticks(sig, ppq) {
     Ok(v) => v
-    Err(e) => return Err(InvalidMeasure(e.to_string()))
+    Err(e) => return Err(LayoutInvalidMeasure(e.to_string()))
   }
   let mut total_ticks = 0
   for i = 0; i < measure.events.length(); i = i + 1 {
@@ -348,7 +357,7 @@ pub fn validate_measure(
   }
   if total_ticks > bar_ticks {
     return Err(
-      MeasureOverflow(
+      LayoutMeasureOverflow(
         "小节 \{measure.index} 的总时值 \{total_ticks} tick 超过小节容量 \{bar_ticks} tick（拍号 \{sig.numerator}/\{sig.denominator}）",
       ),
     )
@@ -364,7 +373,7 @@ pub fn validate_voice(
   ppq : Int,
 ) -> Result[Unit, ScoreError] {
   if voice.name.length() == 0 {
-    return Err(InvalidVoice("声部名称不能为空"))
+    return Err(LayoutInvalidVoice("声部名称不能为空"))
   }
   for i = 0; i < voice.measures.length(); i = i + 1 {
     match validate_measure(voice.measures[i], default_sig, ppq) {
@@ -383,19 +392,19 @@ pub fn validate_staff(
   ppq : Int,
 ) -> Result[Unit, ScoreError] {
   if staff.name.length() == 0 {
-    return Err(InvalidStaff("五线谱名称不能为空"))
+    return Err(LayoutInvalidStaff("五线谱名称不能为空"))
   }
   match staff.channel {
     Some(ch) =>
       if ch < MIN_CHANNEL || ch > MAX_CHANNEL {
-        return Err(InvalidChannel(ch))
+        return Err(LayoutInvalidChannel(ch))
       }
     None => ()
   }
   match staff.program {
     Some(prog) =>
       if prog < 0 || prog > MAX_MIDI_NOTE {
-        return Err(InvalidProgram(prog))
+        return Err(LayoutInvalidProgram(prog))
       }
     None => ()
   }
@@ -416,7 +425,7 @@ pub fn validate_part(
   ppq : Int,
 ) -> Result[Unit, ScoreError] {
   if part.name.length() == 0 {
-    return Err(InvalidPart("声部组名称不能为空"))
+    return Err(LayoutInvalidPart("声部组名称不能为空"))
   }
   for i = 0; i < part.staves.length(); i = i + 1 {
     match validate_staff(part.staves[i], default_sig, ppq) {
@@ -584,12 +593,12 @@ pub fn track_to_voice(
   }
   if !is_valid_time_signature(sig.numerator, sig.denominator) {
     return Err(
-      InvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
+      LayoutInvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
     )
   }
   let bar_ticks = match bar_length_ticks(sig, ppq) {
     Ok(v) => v
-    Err(e) => return Err(InvalidMeasure(e.to_string()))
+    Err(e) => return Err(LayoutInvalidMeasure(e.to_string()))
   }
   let measures = []
   let mut measure_index = 0

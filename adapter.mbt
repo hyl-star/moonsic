@@ -56,9 +56,9 @@ pub(all) enum GenerationTaskKind {
   MelodyContinuation
   ChordProgression
   BassLine
-  Accompaniment
+  AccompanimentTask
   RhythmPatternGen
-  GameLoop
+  GameLoopTask
   Variation
   Orchestration
 }
@@ -229,9 +229,9 @@ fn task_to_required_capability(
     MelodyContinuation => CanGenerateMelody
     ChordProgression => CanGenerateHarmony
     BassLine => CanGenerateBass
-    Accompaniment => CanGenerateAccompaniment
+    AccompanimentTask => CanGenerateAccompaniment
     RhythmPatternGen => CanGenerateRhythm
-    GameLoop => CanGenerateGameLoop
+    GameLoopTask => CanGenerateGameLoop
     Variation => CanGenerateVariation
     Orchestration => CanGenerateArrangement
   }
@@ -258,9 +258,9 @@ fn task_kind_to_tag(task : GenerationTaskKind) -> String {
     MelodyContinuation => "MelodyContinuation"
     ChordProgression => "ChordProgression"
     BassLine => "BassLine"
-    Accompaniment => "Accompaniment"
+    AccompanimentTask => "Accompaniment"
     RhythmPatternGen => "RhythmPattern"
-    GameLoop => "GameLoop"
+    GameLoopTask => "GameLoop"
     Variation => "Variation"
     Orchestration => "Orchestration"
   }
@@ -380,9 +380,9 @@ fn parse_task_kind_from_tag(
     "MelodyContinuation" => Ok(MelodyContinuation)
     "ChordProgression" => Ok(ChordProgression)
     "BassLine" => Ok(BassLine)
-    "Accompaniment" => Ok(Accompaniment)
+    "Accompaniment" => Ok(AccompanimentTask)
     "RhythmPattern" => Ok(RhythmPatternGen)
-    "GameLoop" => Ok(GameLoop)
+    "GameLoop" => Ok(GameLoopTask)
     "Variation" => Ok(Variation)
     "Orchestration" => Ok(Orchestration)
     _ => Err(ExternalGenerationParseError("未知任务种类：\{s}"))
@@ -958,7 +958,7 @@ pub fn deterministic_mock_generate(
         tracks, "简单根音贝斯", "mock 生成了基于 I-IV-V-I 的根音贝斯线",
       )
     }
-    Accompaniment => {
+    AccompanimentTask => {
       let acc = [
         major(c(4), half()),
         major(f(4), half()),
@@ -972,7 +972,7 @@ pub fn deterministic_mock_generate(
       let empty = [track([])]
       (empty, "空节奏", "mock 不支持 RhythmPattern，返回空")
     }
-    GameLoop => {
+    GameLoopTask => {
       let loop_events = [
         n(c(4), eighth()),
         n(e(4), eighth()),

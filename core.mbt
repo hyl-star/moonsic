@@ -196,6 +196,23 @@ pub fn Pitch::to_midi(self : Pitch) -> Int {
 }
 
 ///|
+/// Safe MIDI conversion. Returns MidiOutOfRange when the pitch is outside 0..127.
+pub fn Pitch::to_midi_checked(self : Pitch) -> Result[Int, TheoryError] {
+  let midi = self.to_midi()
+  if is_valid_midi_note(midi) {
+    Ok(midi)
+  } else {
+    Err(MidiOutOfRange(midi))
+  }
+}
+
+///|
+/// Function-style safe MIDI conversion for wrapper layers.
+pub fn pitch_to_midi(p : Pitch) -> Result[Int, TheoryError] {
+  p.to_midi_checked()
+}
+
+///|
 /// 判断该音高是否在有效 MIDI 范围内（0-127）
 pub fn Pitch::is_valid_midi(self : Pitch) -> Bool {
   let midi = self.to_midi()
@@ -210,9 +227,36 @@ pub fn Pitch::transpose(self : Pitch, semitones : Int) -> Pitch {
 }
 
 ///|
+/// Safe transposition. The old transpose method is kept for compatibility.
+pub fn Pitch::transpose_checked(
+  self : Pitch,
+  semitones : Int,
+) -> Result[Pitch, TheoryError] {
+  midi_to_pitch_checked(self.to_midi() + semitones)
+}
+
+///|
+/// Function-style safe transposition for callers that prefer Result APIs.
+pub fn transpose_pitch(
+  p : Pitch,
+  semitones : Int,
+) -> Result[Pitch, TheoryError] {
+  p.transpose_checked(semitones)
+}
+
+///|
 /// 转为字符串，如 "C4", "C#4", "Db4"
 pub fn Pitch::to_string(self : Pitch) -> String {
   "\{self.class.to_string()}\{self.accidental.to_string()}\{self.octave}"
+}
+
+///|
+/// Safe MIDI number to Pitch conversion. Uses sharp spelling.
+pub fn midi_to_pitch_checked(midi : Int) -> Result[Pitch, TheoryError] {
+  if !is_valid_midi_note(midi) {
+    return Err(MidiOutOfRange(midi))
+  }
+  Ok(midi_to_pitch(midi))
 }
 
 ///|
@@ -312,11 +356,22 @@ pub(all) struct Tempo {
 
 ///|
 /// 创建速度，BPM 必须 > 0
+/// Legacy throwing tempo constructor. Prefer `tempo_checked` in library/FFI code.
 pub fn tempo(bpm : Int) -> Tempo {
   if bpm <= 0 {
     abort("tempo: BPM 必须 > 0，实际值：\{bpm}")
   }
   { bpm, }
+}
+
+///|
+/// Safe Tempo constructor for library/FFI code.
+pub fn tempo_checked(bpm : Int) -> Result[Tempo, TimeError] {
+  if bpm <= 0 {
+    Err(InvalidTempo("BPM must be > 0, got \{bpm}"))
+  } else {
+    Ok({ bpm, })
+  }
 }
 
 ///|
@@ -435,6 +490,17 @@ pub fn Note::transpose(self : Note, semitones : Int) -> Note {
 }
 
 ///|
+pub fn Note::transpose_checked(
+  self : Note,
+  semitones : Int,
+) -> Result[Note, TheoryError] {
+  match self.pitch.transpose_checked(semitones) {
+    Ok(p) => Ok({ pitch: p, duration: self.duration, velocity: self.velocity })
+    Err(e) => Err(e)
+  }
+}
+
+///|
 pub fn Note::to_string(self : Note) -> String {
   "\{self.pitch.to_string()} \{self.duration.to_string()} v=\{self.velocity}"
 }
@@ -472,6 +538,21 @@ pub fn Chord::transpose(self : Chord, semitones : Int) -> Chord {
     new_pitches.push(p.transpose(semitones))
   }
   { pitches: new_pitches, duration: self.duration, velocity: self.velocity }
+}
+
+///|
+pub fn Chord::transpose_checked(
+  self : Chord,
+  semitones : Int,
+) -> Result[Chord, TheoryError] {
+  let new_pitches = []
+  for p in self.pitches {
+    match p.transpose_checked(semitones) {
+      Ok(tp) => new_pitches.push(tp)
+      Err(e) => return Err(e)
+    }
+  }
+  Ok({ pitches: new_pitches, duration: self.duration, velocity: self.velocity })
 }
 
 ///|
@@ -548,6 +629,26 @@ pub fn MusicEvent::transpose(self : MusicEvent, semitones : Int) -> MusicEvent {
     Note(n) => Note(n.transpose(semitones))
     Rest(r) => Rest(r)
     Chord(c) => Chord(c.transpose(semitones))
+  }
+}
+
+///|
+pub fn MusicEvent::transpose_checked(
+  self : MusicEvent,
+  semitones : Int,
+) -> Result[MusicEvent, TheoryError] {
+  match self {
+    Note(n) =>
+      match n.transpose_checked(semitones) {
+        Ok(v) => Ok(Note(v))
+        Err(e) => Err(e)
+      }
+    Rest(r) => Ok(Rest(r))
+    Chord(c) =>
+      match c.transpose_checked(semitones) {
+        Ok(v) => Ok(Chord(v))
+        Err(e) => Err(e)
+      }
   }
 }
 
@@ -672,6 +773,28 @@ pub fn Track::transpose(self : Track, semitones : Int) -> Track {
 }
 
 ///|
+pub fn Track::transpose_checked(
+  self : Track,
+  semitones : Int,
+) -> Result[Track, TheoryError] {
+  let new_events = []
+  for event in self.events {
+    match event.transpose_checked(semitones) {
+      Ok(v) => new_events.push(v)
+      Err(e) => return Err(e)
+    }
+  }
+  Ok({
+    events: new_events,
+    channel: self.channel,
+    program: self.program,
+    volume: self.volume,
+    pan: self.pan,
+    mute: self.mute,
+  })
+}
+
+///|
 /// 重复轨道 count 次
 pub fn Track::repeat(self : Track, count : Int) -> Track {
   let new_events = []
@@ -766,6 +889,26 @@ pub fn Score::transpose(self : Score, semitones : Int) -> Score {
     tracks: new_tracks,
     master_gain: self.master_gain,
   }
+}
+
+///|
+pub fn Score::transpose_checked(
+  self : Score,
+  semitones : Int,
+) -> Result[Score, TheoryError] {
+  let new_tracks = []
+  for track in self.tracks {
+    match track.transpose_checked(semitones) {
+      Ok(v) => new_tracks.push(v)
+      Err(e) => return Err(e)
+    }
+  }
+  Ok({
+    tempo: self.tempo,
+    time_signature: self.time_signature,
+    tracks: new_tracks,
+    master_gain: self.master_gain,
+  })
 }
 
 ///|

@@ -36,6 +36,64 @@ pub fn TimeError::to_string(self : TimeError) -> String {
   }
 }
 
+///|
+/// Strict string-only FFI. Input JSON: {"duration":"q","ppq":480}
+pub fn ffi_duration_ticks_json(input : String) -> String {
+  let fields = match ffi_time_fields(input) {
+    Ok(f) => f
+    Err(e) => return ffi_time_error(e)
+  }
+  let dur_text = match ffi_time_string_field(fields, "duration") {
+    Ok(s) => s
+    Err(e) => return ffi_time_error(e)
+  }
+  let ppq = match ffi_time_int_field(fields, "ppq") {
+    Ok(n) => n
+    Err(e) => return ffi_time_error(e)
+  }
+  ffi_duration_ticks(dur_text, ppq)
+}
+
+///|
+/// Strict string-only FFI. Input JSON: {"ticks":480,"bpm":120.0,"ppq":480}
+pub fn ffi_ticks_to_seconds_json(input : String) -> String {
+  let fields = match ffi_time_fields(input) {
+    Ok(f) => f
+    Err(e) => return ffi_time_error(e)
+  }
+  let ticks = match ffi_time_int_field(fields, "ticks") {
+    Ok(n) => n
+    Err(e) => return ffi_time_error(e)
+  }
+  let bpm = match ffi_time_double_field(fields, "bpm") {
+    Ok(n) => n
+    Err(e) => return ffi_time_error(e)
+  }
+  let ppq = match ffi_time_int_field(fields, "ppq") {
+    Ok(n) => n
+    Err(e) => return ffi_time_error(e)
+  }
+  ffi_ticks_to_seconds(ticks, bpm, ppq)
+}
+
+///|
+/// Strict string-only FFI. Input JSON: {"sig":"4/4","ppq":480}
+pub fn ffi_bar_length_json(input : String) -> String {
+  let fields = match ffi_time_fields(input) {
+    Ok(f) => f
+    Err(e) => return ffi_time_error(e)
+  }
+  let sig = match ffi_time_string_field(fields, "sig") {
+    Ok(s) => s
+    Err(e) => return ffi_time_error(e)
+  }
+  let ppq = match ffi_time_int_field(fields, "ppq") {
+    Ok(n) => n
+    Err(e) => return ffi_time_error(e)
+  }
+  ffi_bar_length(sig, ppq)
+}
+
 // ============================================================
 // 有理数 Rational — 精确的分数表示
 // ============================================================
@@ -281,18 +339,36 @@ fn dot_multiplier(dots : Int) -> Result[Rational, TimeError] {
 ///|
 /// RhythmDuration → Rational（四分音符为单位的分数）
 pub fn rhythm_duration_to_fraction(d : RhythmDuration) -> Rational {
+  match rhythm_duration_to_fraction_checked(d) {
+    Ok(frac) => frac
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+/// RhythmDuration 鈫?Rational with structured validation.
+pub fn rhythm_duration_to_fraction_checked(
+  d : RhythmDuration,
+) -> Result[Rational, TimeError] {
   let base = dur_unit_fraction(d.unit)
   let dot = match dot_multiplier(d.dots) {
     Ok(r) => r
-    Err(_) => rational_raw(1, 1)
+    Err(e) => return Err(e)
   }
   let frac = rational_mul(base, dot)
   match d.tuplet {
     Some(ratio) => {
+      if ratio.actual <= 0 || ratio.normal <= 0 {
+        return Err(
+          InvalidDuration(
+            "tuplet ratio must be positive: \{ratio.actual}:\{ratio.normal}",
+          ),
+        )
+      }
       let tf = rational_raw(ratio.normal, ratio.actual)
-      rational_mul(frac, tf)
+      Ok(rational_mul(frac, tf))
     }
-    None => frac
+    None => Ok(frac)
   }
 }
 
@@ -305,7 +381,10 @@ pub fn rhythm_duration_to_ticks(
   if ppq <= 0 {
     return Err(InvalidPPQ("PPQ 必须 > 0，当前：\{ppq}"))
   }
-  let frac = rhythm_duration_to_fraction(d)
+  let frac = match rhythm_duration_to_fraction_checked(d) {
+    Ok(v) => v
+    Err(e) => return Err(e)
+  }
   let ticks_frac = rational_mul(frac, rational_raw(ppq, 1))
   rational_to_int(ticks_frac)
 }
@@ -930,11 +1009,57 @@ pub fn ticks_to_seconds_timemap(
 
 ///|
 /// FFI 解析拍号：入 "4/4" → {"ok":true,"num":4,"den":4}
+fn ffi_time_error(message : String) -> String {
+  ffi_error("TimeError", message)
+}
+
+///|
+fn ffi_time_fields(input : String) -> Result[Array[JsonField], String] {
+  match json_parse(input) {
+    Ok(v) => jv_get_fields(v)
+    Err(e) => Err(e)
+  }
+}
+
+///|
+fn ffi_time_string_field(
+  fields : Array[JsonField],
+  key : String,
+) -> Result[String, String] {
+  match jv_lookup(fields, key) {
+    Ok(v) => jv_as_string(v)
+    Err(e) => Err(e)
+  }
+}
+
+///|
+fn ffi_time_int_field(
+  fields : Array[JsonField],
+  key : String,
+) -> Result[Int, String] {
+  match jv_lookup(fields, key) {
+    Ok(v) => jv_as_int(v)
+    Err(e) => Err(e)
+  }
+}
+
+///|
+fn ffi_time_double_field(
+  fields : Array[JsonField],
+  key : String,
+) -> Result[Double, String] {
+  match jv_lookup(fields, key) {
+    Ok(v) => jv_as_double(v)
+    Err(e) => Err(e)
+  }
+}
+
+///|
 pub fn ffi_parse_time_sig(input : String) -> String {
   match parse_time_sig(input) {
     Ok(sig) =>
       "{\"ok\":true,\"num\":\{sig.numerator},\"den\":\{sig.denominator}}"
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -944,10 +1069,10 @@ pub fn ffi_duration_ticks(input : String, ppq : Int) -> String {
   match parse_dur_unit(input) {
     Ok(dur) =>
       match rhythm_duration_to_ticks(dur, ppq) {
-        Ok(ticks) => "{\"ok\":true,\"ticks\":\{ticks}}"
-        Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+        Ok(ticks) => ffi_ok_field("ticks", ticks.to_string())
+        Err(e) => ffi_error("TimeError", e.to_string())
       }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -955,8 +1080,8 @@ pub fn ffi_duration_ticks(input : String, ppq : Int) -> String {
 /// FFI 解析 BPM：入 "120bpm" → {"ok":true,"bpm":120.0}
 pub fn ffi_parse_tempo(input : String) -> String {
   match parse_tempo(input) {
-    Ok(bpm) => "{\"ok\":true,\"bpm\":\{bpm}}"
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Ok(bpm) => ffi_ok_field("bpm", bpm.to_string())
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -964,8 +1089,8 @@ pub fn ffi_parse_tempo(input : String) -> String {
 /// FFI tick→秒：入 480,120.0,480 → {"ok":true,"seconds":0.5}
 pub fn ffi_ticks_to_seconds(ticks : Int, bpm : Double, ppq : Int) -> String {
   match ticks_to_seconds(ticks, bpm, ppq) {
-    Ok(sec) => "{\"ok\":true,\"seconds\":\{sec}}"
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Ok(sec) => ffi_ok_field("seconds", sec.to_string())
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }
 
@@ -975,9 +1100,9 @@ pub fn ffi_bar_length(sig : String, ppq : Int) -> String {
   match parse_time_sig(sig) {
     Ok(parsed) =>
       match bar_length_ticks(parsed, ppq) {
-        Ok(ticks) => "{\"ok\":true,\"ticks\":\{ticks}}"
-        Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+        Ok(ticks) => ffi_ok_field("ticks", ticks.to_string())
+        Err(e) => ffi_error("TimeError", e.to_string())
       }
-    Err(e) => "{\"ok\":false,\"error\":\"\{e.to_string()}\"}"
+    Err(e) => ffi_error("TimeError", e.to_string())
   }
 }

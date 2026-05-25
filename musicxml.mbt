@@ -881,7 +881,7 @@ pub fn musicxml_validate_export_ready(
     report = _musicxml_add_issue(
       report,
       InvalidPPQ,
-      ScoreTarget,
+      ValidateScoreTarget,
       "divisions must be > 0, got \{options.divisions}",
       Fatal,
     )
@@ -892,7 +892,7 @@ pub fn musicxml_validate_export_ready(
     report = _musicxml_add_issue(
       report,
       EmptyPart,
-      ScoreTarget,
+      ValidateScoreTarget,
       "score has no tracks",
       Error,
     )
@@ -909,7 +909,7 @@ pub fn musicxml_validate_export_ready(
     report = _musicxml_add_issue(
       report,
       EmptyVoice,
-      ScoreTarget,
+      ValidateScoreTarget,
       "all tracks are empty",
       Warning,
     )
@@ -923,7 +923,7 @@ pub fn musicxml_validate_export_ready(
     report = _musicxml_add_issue(
       report,
       ScoreValidationUnsupported,
-      ScoreTarget,
+      ValidateScoreTarget,
       "invalid time signature: \{score.time_signature.numerator}/\{score.time_signature.denominator}",
       Fatal,
     )

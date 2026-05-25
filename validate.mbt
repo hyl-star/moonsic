@@ -26,15 +26,15 @@ pub(all) enum ValidationSeverity {
 ///|
 /// 校验代码，标识问题类型
 pub(all) enum ValidationCode {
-  MeasureOverflow
+  ValidateMeasureOverflow
   MeasureUnderfilled
   PickupMeasureTooLong
   FinalMeasureTooLong
   EmptyVoice
   EmptyStaff
   EmptyPart
-  InvalidChannel
-  InvalidProgram
+  ValidateInvalidChannel
+  ValidateInvalidProgram
   InvalidPPQ
   TieStartWithoutStop
   TieStopWithoutStart
@@ -49,7 +49,7 @@ pub(all) enum ValidationCode {
 ///|
 /// 校验目标类型
 pub(all) enum ValidationTargetKind {
-  ScoreTarget
+  ValidateScoreTarget
   PartTarget
   StaffTarget
   VoiceTarget
@@ -156,15 +156,15 @@ pub fn export_validation_options() -> ValidationOptions {
 ///|
 fn default_severity(code : ValidationCode) -> ValidationSeverity {
   match code {
-    MeasureOverflow => Error
+    ValidateMeasureOverflow => Error
     MeasureUnderfilled => Warning
     PickupMeasureTooLong => Error
     FinalMeasureTooLong => Error
     EmptyVoice => Warning
     EmptyStaff => Warning
     EmptyPart => Warning
-    InvalidChannel => Error
-    InvalidProgram => Error
+    ValidateInvalidChannel => Error
+    ValidateInvalidProgram => Error
     InvalidPPQ => Fatal
     TieStartWithoutStop => Error
     TieStopWithoutStart => Error
@@ -180,7 +180,7 @@ fn default_severity(code : ValidationCode) -> ValidationSeverity {
 ///|
 fn default_suggestion(code : ValidationCode) -> String {
   match code {
-    MeasureOverflow =>
+    ValidateMeasureOverflow =>
       "缩短该小节事件、拆分跨小节 tie，或改为 CadenzaMeasure"
     MeasureUnderfilled =>
       "补 rest、标记为 PickupMeasure/FinalMeasure，或调整拍号"
@@ -189,8 +189,8 @@ fn default_suggestion(code : ValidationCode) -> String {
     EmptyVoice => "删除空 voice 或添加 rest/note"
     EmptyStaff => "删除空 staff 或添加 voice"
     EmptyPart => "删除空 part 或添加 staff"
-    InvalidChannel => "使用 0..15 的 MIDI channel"
-    InvalidProgram => "使用 0..127 的 program"
+    ValidateInvalidChannel => "使用 0..15 的 MIDI channel"
+    ValidateInvalidProgram => "使用 0..127 的 program"
     InvalidPPQ => "使用大于 0 的 PPQ"
     TieStartWithoutStop => "添加对应 TieStop"
     TieStopWithoutStart => "添加对应 TieStart"
@@ -206,15 +206,15 @@ fn default_suggestion(code : ValidationCode) -> String {
 ///|
 fn code_to_string(code : ValidationCode) -> String {
   match code {
-    MeasureOverflow => "MeasureOverflow"
+    ValidateMeasureOverflow => "ValidateMeasureOverflow"
     MeasureUnderfilled => "MeasureUnderfilled"
     PickupMeasureTooLong => "PickupMeasureTooLong"
     FinalMeasureTooLong => "FinalMeasureTooLong"
     EmptyVoice => "EmptyVoice"
     EmptyStaff => "EmptyStaff"
     EmptyPart => "EmptyPart"
-    InvalidChannel => "InvalidChannel"
-    InvalidProgram => "InvalidProgram"
+    ValidateInvalidChannel => "ValidateInvalidChannel"
+    ValidateInvalidProgram => "ValidateInvalidProgram"
     InvalidPPQ => "InvalidPPQ"
     TieStartWithoutStop => "TieStartWithoutStop"
     TieStopWithoutStart => "TieStopWithoutStart"
@@ -240,7 +240,7 @@ fn severity_to_string(severity : ValidationSeverity) -> String {
 ///|
 fn target_kind_to_string(kind : ValidationTargetKind) -> String {
   match kind {
-    ScoreTarget => "Score"
+    ValidateScoreTarget => "Score"
     PartTarget => "Part"
     StaffTarget => "Staff"
     VoiceTarget => "Voice"
@@ -378,7 +378,7 @@ fn measure_events_beats(events : Array[MusicEvent]) -> Double {
 ///|
 /// 校验单个 Measure。
 /// 若 measure 自带 signature 则用它；否则使用传入的 sig。
-/// 检查容量溢出 (MeasureOverflow) 和填充不足 (MeasureUnderfilled)。
+/// 检查容量溢出 (ValidateMeasureOverflow) 和填充不足 (MeasureUnderfilled)。
 pub fn validate_measure_report(
   measure : Measure,
   sig : TimeSignature,
@@ -407,7 +407,7 @@ pub fn validate_measure_report(
     report = add_issue_to_report(
       report,
       make_issue(
-        MeasureOverflow,
+        ValidateMeasureOverflow,
         loc,
         "小节 #\{measure.index} 溢出：拍数 \{used} > 容量 \{capacity}",
       ),
@@ -519,7 +519,7 @@ pub fn validate_staff_report(
         report = add_issue_to_report(
           report,
           make_issue(
-            InvalidChannel,
+            ValidateInvalidChannel,
             loc,
             "非法 MIDI channel：\{c}，staff[\{staff.name}]",
           ),
@@ -543,7 +543,7 @@ pub fn validate_staff_report(
         report = add_issue_to_report(
           report,
           make_issue(
-            InvalidProgram,
+            ValidateInvalidProgram,
             loc,
             "非法 MIDI program：\{p}，staff[\{staff.name}]",
           ),
@@ -627,7 +627,15 @@ pub fn validate_score_layout_report(
   report = bump_checked(report, 1)
   // PPQ 检查
   if layout.ppq <= 0 {
-    let loc = make_location(ScoreTarget, -1, -1, -1, -1, -1, "score_layout")
+    let loc = make_location(
+      ValidateScoreTarget,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      "score_layout",
+    )
     report = add_issue_to_report(
       report,
       make_issue(InvalidPPQ, loc, "非法 PPQ：\{layout.ppq}，必须 > 0"),
@@ -639,7 +647,7 @@ pub fn validate_score_layout_report(
       report,
       make_issue(
         EmptyPart,
-        make_location(ScoreTarget, -1, -1, -1, -1, -1, "score_layout"),
+        make_location(ValidateScoreTarget, -1, -1, -1, -1, -1, "score_layout"),
         "空 ScoreLayout：无 part",
       ),
     )
@@ -682,7 +690,7 @@ pub fn validate_score_layout_report(
             report = add_issue_to_report(
               report,
               make_issue(
-                InvalidChannel,
+                ValidateInvalidChannel,
                 loc,
                 "非法 MIDI channel：\{c}，\{staff_path}",
               ),
@@ -698,7 +706,7 @@ pub fn validate_score_layout_report(
             report = add_issue_to_report(
               report,
               make_issue(
-                InvalidProgram,
+                ValidateInvalidProgram,
                 loc,
                 "非法 MIDI program：\{p}，\{staff_path}",
               ),
@@ -790,7 +798,7 @@ pub fn validate_score_layout_report(
             report = add_issue_to_report(
               report,
               make_issue(
-                MeasureOverflow,
+                ValidateMeasureOverflow,
                 loc,
                 "小节 \{m_path} 溢出：拍数 \{used} > 容量 \{capacity}",
               ),
@@ -839,7 +847,7 @@ pub fn validate_score_report(
   report = bump_checked(report, 1)
   // PPQ 检查
   if ppq <= 0 {
-    let loc = make_location(ScoreTarget, -1, -1, -1, -1, -1, "score")
+    let loc = make_location(ValidateScoreTarget, -1, -1, -1, -1, -1, "score")
     report = add_issue_to_report(
       report,
       make_issue(InvalidPPQ, loc, "非法 PPQ：\{ppq}，必须 > 0"),
@@ -861,7 +869,7 @@ pub fn validate_score_report(
       report = add_issue_to_report(
         report,
         make_issue(
-          InvalidChannel,
+          ValidateInvalidChannel,
           loc,
           "非法 MIDI channel：\{track.channel}，track[" +
           ti.to_string() +
@@ -882,7 +890,7 @@ pub fn validate_score_report(
       report = add_issue_to_report(
         report,
         make_issue(
-          InvalidProgram,
+          ValidateInvalidProgram,
           loc,
           "非法 MIDI program：\{track.program}，track[" +
           ti.to_string() +
@@ -897,7 +905,7 @@ pub fn validate_score_report(
       report,
       make_issue(
         ScoreValidationUnsupported,
-        make_location(ScoreTarget, -1, -1, -1, -1, -1, "score"),
+        make_location(ValidateScoreTarget, -1, -1, -1, -1, -1, "score"),
         "Score 不支持完整 measure 级校验，请使用 ScoreLayout 获得更详细的校验",
       ),
     )

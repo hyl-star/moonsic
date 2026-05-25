@@ -1,11 +1,34 @@
-// ============================================================
-// MIDI 语义适配层 — Score 转标准 MIDI track 结构
-// ============================================================
-
-// --- MIDI 事件类型 ---
+// MIDI semantic adapter: Score -> absolute-tick MIDI events -> CAIMEOX/midi bytes.
 
 ///|
-/// MIDI 事件类型：NoteOn/NoteOff/ProgramChange/ControlChange/元事件
+pub(all) enum MidiError {
+  InvalidMidiTick(Int)
+  InvalidMidiChannel(Int)
+  InvalidMidiNote(Int)
+  InvalidMidiVelocity(Int)
+  InvalidMidiProgram(Int)
+  InvalidMidiController(Int)
+  InvalidMidiTempo(Int)
+  InvalidMidiPPQ(Int)
+  MidiExportError(String)
+}
+
+///|
+pub fn MidiError::to_string(self : MidiError) -> String {
+  match self {
+    InvalidMidiTick(v) => "invalid MIDI tick: \{v}"
+    InvalidMidiChannel(v) => "invalid MIDI channel: \{v}"
+    InvalidMidiNote(v) => "invalid MIDI note: \{v}"
+    InvalidMidiVelocity(v) => "invalid MIDI velocity: \{v}"
+    InvalidMidiProgram(v) => "invalid MIDI program: \{v}"
+    InvalidMidiController(v) => "invalid MIDI controller: \{v}"
+    InvalidMidiTempo(v) => "invalid MIDI tempo: \{v}"
+    InvalidMidiPPQ(v) => "invalid MIDI PPQ: \{v}"
+    MidiExportError(msg) => "MIDI export error: \{msg}"
+  }
+}
+
+///|
 pub(all) enum MidiEventKind {
   NoteOn(channel~ : Int, note~ : Int, velocity~ : Int)
   NoteOff(channel~ : Int, note~ : Int, velocity~ : Int)
@@ -18,199 +41,172 @@ pub(all) enum MidiEventKind {
 }
 
 ///|
-/// 绝对 tick MIDI 事件
 pub(all) struct MidiEvent {
   tick : Int
   kind : MidiEventKind
 }
 
 ///|
-/// MIDI 语义轨道：名称、乐器号、通道、事件列表
 pub(all) struct MidiTrack {
   name : String
-  program : Int // -1 = 未设置乐器
+  program : Int
   channel : Int
   events : Array[MidiEvent]
 }
 
 ///|
-/// MIDI 语义乐谱：ppq + 轨道列表
 pub(all) struct MidiScore {
   ppq : Int
   tracks : Array[MidiTrack]
 }
 
-// --- 简单验证 ---
-
 ///|
-/// 验证 MIDI 音符范围 0..127
 pub fn validate_midi_note(note : Int) -> Bool {
-  note >= 0 && note <= MAX_MIDI_NOTE
+  note >= MIN_MIDI_NOTE && note <= MAX_MIDI_NOTE
 }
 
 ///|
-/// 验证力度范围 0..127
 pub fn validate_velocity(vel : Int) -> Bool {
   vel >= MIN_VELOCITY && vel <= MAX_VELOCITY
 }
 
 ///|
-/// 验证 MIDI 通道范围 0..15
 pub fn validate_channel(ch : Int) -> Bool {
   ch >= MIN_CHANNEL && ch <= MAX_CHANNEL
 }
 
 ///|
-/// 验证乐器号范围 0..127
 pub fn validate_program(prog : Int) -> Bool {
   prog >= 0 && prog <= 127
 }
 
 ///|
-/// 验证控制器编号/值范围 0..127
 pub fn validate_controller(ctrl : Int) -> Bool {
   ctrl >= 0 && ctrl <= 127
 }
 
 ///|
-/// 验证 tick >= 0
 pub fn validate_tick(tick : Int) -> Bool {
   tick >= 0
 }
 
 ///|
-/// 验证 ppq > 0
 pub fn validate_ppq(ppq : Int) -> Bool {
   ppq > 0
 }
 
-// --- 事件构造 ---
-
 ///|
-/// 构造 NoteOn 事件
 pub fn note_on(
   tick : Int,
   channel : Int,
   note : Int,
   velocity : Int,
-) -> Result[MidiEvent, String] {
+) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   if !validate_channel(channel) {
-    return Err("invalid channel")
+    return Err(InvalidMidiChannel(channel))
   }
   if !validate_midi_note(note) {
-    return Err("invalid MIDI note")
+    return Err(InvalidMidiNote(note))
   }
   if !validate_velocity(velocity) {
-    return Err("invalid velocity")
+    return Err(InvalidMidiVelocity(velocity))
   }
   Ok({ tick, kind: NoteOn(channel~, note~, velocity~) })
 }
 
 ///|
-/// 构造 NoteOff 事件
 pub fn note_off(
   tick : Int,
   channel : Int,
   note : Int,
   velocity : Int,
-) -> Result[MidiEvent, String] {
+) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   if !validate_channel(channel) {
-    return Err("invalid channel")
+    return Err(InvalidMidiChannel(channel))
   }
   if !validate_midi_note(note) {
-    return Err("invalid MIDI note")
+    return Err(InvalidMidiNote(note))
   }
   if !validate_velocity(velocity) {
-    return Err("invalid velocity")
+    return Err(InvalidMidiVelocity(velocity))
   }
   Ok({ tick, kind: NoteOff(channel~, note~, velocity~) })
 }
 
 ///|
-/// 构造 ProgramChange 事件（0 基 program 0..127）
 pub fn program_change(
   tick : Int,
   channel : Int,
   program : Int,
-) -> Result[MidiEvent, String] {
+) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   if !validate_channel(channel) {
-    return Err("invalid channel")
+    return Err(InvalidMidiChannel(channel))
   }
   if !validate_program(program) {
-    return Err("invalid program")
+    return Err(InvalidMidiProgram(program))
   }
   Ok({ tick, kind: ProgramChange(channel~, program~) })
 }
 
 ///|
-/// 构造 ControlChange 事件
 pub fn control_change(
   tick : Int,
   channel : Int,
   controller : Int,
   value : Int,
-) -> Result[MidiEvent, String] {
+) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   if !validate_channel(channel) {
-    return Err("invalid channel")
+    return Err(InvalidMidiChannel(channel))
   }
   if !validate_controller(controller) {
-    return Err("invalid controller number")
+    return Err(InvalidMidiController(controller))
   }
   if !validate_controller(value) {
-    return Err("invalid controller value")
+    return Err(InvalidMidiController(value))
   }
   Ok({ tick, kind: ControlChange(channel~, controller~, value~) })
 }
 
 ///|
-/// 构造 TempoChange 事件（BPM 输入）
-pub fn tempo_change(tick : Int, bpm : Int) -> Result[MidiEvent, String] {
+pub fn tempo_change(tick : Int, bpm : Int) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   if bpm <= 0 {
-    return Err("invalid bpm")
+    return Err(InvalidMidiTempo(bpm))
   }
   Ok({ tick, kind: TempoChange(bpm~) })
 }
 
 ///|
-/// 构造 TrackName 元事件
-pub fn track_name(tick : Int, name : String) -> Result[MidiEvent, String] {
+pub fn track_name(tick : Int, name : String) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   Ok({ tick, kind: TrackName(name~) })
 }
 
 ///|
-/// 构造 EndOfTrack 事件
-pub fn end_of_track(tick : Int) -> Result[MidiEvent, String] {
+pub fn end_of_track(tick : Int) -> Result[MidiEvent, MidiError] {
   if !validate_tick(tick) {
-    return Err("invalid tick")
+    return Err(InvalidMidiTick(tick))
   }
   Ok({ tick, kind: EndOfTrack })
 }
 
-// --- 事件排序 ---
-
 ///|
-/// 按绝对 tick 升序排序，同一 tick 内按事件优先级排序
-/// 优先级：TrackName(0) < TimeSignatureMeta(1) < TempoChange(2) <
-///         ProgramChange(4) < ControlChange(5) < NoteOff(7) <
-///         NoteOn(8) < EndOfTrack(13)
 pub fn sort_midi_events(events : Array[MidiEvent]) -> Array[MidiEvent] {
   let n = events.length()
   for i = 1; i < n; i = i + 1 {
@@ -235,7 +231,6 @@ pub fn sort_midi_events(events : Array[MidiEvent]) -> Array[MidiEvent] {
 }
 
 ///|
-/// 获取事件类型的排序优先级
 fn event_priority(kind : MidiEventKind) -> Int {
   match kind {
     TrackName(name=_) => 0
@@ -249,14 +244,86 @@ fn event_priority(kind : MidiEventKind) -> Int {
   }
 }
 
-// --- 核心转换：Score -> MidiScore ---
+///|
+fn validate_midi_event(event : MidiEvent) -> Result[Unit, MidiError] {
+  if !validate_tick(event.tick) {
+    return Err(InvalidMidiTick(event.tick))
+  }
+  match event.kind {
+    NoteOn(channel=ch, note=n, velocity=v)
+    | NoteOff(channel=ch, note=n, velocity=v) => {
+      if !validate_channel(ch) {
+        return Err(InvalidMidiChannel(ch))
+      }
+      if !validate_midi_note(n) {
+        return Err(InvalidMidiNote(n))
+      }
+      if !validate_velocity(v) {
+        return Err(InvalidMidiVelocity(v))
+      }
+      Ok(())
+    }
+    ProgramChange(channel=ch, program=prog) => {
+      if !validate_channel(ch) {
+        return Err(InvalidMidiChannel(ch))
+      }
+      if !validate_program(prog) {
+        return Err(InvalidMidiProgram(prog))
+      }
+      Ok(())
+    }
+    ControlChange(channel=ch, controller=ctrl, value=val) => {
+      if !validate_channel(ch) {
+        return Err(InvalidMidiChannel(ch))
+      }
+      if !validate_controller(ctrl) {
+        return Err(InvalidMidiController(ctrl))
+      }
+      if !validate_controller(val) {
+        return Err(InvalidMidiController(val))
+      }
+      Ok(())
+    }
+    TempoChange(bpm=bpm_val) =>
+      if bpm_val <= 0 {
+        Err(InvalidMidiTempo(bpm_val))
+      } else {
+        Ok(())
+      }
+    TimeSignatureMeta(numerator=num, denominator=den) =>
+      if !is_valid_time_signature(num, den) {
+        Err(MidiExportError("invalid time signature: \{num}/\{den}"))
+      } else {
+        Ok(())
+      }
+    TrackName(name=_) | EndOfTrack => Ok(())
+  }
+}
 
 ///|
-/// 将 Moonsic Score 转为 MIDI 语义乐谱 MidiScore
-/// - 自动生成元数据轨道（速度、拍号）
-/// - 每条 Track 生成对应 MidiTrack，包含 ProgramChange（如有乐器）、NoteOn/NoteOff、EndOfTrack
+pub fn validate_midi_score(score : MidiScore) -> Result[Unit, MidiError] {
+  if !validate_ppq(score.ppq) {
+    return Err(InvalidMidiPPQ(score.ppq))
+  }
+  for track in score.tracks {
+    if track.program != -1 && !validate_program(track.program) {
+      return Err(InvalidMidiProgram(track.program))
+    }
+    if !validate_channel(track.channel) {
+      return Err(InvalidMidiChannel(track.channel))
+    }
+    for event in track.events {
+      match validate_midi_event(event) {
+        Ok(_) => ()
+        Err(e) => return Err(e)
+      }
+    }
+  }
+  Ok(())
+}
+
+///|
 pub fn score_to_midi_score(score : Score, ppq : Int) -> MidiScore {
-  // 元数据轨道：速度 + 拍号 + 轨道名 + EndOfTrack
   let meta_events : Array[MidiEvent] = []
   meta_events.push({ tick: 0, kind: TrackName(name="Meta") })
   meta_events.push({ tick: 0, kind: TempoChange(bpm=score.tempo.bpm) })
@@ -273,25 +340,18 @@ pub fn score_to_midi_score(score : Score, ppq : Int) -> MidiScore {
     { name: "Meta", program: -1, channel: 0, events: meta_events },
   ]
 
-  // 每条 Score 轨道 → MidiTrack
   for track in score.tracks {
     let midi_events : Array[MidiEvent] = []
-
-    // 轨道名称
     midi_events.push({
       tick: 0,
       kind: TrackName(name="Track ch=\{track.channel}"),
     })
-
-    // 乐器 ProgramChange
     if track.program >= 0 {
       midi_events.push({
         tick: 0,
         kind: ProgramChange(channel=track.channel, program=track.program),
       })
     }
-
-    // 音符展开为 NoteOn + NoteOff
     let note_events = track.to_note_events()
     for ne in note_events {
       let start_tick = ne.start_ticks(ppq)
@@ -314,8 +374,6 @@ pub fn score_to_midi_score(score : Score, ppq : Int) -> MidiScore {
         ),
       })
     }
-
-    // 找到最大 tick 并追加 EndOfTrack
     let mut max_tick = 0
     for e in midi_events {
       if e.tick > max_tick {
@@ -323,7 +381,6 @@ pub fn score_to_midi_score(score : Score, ppq : Int) -> MidiScore {
       }
     }
     midi_events.push({ tick: max_tick, kind: EndOfTrack })
-
     all_tracks.push({
       name: "Track ch=\{track.channel}",
       program: track.program,
@@ -335,10 +392,25 @@ pub fn score_to_midi_score(score : Score, ppq : Int) -> MidiScore {
   { ppq, tracks: all_tracks }
 }
 
-// --- CAIMEOX/midi 适配 ---
+///|
+pub fn score_to_midi_score_checked(
+  score : Score,
+  ppq : Int,
+) -> Result[MidiScore, MidiError] {
+  if !validate_ppq(ppq) {
+    return Err(InvalidMidiPPQ(ppq))
+  }
+  if score.tempo.bpm <= 0 {
+    return Err(InvalidMidiTempo(score.tempo.bpm))
+  }
+  let midi_score = score_to_midi_score(score, ppq)
+  match validate_midi_score(midi_score) {
+    Ok(_) => Ok(midi_score)
+    Err(e) => Err(e)
+  }
+}
 
 ///|
-/// 将 MidiEvent 转为一个 @midi.Event（需要 delta ticks）
 fn midi_event_to_caimeox(event : MidiEvent, delta : Int) -> @midi.Event {
   match event.kind {
     NoteOn(channel=ch, note=n, velocity=v) =>
@@ -416,9 +488,21 @@ fn midi_event_to_caimeox(event : MidiEvent, delta : Int) -> @midi.Event {
 }
 
 ///|
-/// 将 MidiScore 转为 MIDI 字节流（调用 @midi.serialize）
-/// 内部执行事件排序、delta 转换、EndOfTrack 补齐
 pub fn midi_score_to_bytes(score : MidiScore) -> Bytes {
+  match midi_score_to_bytes_checked(score) {
+    Ok(bytes) => bytes
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+pub fn midi_score_to_bytes_checked(
+  score : MidiScore,
+) -> Result[Bytes, MidiError] {
+  match validate_midi_score(score) {
+    Ok(_) => ()
+    Err(e) => return Err(e)
+  }
   let caimeox_tracks : Array[@midi.Track] = []
   for track in score.tracks {
     let sorted = sort_midi_events(track.events)
@@ -437,11 +521,24 @@ pub fn midi_score_to_bytes(score : MidiScore) -> Bytes {
     division: score.ppq.to_uint16(),
     tracks: caimeox_tracks,
   }
-  @midi.serialize(file)
+  Ok(@midi.serialize(file))
 }
 
 ///|
-/// 一站式转换：Score -> MidiScore -> MIDI 字节流
 pub fn score_to_midi_bytes(score : Score, ppq : Int) -> Bytes {
-  midi_score_to_bytes(score_to_midi_score(score, ppq))
+  match score_to_midi_bytes_checked(score, ppq) {
+    Ok(bytes) => bytes
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+pub fn score_to_midi_bytes_checked(
+  score : Score,
+  ppq : Int,
+) -> Result[Bytes, MidiError] {
+  match score_to_midi_score_checked(score, ppq) {
+    Ok(midi_score) => midi_score_to_bytes_checked(midi_score)
+    Err(e) => Err(e)
+  }
 }

@@ -14,10 +14,10 @@ pub(all) enum ScoreStructureError {
   InvalidSection(String)
   InvalidRepeat(String)
   InvalidEnding(String)
-  InvalidMeasure(String)
-  InvalidVoice(String)
-  InvalidStaff(String)
-  InvalidPart(String)
+  StructInvalidMeasure(String)
+  StructInvalidVoice(String)
+  StructInvalidStaff(String)
+  StructInvalidPart(String)
   InvalidNotation(String)
   InvalidLyric(String)
   InvalidPickup(String)
@@ -33,10 +33,10 @@ pub fn ScoreStructureError::to_string(self : ScoreStructureError) -> String {
     InvalidSection(msg) => "无效段落：\{msg}"
     InvalidRepeat(msg) => "无效反复：\{msg}"
     InvalidEnding(msg) => "无效结尾：\{msg}"
-    InvalidMeasure(msg) => "无效小节：\{msg}"
-    InvalidVoice(msg) => "无效声部：\{msg}"
-    InvalidStaff(msg) => "无效五线谱：\{msg}"
-    InvalidPart(msg) => "无效声部组：\{msg}"
+    StructInvalidMeasure(msg) => "无效小节：\{msg}"
+    StructInvalidVoice(msg) => "无效声部：\{msg}"
+    StructInvalidStaff(msg) => "无效五线谱：\{msg}"
+    StructInvalidPart(msg) => "无效声部组：\{msg}"
     InvalidNotation(msg) => "无效演奏记号：\{msg}"
     InvalidLyric(msg) => "无效歌词：\{msg}"
     InvalidPickup(msg) => "无效弱起小节：\{msg}"
@@ -234,8 +234,8 @@ pub(all) enum NotationKind {
   Articulation(ArticulationKind)
   SlurStart
   SlurStop
-  TieStart
-  TieStop
+  NotationTieStart
+  NotationTieStop
   Dynamic(DynamicMark)
   Fermata
   Breath
@@ -254,8 +254,8 @@ pub fn NotationKind::musicxml_category(self : NotationKind) -> String {
       }
     SlurStart => "slur start"
     SlurStop => "slur stop"
-    TieStart => "tied start"
-    TieStop => "tied stop"
+    NotationTieStart => "tied start"
+    NotationTieStop => "tied stop"
     Dynamic(d) =>
       match d {
         Pianissimo => "direction/dynamics/pp"
@@ -577,13 +577,15 @@ pub fn enhanced_measure_checked(
   events : Array[StructuredEvent],
 ) -> Result[EnhancedMeasure, ScoreStructureError] {
   if index < 0 {
-    return Err(InvalidMeasure("小节索引必须 >= 0，当前：\{index}"))
+    return Err(
+      StructInvalidMeasure("小节索引必须 >= 0，当前：\{index}"),
+    )
   }
   match sig {
     Some(s) =>
       if !is_valid_time_signature(s.numerator, s.denominator) {
         return Err(
-          InvalidMeasure("无效拍号：\{s.numerator}/\{s.denominator}"),
+          StructInvalidMeasure("无效拍号：\{s.numerator}/\{s.denominator}"),
         )
       }
     None => ()
@@ -598,7 +600,7 @@ pub fn enhanced_voice_checked(
   measures : Array[EnhancedMeasure],
 ) -> Result[EnhancedVoice, ScoreStructureError] {
   if name.length() == 0 {
-    return Err(InvalidVoice("声部名称不能为空"))
+    return Err(StructInvalidVoice("声部名称不能为空"))
   }
   Ok({ name, measures })
 }
@@ -613,14 +615,18 @@ pub fn enhanced_staff_checked(
   voices : Array[EnhancedVoice],
 ) -> Result[EnhancedStaff, ScoreStructureError] {
   if name.length() == 0 {
-    return Err(InvalidStaff("五线谱名称不能为空"))
+    return Err(StructInvalidStaff("五线谱名称不能为空"))
   }
   if !is_valid_channel(channel) {
-    return Err(InvalidStaff("无效通道：\{channel}（合法范围 0-15）"))
+    return Err(
+      StructInvalidStaff("无效通道：\{channel}（合法范围 0-15）"),
+    )
   }
   if !is_valid_midi_note(program) {
     return Err(
-      InvalidStaff("无效乐器程序号：\{program}（合法范围 0-127）"),
+      StructInvalidStaff(
+        "无效乐器程序号：\{program}（合法范围 0-127）",
+      ),
     )
   }
   Ok({ name, channel, program, voices })
@@ -633,7 +639,7 @@ pub fn enhanced_part_checked(
   staves : Array[EnhancedStaff],
 ) -> Result[EnhancedPart, ScoreStructureError] {
   if name.length() == 0 {
-    return Err(InvalidPart("声部组名称不能为空"))
+    return Err(StructInvalidPart("声部组名称不能为空"))
   }
   Ok({ name, staves })
 }
@@ -663,19 +669,19 @@ pub fn track_to_enhanced_voice_checked(
   voice_name : String,
 ) -> Result[EnhancedVoice, ScoreStructureError] {
   if voice_name.length() == 0 {
-    return Err(InvalidVoice("声部名称不能为空"))
+    return Err(StructInvalidVoice("声部名称不能为空"))
   }
   if ppq <= 0 {
     return Err(InvalidPPQ("PPQ 必须 > 0，当前：\{ppq}"))
   }
   if !is_valid_time_signature(sig.numerator, sig.denominator) {
     return Err(
-      InvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
+      StructInvalidMeasure("无效拍号：\{sig.numerator}/\{sig.denominator}"),
     )
   }
   let bar_ticks = match bar_length_ticks(sig, ppq) {
     Ok(v) => v
-    Err(e) => return Err(InvalidMeasure(e.to_string()))
+    Err(e) => return Err(StructInvalidMeasure(e.to_string()))
   }
   let measures : Array[EnhancedMeasure] = []
   let mut measure_index = 0
@@ -987,10 +993,10 @@ fn _ffi_error_json(e : ScoreStructureError) -> String {
     InvalidSection(_) => "InvalidSection"
     InvalidRepeat(_) => "InvalidRepeat"
     InvalidEnding(_) => "InvalidEnding"
-    InvalidMeasure(_) => "InvalidMeasure"
-    InvalidVoice(_) => "InvalidVoice"
-    InvalidStaff(_) => "InvalidStaff"
-    InvalidPart(_) => "InvalidPart"
+    StructInvalidMeasure(_) => "StructInvalidMeasure"
+    StructInvalidVoice(_) => "StructInvalidVoice"
+    StructInvalidStaff(_) => "StructInvalidStaff"
+    StructInvalidPart(_) => "StructInvalidPart"
     InvalidNotation(_) => "InvalidNotation"
     InvalidLyric(_) => "InvalidLyric"
     InvalidPickup(_) => "InvalidPickup"

@@ -74,6 +74,8 @@ pub fn add_sig_change(TimeMap, TimeSigChange) -> TimeMap
 
 pub fn add_tempo_change(TimeMap, TempoChange) -> TimeMap
 
+pub fn apply_generation_patch_checked(Score, GenerationPatch) -> Result[Score, ExternalGenerationError]
+
 pub fn arpeggiate(Track, Duration) -> Track
 
 pub fn arpeggiate_dir(Track, Duration, ArpStyle) -> Track
@@ -110,6 +112,8 @@ pub fn bridge(Array[Track]) -> Section
 
 pub fn build_scale(PitchClass, ScaleKind) -> Scale
 
+pub fn build_scale_spelled(PitchClass, Accidental, ScaleKind) -> Scale
+
 pub fn c(Int) -> Pitch
 
 pub fn cello() -> Int
@@ -130,7 +134,7 @@ pub fn chord_with_velocity(Array[Pitch], Duration, Int) -> Chord
 
 pub fn chorus(Array[Track]) -> Section
 
-pub fn control_change(Int, Int, Int, Int) -> Result[MidiEvent, String]
+pub fn control_change(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
 
 pub fn cs(Int) -> Pitch
 
@@ -138,9 +142,17 @@ pub fn d(Int) -> Pitch
 
 pub fn db(Int) -> Pitch
 
+pub fn default_musicxml_export_options() -> MusicXmlExportOptions
+
 pub fn default_tempo() -> Tempo
 
+pub fn default_validation_options() -> ValidationOptions
+
 pub fn degree(Pitch, ScaleKind, Int) -> Pitch
+
+pub fn degree_checked(Pitch, ScaleKind, Int) -> Result[Pitch, TheoryError]
+
+pub fn deterministic_mock_generate(GenerationRequest) -> Result[GenerationResponse, ExternalGenerationError]
 
 pub fn dim(Pitch, Duration) -> MusicEvent
 
@@ -176,25 +188,67 @@ pub fn empty_track() -> Track
 
 pub fn empty_voice(String) -> Voice
 
-pub fn end_of_track(Int) -> Result[MidiEvent, String]
+pub fn end_of_track(Int) -> Result[MidiEvent, MidiError]
+
+pub fn enhanced_layout_to_score_checked(EnhancedScoreLayout) -> Result[Score, ScoreStructureError]
+
+pub fn enhanced_measure_checked(Int, TimeSignature?, MeasureRole, Array[StructuredEvent]) -> Result[EnhancedMeasure, ScoreStructureError]
+
+pub fn enhanced_part_checked(String, Array[EnhancedStaff]) -> Result[EnhancedPart, ScoreStructureError]
+
+pub fn enhanced_score_layout_checked(Array[EnhancedPart], Array[ScoreSection], Array[RepeatMark], Array[EndingBracket], Int) -> Result[EnhancedScoreLayout, ScoreStructureError]
+
+pub fn enhanced_staff_checked(String, Int, Int, Array[EnhancedVoice]) -> Result[EnhancedStaff, ScoreStructureError]
+
+pub fn enhanced_voice(String, Array[EnhancedMeasure]) -> EnhancedVoice
+
+pub fn enhanced_voice_checked(String, Array[EnhancedMeasure]) -> Result[EnhancedVoice, ScoreStructureError]
+
+pub fn export_validation_options() -> ValidationOptions
 
 pub fn f(Int) -> Pitch
 
 pub fn ffi_bar_length(String, Int) -> String
 
+pub fn ffi_bar_length_json(String) -> String
+
 pub fn ffi_build_scale(String) -> String
 
 pub fn ffi_duration_ticks(String, Int) -> String
+
+pub fn ffi_duration_ticks_json(String) -> String
+
+pub fn ffi_external_generate_mock_json(String) -> String
+
+pub fn ffi_generate_accompaniment_json(String) -> String
+
+pub fn ffi_generate_melody_json(String) -> String
 
 pub fn ffi_parse_chord_tones(String) -> String
 
 pub fn ffi_parse_pitch_to_midi(String) -> String
 
+pub fn ffi_parse_rhythm_pattern_json(String) -> String
+
 pub fn ffi_parse_tempo(String) -> String
 
 pub fn ffi_parse_time_sig(String) -> String
 
+pub fn ffi_score_structure_summary_json(String) -> String
+
+pub fn ffi_score_to_musicxml_json(String) -> String
+
 pub fn ffi_ticks_to_seconds(Int, Double, Int) -> String
+
+pub fn ffi_ticks_to_seconds_json(String) -> String
+
+pub fn ffi_transform_motif_json(String) -> String
+
+pub fn ffi_validate_generation_patch_json(String) -> String
+
+pub fn ffi_validate_score_layout_json(String) -> String
+
+pub fn fit_pattern_to_bars_checked(PhrasePattern, TimeSignature, Int, PatternFillMode) -> Result[PhrasePattern, MotifError]
 
 pub fn four_four() -> TimeSignature
 
@@ -203,6 +257,38 @@ pub fn fs(Int) -> Pitch
 pub fn g(Int) -> Pitch
 
 pub fn gb(Int) -> Pitch
+
+pub fn generate_accompaniment_checked(Track, AccompanimentPattern, GenerationConfig) -> Result[Score, GenerateError]
+
+pub fn generate_bass_checked(Track, AccompanimentPattern, GenerationConfig) -> Result[Track, GenerateError]
+
+pub fn generate_chord_progression(Key, Array[Int], Duration) -> Track
+
+pub fn generate_chord_progression_checked(Key, Array[Int], Duration, GenerationConfig) -> Result[Track, GenerateError]
+
+pub fn generate_game_loop(GenerationContext, Int) -> Score
+
+pub fn generate_game_loop_checked(GenerationContext, Int, GenerationConfig) -> Result[Score, GenerateError]
+
+pub fn generate_melody(Key, RhythmPattern) -> Track
+
+pub fn generate_melody_checked(Key, RhythmPattern, GenerationConfig) -> Result[Track, GenerateError]
+
+pub fn generate_phrase_checked(GenerationContext, GenerationConfig) -> Result[GeneratedPhrase, GenerateError]
+
+pub fn generation_patch_checked(Array[GenerationPatchOperation]) -> Result[GenerationPatch, ExternalGenerationError]
+
+pub fn generation_provider_info(String, ExternalGeneratorKind, Array[GenerationCapability]) -> GenerationProviderInfo
+
+pub fn generation_request_checked(GenerationTaskKind, ScoreContext, Array[GenerationConstraint]) -> Result[GenerationRequest, ExternalGenerationError]
+
+pub fn generation_request_from_json(String) -> Result[GenerationRequest, ExternalGenerationError]
+
+pub fn generation_request_to_json(GenerationRequest) -> String
+
+pub fn generation_response_from_json(String) -> Result[GenerationResponse, ExternalGenerationError]
+
+pub fn generation_response_to_json(GenerationResponse) -> String
 
 pub fn gs(Int) -> Pitch
 
@@ -228,6 +314,8 @@ pub fn is_valid_time_signature(Int, Int) -> Bool
 
 pub fn is_valid_velocity(Int) -> Bool
 
+pub fn join_patterns_checked(Array[PhrasePattern], PatternJoinMode) -> Result[PhrasePattern, MotifError]
+
 pub fn json_parse(String) -> Result[JsonValue, String]
 
 pub fn json_stringify(JsonValue) -> String
@@ -240,15 +328,27 @@ pub fn layer(Array[Track]) -> Score
 
 pub fn layout_add_part(ScoreLayout, Part) -> ScoreLayout
 
+pub fn lyric(String) -> Lyric
+
 pub fn maj7(Pitch, Duration) -> MusicEvent
 
 pub fn major(Pitch, Duration) -> MusicEvent
 
+pub fn make_ending_checked(Int, Int, Int, EndingKind) -> Result[EndingBracket, ScoreStructureError]
+
+pub fn make_lyric_checked(String, Int, LyricSyllableKind) -> Result[Lyric, ScoreStructureError]
+
 pub fn make_measure(Int, TimeSignature?, Array[MusicEvent]) -> Result[Measure, ScoreError]
+
+pub fn make_notation_checked(NotationKind, NotationPlacement) -> Result[Notation, ScoreStructureError]
 
 pub fn make_part(String, Array[Staff]) -> Result[Part, ScoreError]
 
+pub fn make_repeat_checked(RepeatKind, Int, Int?) -> Result[RepeatMark, ScoreStructureError]
+
 pub fn make_score_layout(String, Int, Array[Part]) -> Result[ScoreLayout, ScoreError]
+
+pub fn make_section_checked(String, SectionKind, Int, Int) -> Result[ScoreSection, ScoreStructureError]
 
 pub fn make_staff(String, Int?, Int?, String?, Array[Voice]) -> Result[Staff, ScoreError]
 
@@ -270,13 +370,29 @@ pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
 
 pub fn midi_score_to_bytes(MidiScore) -> Bytes
 
+pub fn midi_score_to_bytes_checked(MidiScore) -> Result[Bytes, MidiError]
+
 pub fn midi_to_frequency(Int) -> Double
 
 pub fn midi_to_pitch(Int) -> Pitch
 
+pub fn midi_to_pitch_checked(Int) -> Result[Pitch, TheoryError]
+
 pub fn min7(Pitch, Duration) -> MusicEvent
 
 pub fn minor(Pitch, Duration) -> MusicEvent
+
+pub fn motif(Array[Int], RhythmPattern) -> Motif
+
+pub fn motif_checked(Array[Int], RhythmPattern) -> Result[Motif, MotifError]
+
+pub fn motif_to_track_checked(Motif, Key, Int, Duration) -> Result[Track, MotifError]
+
+pub fn musicxml_to_string_checked(MusicXmlScore, MusicXmlExportOptions) -> Result[String, MusicXmlError]
+
+pub fn musicxml_validate_export_ready(Score, MusicXmlExportOptions) -> ValidationReport
+
+pub fn musicxml_validation_passed(ValidationReport, Bool) -> Bool
 
 pub fn n(Pitch, Duration) -> MusicEvent
 
@@ -286,15 +402,17 @@ pub fn natural(PitchClass, Int) -> Pitch
 
 pub fn natural_pitch(PitchClass, Int) -> Pitch
 
+pub fn notation(NotationKind) -> Notation
+
 pub fn note(Pitch, Duration) -> Note
 
 pub fn note_event_to_json(NoteEvent) -> String
 
 pub fn note_events_to_browser_js(Array[NoteEvent]) -> String
 
-pub fn note_off(Int, Int, Int, Int) -> Result[MidiEvent, String]
+pub fn note_off(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
 
-pub fn note_on(Int, Int, Int, Int) -> Result[MidiEvent, String]
+pub fn note_on(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
 
 pub fn note_with_velocity(Pitch, Duration, Int) -> Note
 
@@ -302,17 +420,19 @@ pub fn nv(Pitch, Duration, Int) -> MusicEvent
 
 pub fn outro(Array[Track]) -> Section
 
-pub fn parse_chord(String) -> Result[Chord, String]
+pub fn parse_chord(String) -> Result[Chord, TheoryError]
 
 pub fn parse_dur_unit(String) -> Result[RhythmDuration, TimeError]
 
-pub fn parse_interval(String) -> Result[Interval, String]
+pub fn parse_interval(String) -> Result[Interval, TheoryError]
 
-pub fn parse_pitch(String) -> Result[Pitch, String]
+pub fn parse_pitch(String) -> Result[Pitch, TheoryError]
 
-pub fn parse_pitch_class(String) -> Result[PitchClass, String]
+pub fn parse_pitch_class(String) -> Result[PitchClass, TheoryError]
 
-pub fn parse_scale(String) -> Result[Scale, String]
+pub fn parse_rhythm_pattern(String) -> Result[RhythmPattern, MotifError]
+
+pub fn parse_scale(String) -> Result[Scale, TheoryError]
 
 pub fn parse_tempo(String) -> Result[Double, TimeError]
 
@@ -326,9 +446,11 @@ pub fn pitch(PitchClass, Accidental, Int) -> Pitch
 
 pub fn pitch_to_json_string(Pitch) -> String
 
+pub fn pitch_to_midi(Pitch) -> Result[Int, TheoryError]
+
 pub fn position_to_ticks(BarPosition, TimeSignature, Int) -> Result[Int, TimeError]
 
-pub fn program_change(Int, Int, Int) -> Result[MidiEvent, String]
+pub fn program_change(Int, Int, Int) -> Result[MidiEvent, MidiError]
 
 pub fn progression(Pitch, ScaleKind, Array[RomanNumeral], Duration) -> Track
 
@@ -354,11 +476,23 @@ pub fn rational_to_double(Rational) -> Double
 
 pub fn rational_to_int(Rational) -> Result[Int, TimeError]
 
+pub fn repeat_motif(Motif, Int) -> PhrasePattern
+
+pub fn repeat_motif_checked(Motif, Int) -> Result[PhrasePattern, MotifError]
+
 pub fn rest(Duration) -> Rest
 
 pub fn rhythm_duration_to_fraction(RhythmDuration) -> Rational
 
+pub fn rhythm_duration_to_fraction_checked(RhythmDuration) -> Result[Rational, TimeError]
+
 pub fn rhythm_duration_to_ticks(RhythmDuration, Int) -> Result[Int, TimeError]
+
+pub fn rhythm_pattern(Array[RhythmCell]) -> RhythmPattern
+
+pub fn rhythm_pattern_checked(Array[RhythmCell]) -> Result[RhythmPattern, MotifError]
+
+pub fn rhythm_template(RhythmTemplateKind) -> RhythmPattern
 
 pub fn roman_progression(Key, String, Duration) -> Track
 
@@ -368,19 +502,35 @@ pub fn score(Array[Track]) -> Score
 
 pub fn score1(Track) -> Score
 
-pub fn score_from_json_string(String) -> Result[Score, String]
+pub fn score_context_from_score(Score, Int) -> ScoreContext
+
+pub fn score_from_json_string(String) -> Result[Score, SerializeError]
 
 pub fn score_layout_measure_count(ScoreLayout) -> Int
+
+pub fn score_layout_to_musicxml_checked(ScoreLayout, MusicXmlExportOptions) -> Result[MusicXmlScore, MusicXmlError]
 
 pub fn score_layout_to_score(ScoreLayout) -> Score
 
 pub fn score_str(String) -> Score
 
+pub fn score_to_enhanced_layout_checked(Score, Int) -> Result[EnhancedScoreLayout, ScoreStructureError]
+
 pub fn score_to_json(Score) -> String
 
 pub fn score_to_midi_bytes(Score, Int) -> Bytes
 
+pub fn score_to_midi_bytes_checked(Score, Int) -> Result[Bytes, MidiError]
+
 pub fn score_to_midi_score(Score, Int) -> MidiScore
+
+pub fn score_to_midi_score_checked(Score, Int) -> Result[MidiScore, MidiError]
+
+pub fn score_to_musicxml_checked(Score, MusicXmlExportOptions) -> Result[MusicXmlScore, MusicXmlError]
+
+pub fn score_to_musicxml_string(Score) -> String
+
+pub fn score_to_musicxml_string_checked(Score, MusicXmlExportOptions) -> Result[String, MusicXmlError]
 
 pub fn score_with(Array[Track], Int, TimeSignature) -> Score
 
@@ -404,6 +554,10 @@ pub fn staff_measure_count(Staff) -> Int
 
 pub fn staff_to_track(Staff) -> Track
 
+pub fn strict_validation_options() -> ValidationOptions
+
+pub fn structured_note_checked(Note, Array[Notation], Lyric?, TieKind) -> Result[StructuredEvent, ScoreStructureError]
+
 pub fn synth_lead_square() -> Int
 
 pub fn synth_pad_warm() -> Int
@@ -412,7 +566,9 @@ pub fn tempo(Int) -> Tempo
 
 pub fn tempo_at_tick(TimeMap, Int) -> Double
 
-pub fn tempo_change(Int, Int) -> Result[MidiEvent, String]
+pub fn tempo_change(Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn tempo_checked(Int) -> Result[Tempo, TimeError]
 
 pub fn ticks_to_position(Int, TimeSignature, Int) -> Result[BarPosition, TimeError]
 
@@ -430,7 +586,9 @@ pub fn timeline_from_score(Score) -> PlaybackTimeline
 
 pub fn track(Array[MusicEvent]) -> Track
 
-pub fn track_name(Int, String) -> Result[MidiEvent, String]
+pub fn track_name(Int, String) -> Result[MidiEvent, MidiError]
+
+pub fn track_to_enhanced_voice_checked(Track, TimeSignature, Int, String) -> Result[EnhancedVoice, ScoreStructureError]
 
 pub fn track_to_json(Track) -> String
 
@@ -440,13 +598,25 @@ pub fn track_to_voice(Track, String, Int, TimeSignature) -> Result[Voice, ScoreE
 
 pub fn track_with_channel(Array[MusicEvent], Int) -> Track
 
+pub fn transform_motif_checked(Motif, MotifTransform) -> Result[Motif, MotifError]
+
+pub fn transpose_pitch(Pitch, Int) -> Result[Pitch, TheoryError]
+
 pub fn validate_channel(Int) -> Bool
 
 pub fn validate_controller(Int) -> Bool
 
+pub fn validate_generation_patch(GenerationPatch, ScoreContext) -> Result[Unit, ExternalGenerationError]
+
+pub fn validate_generation_request(GenerationRequest, GenerationProviderInfo) -> Result[Unit, ExternalGenerationError]
+
 pub fn validate_measure(Measure, TimeSignature, Int) -> Result[Unit, ScoreError]
 
+pub fn validate_measure_report(Measure, TimeSignature, Int, ValidationOptions) -> ValidationReport
+
 pub fn validate_midi_note(Int) -> Bool
+
+pub fn validate_midi_score(MidiScore) -> Result[Unit, MidiError]
 
 pub fn validate_part(Part, TimeSignature, Int) -> Result[Unit, ScoreError]
 
@@ -456,13 +626,35 @@ pub fn validate_program(Int) -> Bool
 
 pub fn validate_score_layout(ScoreLayout) -> Result[Unit, ScoreError]
 
+pub fn validate_score_layout_report(ScoreLayout, ValidationOptions) -> ValidationReport
+
+pub fn validate_score_report(Score, Int, ValidationOptions) -> ValidationReport
+
 pub fn validate_staff(Staff, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_staff_report(Staff, ValidationOptions) -> ValidationReport
 
 pub fn validate_tick(Int) -> Bool
 
 pub fn validate_velocity(Int) -> Bool
 
 pub fn validate_voice(Voice, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_voice_report(Voice, ValidationOptions) -> ValidationReport
+
+pub fn validation_report_error_count(ValidationReport) -> Int
+
+pub fn validation_report_has_errors(ValidationReport) -> Bool
+
+pub fn validation_report_has_warnings(ValidationReport) -> Bool
+
+pub fn validation_report_to_json(ValidationReport) -> String
+
+pub fn validation_report_to_summary(ValidationReport) -> String
+
+pub fn validation_report_warning_count(ValidationReport) -> Int
+
+pub fn vary_motif_checked(Motif, MotifVariationStrategy) -> Result[Motif, MotifError]
 
 pub fn verse(Array[Track]) -> Section
 
@@ -481,6 +673,15 @@ pub fn whole() -> Duration
 // Errors
 
 // Types and methods
+pub(all) enum AccentStrength {
+  NoAccent
+  Weak
+  Medium
+  Strong
+  Marcato
+}
+pub fn AccentStrength::velocity_multiplier(Self) -> Double
+
 pub(all) enum Accidental {
   DoubleFlat
   Flat
@@ -490,6 +691,18 @@ pub(all) enum Accidental {
 }
 pub fn Accidental::semitone_offset(Self) -> Int
 pub fn Accidental::to_string(Self) -> String
+
+pub(all) enum AccompanimentPattern {
+  BlockChord
+  ArpeggioUp
+  ArpeggioDown
+  ArpeggioUpDown
+  Alberti
+  Pad
+  RootBass
+  RootFifthBass
+  WalkingBass
+}
 
 pub(all) enum AccompanimentStyle {
   BlockChords
@@ -504,6 +717,13 @@ pub(all) enum ArpStyle {
   UpDown
   Alberti
 }
+
+pub(all) enum ArticulationKind {
+  Staccato
+  Accent
+  Tenuto
+}
+pub fn ArticulationKind::playback_hint(Self) -> String
 
 pub(all) struct BarPosition {
   bar : Int
@@ -525,6 +745,7 @@ pub(all) struct Chord {
 }
 pub fn Chord::invert(Self, Int) -> Self
 pub fn Chord::transpose(Self, Int) -> Self
+pub fn Chord::transpose_checked(Self, Int) -> Result[Self, TheoryError]
 pub fn Chord::with_velocity(Self, Int) -> Self
 
 pub(all) enum ChordQuality {
@@ -541,6 +762,10 @@ pub(all) enum ChordQuality {
   Suspended4
 }
 pub fn ChordQuality::intervals(Self) -> Array[Int]
+
+pub(all) struct CodaMark {
+  measure_index : Int
+}
 
 pub(all) enum DurUnit {
   DurWhole
@@ -568,6 +793,232 @@ pub fn Duration::seconds(Self, Int) -> Double
 pub fn Duration::stretch(Self, Double) -> Self
 pub fn Duration::ticks(Self, Int) -> Int
 pub fn Duration::to_string(Self) -> String
+
+pub(all) enum DynamicMark {
+  Pianissimo
+  Piano
+  MezzoPiano
+  MezzoForte
+  Forte
+  Fortissimo
+}
+pub fn DynamicMark::symbol(Self) -> String
+pub fn DynamicMark::velocity_hint(Self) -> Int
+
+pub(all) struct EndingBracket {
+  number : Int
+  start_measure : Int
+  end_measure : Int
+  kind : EndingKind
+}
+
+pub(all) enum EndingKind {
+  FirstEnding
+  SecondEnding
+  ThirdEnding
+  CustomEnding(Int)
+  OpenEnding
+  ClosedEnding
+}
+pub fn EndingKind::playback_pass(Self) -> String
+
+pub(all) struct EnhancedMeasure {
+  index : Int
+  time_signature : TimeSignature?
+  role : MeasureRole
+  events : Array[StructuredEvent]
+}
+
+pub(all) struct EnhancedPart {
+  name : String
+  staves : Array[EnhancedStaff]
+}
+
+pub(all) struct EnhancedScoreLayout {
+  parts : Array[EnhancedPart]
+  sections : Array[ScoreSection]
+  repeats : Array[RepeatMark]
+  endings : Array[EndingBracket]
+  ppq : Int
+}
+
+pub(all) struct EnhancedStaff {
+  name : String
+  channel : Int
+  program : Int
+  voices : Array[EnhancedVoice]
+}
+
+pub(all) struct EnhancedVoice {
+  name : String
+  measures : Array[EnhancedMeasure]
+}
+
+pub(all) enum ExternalGenerationError {
+  InvalidGenerationRequest(String)
+  InvalidGenerationConstraint(String)
+  ProviderCapabilityMismatch(String)
+  InvalidGenerationPatch(String)
+  PatchTargetNotFound(String)
+  PatchConflict(String)
+  ExternalGenerationParseError(String)
+  ExternalGenerationUnsupported(String)
+}
+pub fn ExternalGenerationError::to_string(Self) -> String
+
+pub(all) enum ExternalGeneratorKind {
+  LocalRuleProvider
+  LocalModelProvider
+  RemoteModelProvider
+  HumanPluginProvider
+  MockProvider
+}
+
+pub(all) enum GenerateError {
+  InvalidGenerationConfig(String)
+  EmptyRhythmPattern(String)
+  EmptyProgression(String)
+  UnsupportedGenerateMode(String)
+  InvalidDegree(String)
+  RangeTooSmall(String)
+  GenerationFailed(String)
+}
+pub fn GenerateError::to_string(Self) -> String
+
+pub(all) enum GenerateMode {
+  MelodyOnly
+  ChordsOnly
+  BassOnly
+  Accompaniment
+  GameLoop
+}
+
+pub(all) struct GeneratedPhrase {
+  track : Track
+  start_degree : Int
+  end_degree : Int
+  total_beats : Double
+}
+
+pub(all) struct GenerationCandidate {
+  fragment : ScoreFragment
+  confidence : Double
+  description : String
+}
+
+pub(all) enum GenerationCapability {
+  CanGenerateMelody
+  CanGenerateHarmony
+  CanGenerateBass
+  CanGenerateAccompaniment
+  CanGenerateRhythm
+  CanGenerateGameLoop
+  CanGenerateVariation
+  CanGenerateArrangement
+}
+
+pub(all) struct GenerationConfig {
+  mode : GenerateMode
+  contour : MelodyContour
+  range_low : Pitch
+  range_high : Pitch
+  seed : Int?
+  voice_leading : VoiceLeadingStrategy
+  allow_rests : Bool
+  max_leap : Int
+}
+
+pub(all) enum GenerationConstraint {
+  MinBars(Int)
+  MaxBars(Int)
+  AllowedScaleDegrees(Array[Int])
+  AllowedPitchRange(Int, Int)
+  RequiredStyle(GenerationStyleTag)
+  MaxLeap(Int)
+  TargetDensity(Double)
+  MustFitTimeSignature
+  MustLoop
+}
+
+pub(all) struct GenerationContext {
+  key : Key
+  scale : Scale
+  progression : Array[Int]
+  time_signature : TimeSignature
+  tempo : Tempo
+  bars : Int
+}
+
+pub(all) enum GenerationDeterminism {
+  Deterministic
+  Seeded
+  NonDeterministic
+}
+
+pub(all) struct GenerationPatch {
+  operations : Array[GenerationPatchOperation]
+  source : String
+}
+
+pub(all) struct GenerationPatchOperation {
+  kind : PatchOperationKind
+  target : PatchTargetKind
+  path : String
+  payload_json : String
+}
+
+pub(all) struct GenerationProviderInfo {
+  name : String
+  kind : ExternalGeneratorKind
+  capabilities : Array[GenerationCapability]
+  determinism : GenerationDeterminism
+}
+
+pub(all) struct GenerationRequest {
+  id : String
+  task : GenerationTaskKind
+  context : ScoreContext
+  style_tags : Array[GenerationStyleTag]
+  constraints : Array[GenerationConstraint]
+  deterministic : GenerationDeterminism
+  seed : Int?
+}
+
+pub(all) struct GenerationResponse {
+  request_id : String
+  candidates : Array[GenerationCandidate]
+  patch : GenerationPatch?
+  message : String
+}
+
+pub(all) struct GenerationResult {
+  ok : Bool
+  data : String
+  error : String
+  message : String
+}
+
+pub(all) enum GenerationStyleTag {
+  Pop
+  Jazz
+  Lofi
+  Cinematic
+  Ambient
+  Chiptune
+  GameCombat
+  GameExploration
+}
+
+pub(all) enum GenerationTaskKind {
+  MelodyContinuation
+  ChordProgression
+  BassLine
+  Accompaniment
+  RhythmPatternGen
+  GameLoop
+  Variation
+  Orchestration
+}
 
 pub(all) struct Interval {
   quality : IntervalQuality
@@ -607,12 +1058,59 @@ pub fn Key::scale(Self, Int, Int) -> Array[Pitch]
 pub fn Key::scale_kind(Self) -> ScaleKind
 pub fn Key::tonic_pitch(Self) -> Pitch
 
+pub(all) struct Lyric {
+  text : String
+  verse : Int
+  syllable : LyricSyllableKind
+}
+
+pub(all) enum LyricSyllableKind {
+  Single
+  Begin
+  Middle
+  End
+  Melisma
+}
+pub fn LyricSyllableKind::musicxml_syllabic(Self) -> String
+
 pub(all) struct Measure {
   index : Int
   signature : TimeSignature?
   events : Array[MusicEvent]
 }
 pub fn Measure::event_count(Self) -> Int
+
+pub(all) enum MeasureRole {
+  NormalMeasure
+  PickupMeasure
+  FinalMeasure
+  CadenzaMeasure
+  FreeTimeMeasure
+}
+pub fn MeasureRole::capacity_policy(Self) -> String
+
+pub(all) enum MelodyContour {
+  StepwiseUp
+  StepwiseDown
+  Arch
+  InvertedArch
+  Wave
+  Static
+  ChordTone
+}
+
+pub(all) enum MidiError {
+  InvalidMidiTick(Int)
+  InvalidMidiChannel(Int)
+  InvalidMidiNote(Int)
+  InvalidMidiVelocity(Int)
+  InvalidMidiProgram(Int)
+  InvalidMidiController(Int)
+  InvalidMidiTempo(Int)
+  InvalidMidiPPQ(Int)
+  MidiExportError(String)
+}
+pub fn MidiError::to_string(Self) -> String
 
 pub(all) struct MidiEvent {
   tick : Int
@@ -642,6 +1140,52 @@ pub(all) struct MidiTrack {
   events : Array[MidiEvent]
 }
 
+pub(all) struct Motif {
+  events : Array[MotifEvent]
+  total_beats : Double
+}
+
+pub(all) enum MotifError {
+  EmptyRhythmPattern(String)
+  InvalidRhythmCell(String)
+  InvalidMotif(String)
+  InvalidPatternLength(String)
+  InvalidRepeatCount(String)
+  InvalidTransform(String)
+  PatternDoesNotFit(String)
+  MotifParseError(String)
+  MotifUnsupported(String)
+}
+pub fn MotifError::to_string(Self) -> String
+
+pub(all) struct MotifEvent {
+  degree : Int
+  cell : RhythmCell
+}
+
+pub(all) enum MotifTransform {
+  TransposeDegrees(Int)
+  InvertAround(Int)
+  Retrograde
+  Augment
+  Diminish
+  Rotate(Int)
+  Repeat(Int)
+  KeepRhythmChangeDegrees(Array[Int])
+  KeepDegreesChangeRhythm(RhythmPattern)
+}
+
+pub(all) enum MotifVariationStrategy {
+  ExactRepeat
+  SequenceUp
+  SequenceDown
+  Inversion
+  RetrogradeVariation
+  RhythmicAugmentation
+  RhythmicDiminution
+  CallResponse
+}
+
 pub(all) enum MusicEvent {
   Note(Note)
   Rest(Rest)
@@ -652,6 +1196,159 @@ pub fn MusicEvent::map_velocity(Self, (Int) -> Int) -> Self
 pub fn MusicEvent::stretch(Self, Double) -> Self
 pub fn MusicEvent::to_string(Self) -> String
 pub fn MusicEvent::transpose(Self, Int) -> Self
+pub fn MusicEvent::transpose_checked(Self, Int) -> Result[Self, TheoryError]
+
+pub(all) enum MusicXmlAccidental {
+  FlatFlat
+  MFlat
+  MNatural
+  MSharp
+  DoubleMSharp
+}
+
+pub(all) struct MusicXmlAttributes {
+  divisions : Int
+  time_signature : TimeSignature
+  clef : MusicXmlClefKind
+}
+
+pub(all) struct MusicXmlBackup {
+  duration : Int
+}
+
+pub(all) enum MusicXmlClefKind {
+  Treble
+  Bass
+  Alto
+  Tenor
+  Percussion
+  NoClef
+}
+
+pub(all) struct MusicXmlDirection {
+  kind : MusicXmlDirectionKind
+  content : String
+}
+
+pub(all) enum MusicXmlDirectionKind {
+  DynamicsDir
+  TempoDir
+  WordsDir
+  RepeatDir
+}
+
+pub(all) enum MusicXmlDocumentKind {
+  Partwise
+  Timewise
+}
+
+pub(all) enum MusicXmlError {
+  InvalidMusicXmlOptions(String)
+  MusicXmlUnsupported(String)
+  MusicXmlValidationFailed(String)
+  MusicXmlDurationError(String)
+  MusicXmlPitchError(String)
+  MusicXmlMeasureError(String)
+  MusicXmlSerializationError(String)
+}
+pub fn MusicXmlError::to_string(Self) -> String
+
+pub(all) struct MusicXmlExportOptions {
+  divisions : Int
+  document_kind : MusicXmlDocumentKind
+  include_xml_header : Bool
+  strict : Bool
+  part_name_fallback : String
+}
+
+pub(all) struct MusicXmlForward {
+  duration : Int
+}
+
+pub(all) struct MusicXmlMeasure {
+  number : Int
+  attributes : MusicXmlAttributes?
+  notes : Array[MusicXmlNote]
+  directions : Array[MusicXmlDirection]
+}
+
+pub(all) struct MusicXmlNotation {
+  kind : MusicXmlNotationKind
+}
+
+pub(all) enum MusicXmlNotationKind {
+  StaccatoN
+  AccentN
+  TenutoN
+  SlurStartN
+  SlurStopN
+  TieStartN
+  TieStopN
+  FermataN
+  BreathN
+}
+
+pub(all) struct MusicXmlNote {
+  pitch : MusicXmlPitch?
+  duration : Int
+  note_type : MusicXmlNoteType
+  dots : Int
+  is_rest : Bool
+  is_chord_tone : Bool
+  voice : Int
+  staff : Int
+  notations : Array[MusicXmlNotation]
+}
+
+pub(all) enum MusicXmlNoteType {
+  WholeT
+  HalfT
+  QuarterT
+  EighthT
+  SixteenthT
+}
+
+pub(all) struct MusicXmlPart {
+  id : String
+  name : String
+  measures : Array[MusicXmlMeasure]
+}
+
+pub(all) struct MusicXmlPitch {
+  step : String
+  alter : Int
+  octave : Int
+}
+
+pub(all) struct MusicXmlScore {
+  title : String
+  parts : Array[MusicXmlPart]
+  divisions : Int
+}
+
+pub(all) struct Notation {
+  kind : NotationKind
+  placement : NotationPlacement
+  text : String?
+}
+
+pub(all) enum NotationKind {
+  Articulation(ArticulationKind)
+  SlurStart
+  SlurStop
+  TieStart
+  TieStop
+  Dynamic(DynamicMark)
+  Fermata
+  Breath
+  TextAnnotation
+}
+pub fn NotationKind::musicxml_category(Self) -> String
+
+pub(all) enum NotationPlacement {
+  Above
+  Below
+}
 
 pub(all) struct Note {
   pitch : Pitch
@@ -661,6 +1358,7 @@ pub(all) struct Note {
 pub fn Note::stretch(Self, Double) -> Self
 pub fn Note::to_string(Self) -> String
 pub fn Note::transpose(Self, Int) -> Self
+pub fn Note::transpose_checked(Self, Int) -> Result[Self, TheoryError]
 pub fn Note::with_velocity(Self, Int) -> Self
 
 pub(all) struct NoteEvent {
@@ -683,6 +1381,51 @@ pub(all) struct Part {
   staves : Array[Staff]
 }
 
+pub(all) enum PatchOperationKind {
+  AppendTrack
+  InsertTrack
+  ReplaceTrack
+  RemoveTrack
+  AppendMeasure
+  ReplaceMeasure
+  InsertSection
+  AddNotation
+  SetTempo
+}
+
+pub(all) enum PatchTargetKind {
+  ScoreTarget
+  TrackTarget
+  PartTarget
+  StaffTarget
+  VoiceTarget
+  MeasureTarget
+  EventTarget
+  SectionTarget
+}
+
+pub(all) enum PatternFillMode {
+  Strict
+  PadRest
+  Truncate
+  RepeatToFit
+  StretchLast
+}
+
+pub(all) enum PatternJoinMode {
+  Sequential
+  Overlay
+  CallResponse
+  Loop
+  Interleave
+}
+
+pub(all) struct PhrasePattern {
+  motifs : Array[Motif]
+  events : Array[MotifEvent]
+  total_beats : Double
+}
+
 pub(all) struct Pitch {
   class : PitchClass
   accidental : Accidental
@@ -691,8 +1434,10 @@ pub(all) struct Pitch {
 pub fn Pitch::frequency(Self) -> Double
 pub fn Pitch::is_valid_midi(Self) -> Bool
 pub fn Pitch::to_midi(Self) -> Int
+pub fn Pitch::to_midi_checked(Self) -> Result[Int, TheoryError]
 pub fn Pitch::to_string(Self) -> String
 pub fn Pitch::transpose(Self, Int) -> Self
+pub fn Pitch::transpose_checked(Self, Int) -> Result[Self, TheoryError]
 
 pub(all) enum PitchClass {
   C
@@ -725,16 +1470,70 @@ pub(all) struct Rational {
 }
 pub fn Rational::to_string(Self) -> String
 
+pub(all) enum RepeatJumpKind {
+  DC
+  DCAlFine
+  DCAlCoda
+  DS
+  DSAlFine
+  DSAlCoda
+}
+pub fn RepeatJumpKind::target(Self) -> String
+
+pub(all) enum RepeatKind {
+  RepeatStart
+  RepeatEnd
+  RepeatBoth
+  Fine
+  DaCapo
+  DalSegno
+  ToCoda
+  Coda
+}
+pub fn RepeatKind::navigation_meaning(Self) -> String
+
+pub(all) struct RepeatMark {
+  kind : RepeatKind
+  measure_index : Int
+  target_measure : Int?
+  repeat_count : Int
+}
+
 pub(all) struct Rest {
   duration : Duration
 }
 pub fn Rest::stretch(Self, Double) -> Self
 pub fn Rest::to_string(Self) -> String
 
+pub(all) struct RhythmCell {
+  duration : Duration
+  is_rest : Bool
+  accent : AccentStrength
+  tie_to_next : Bool
+}
+
 pub(all) struct RhythmDuration {
   unit : DurUnit
   dots : Int
   tuplet : TupletRatio?
+}
+
+pub(all) struct RhythmPattern {
+  cells : Array[RhythmCell]
+  total_beats : Double
+}
+
+pub(all) enum RhythmTemplateKind {
+  FourQuarters
+  TwoHalves
+  WholePad
+  EighthFlow
+  Syncopated
+  LongShort
+  ShortShortLong
+  Waltz
+  Tresillo
+  RestLead
 }
 
 pub(all) enum RhythmicKind {
@@ -759,8 +1558,10 @@ pub(all) enum RomanNumeral {
 
 pub(all) struct Scale {
   root : PitchClass
+  root_accidental : Accidental
   scale_type : ScaleKind
   tones : Array[PitchClass]
+  spelled_tones : Array[Pitch]
 }
 
 pub(all) enum ScaleKind {
@@ -788,11 +1589,23 @@ pub(all) struct Score {
 pub fn Score::duration_beats(Self) -> Double
 pub fn Score::to_midi_bytes(Self) -> Bytes
 pub fn Score::to_midi_bytes_with_ppq(Self, Int) -> Bytes
+pub fn Score::to_midi_bytes_with_ppq_checked(Self, Int) -> Result[Bytes, MidiError]
 pub fn Score::to_note_events(Self) -> Array[NoteEvent]
 pub fn Score::to_string(Self) -> String
 pub fn Score::to_wav_bytes(Self) -> Bytes
 pub fn Score::track_count(Self) -> Int
 pub fn Score::transpose(Self, Int) -> Self
+pub fn Score::transpose_checked(Self, Int) -> Result[Self, TheoryError]
+
+pub(all) struct ScoreContext {
+  score_summary : String
+  key_hint : Key?
+  time_signature : TimeSignature
+  tempo : Tempo
+  bars : Int
+  track_count : Int
+  ppq : Int
+}
 
 pub(all) enum ScoreError {
   InvalidMeasure(String)
@@ -807,6 +1620,12 @@ pub(all) enum ScoreError {
 }
 pub fn ScoreError::to_string(Self) -> String
 
+pub(all) struct ScoreFragment {
+  tracks : Array[Track]
+  start_bar : Int
+  length_bars : Int
+}
+
 pub(all) struct ScoreLayout {
   title : String
   ppq : Int
@@ -816,11 +1635,57 @@ pub(all) struct ScoreLayout {
   initial_signature : TimeSignature
 }
 
+pub(all) struct ScoreSection {
+  name : String
+  kind : SectionKind
+  start_measure : Int
+  end_measure : Int
+}
+
+pub(all) enum ScoreStructureError {
+  InvalidSection(String)
+  InvalidRepeat(String)
+  InvalidEnding(String)
+  InvalidMeasure(String)
+  InvalidVoice(String)
+  InvalidStaff(String)
+  InvalidPart(String)
+  InvalidNotation(String)
+  InvalidLyric(String)
+  InvalidPickup(String)
+  InvalidTie(String)
+  InvalidPPQ(String)
+  ScoreStructureUnsupported(String)
+}
+pub fn ScoreStructureError::to_string(Self) -> String
+
 pub(all) struct Section {
   name : String
   tracks : Array[Track]
 }
 pub fn Section::duration_beats(Self) -> Double
+
+pub(all) enum SectionKind {
+  Intro
+  Verse
+  Chorus
+  Bridge
+  Solo
+  Outro
+  CustomSection
+}
+pub fn SectionKind::default_label(Self) -> String
+pub fn SectionKind::playback_meaning(Self) -> String
+
+pub(all) struct SegnoMark {
+  measure_index : Int
+}
+
+pub(all) enum SerializeError {
+  JsonParseError(String)
+  JsonDecodeError(String)
+}
+pub fn SerializeError::to_string(Self) -> String
 
 pub(all) struct Staff {
   name : String
@@ -828,6 +1693,20 @@ pub(all) struct Staff {
   program : Int?
   instrument_name : String?
   voices : Array[Voice]
+}
+
+pub(all) struct StructuredEvent {
+  event : MusicEvent
+  notations : Array[Notation]
+  lyric : Lyric?
+  tie : TieKind
+}
+
+pub(all) struct StructuredNote {
+  note : Note
+  notations : Array[Notation]
+  lyric : Lyric?
+  tie : TieKind
 }
 
 pub(all) struct Tempo {
@@ -855,6 +1734,15 @@ pub fn TheoryError::to_string(Self) -> String
 pub(all) struct TickPosition {
   ticks : Int
 }
+
+pub(all) enum TieKind {
+  NoTie
+  TieStart
+  TieContinue
+  TieStop
+  TieStartStop
+}
+pub fn TieKind::behavior(Self) -> String
 
 pub(all) enum TimeError {
   InvalidRational(String)
@@ -912,6 +1800,7 @@ pub fn Track::stretch(Self, Double) -> Self
 pub fn Track::to_note_events(Self) -> Array[NoteEvent]
 pub fn Track::to_string(Self) -> String
 pub fn Track::transpose(Self, Int) -> Self
+pub fn Track::transpose_checked(Self, Int) -> Result[Self, TheoryError]
 pub fn Track::up_octave(Self) -> Self
 pub fn Track::with_mute(Self, Bool) -> Self
 pub fn Track::with_pan(Self, Double) -> Self
@@ -922,9 +1811,92 @@ pub(all) struct TupletRatio {
   normal : Int
 }
 
+pub(all) enum ValidationCode {
+  MeasureOverflow
+  MeasureUnderfilled
+  PickupMeasureTooLong
+  FinalMeasureTooLong
+  EmptyVoice
+  EmptyStaff
+  EmptyPart
+  InvalidChannel
+  InvalidProgram
+  InvalidPPQ
+  TieStartWithoutStop
+  TieStopWithoutStart
+  RepeatWithoutStart
+  RepeatJumpTargetMissing
+  UnreachableSection
+  VoiceAlignmentMismatch
+  UnsupportedNotation
+  ScoreValidationUnsupported
+}
+
+pub(all) struct ValidationIssue {
+  severity : ValidationSeverity
+  code : ValidationCode
+  location : ValidationLocation
+  message : String
+  suggestion : String
+}
+
+pub(all) struct ValidationLocation {
+  target_kind : ValidationTargetKind
+  part_index : Int
+  staff_index : Int
+  voice_index : Int
+  measure_index : Int
+  event_index : Int
+  path : String
+}
+
+pub(all) struct ValidationOptions {
+  strict_measure_capacity : Bool
+  empty_voice_is_error : Bool
+  empty_staff_is_error : Bool
+  check_repeats : Bool
+  check_ties : Bool
+  check_voice_alignment : Bool
+  export_mode : Bool
+}
+
+pub(all) struct ValidationReport {
+  issues : Array[ValidationIssue]
+  checked_targets : Int
+  error_count : Int
+  warning_count : Int
+  fatal_count : Int
+}
+
+pub(all) enum ValidationSeverity {
+  Info
+  Warning
+  Error
+  Fatal
+}
+
+pub(all) enum ValidationTargetKind {
+  ScoreTarget
+  PartTarget
+  StaffTarget
+  VoiceTarget
+  MeasureTarget
+  EventTarget
+  RepeatTarget
+  SectionTarget
+}
+
 pub(all) struct Voice {
   name : String
   measures : Array[Measure]
+}
+
+pub(all) enum VoiceLeadingStrategy {
+  None
+  Nearest
+  KeepInRange
+  Smooth
+  ChordToneAnchor
 }
 
 // Type aliases
