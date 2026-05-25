@@ -5,10 +5,12 @@
 // 进行非阻塞式校验，输出结构化问题报告 (ValidationReport)。
 // 不阻止用户构建对象 — 校验发现的问题以 ValidationIssue 进入 report。
 //
+// v2 扩展: Profile 档案系统、export readiness、golden text、
+// ValidationContext 全层级路径、source 规则追踪。
+//
 // TODO: 当 EnhancedScoreLayout / MeasureRole / TieKind / RepeatKind
 // 实现后，接入 enhanced score 校验（pickup/final measure、
 // tie start/stop、repeat jump target 检查）。
-// 当前 v1.x 只支持基础容量、空结构、channel/program/PPQ 校验。
 
 // ============================================================
 // 核心类型定义
@@ -26,23 +28,64 @@ pub(all) enum ValidationSeverity {
 ///|
 /// 校验代码，标识问题类型
 pub(all) enum ValidationCode {
+  // ---- 基础参数 ----
+  InvalidPPQ
+  ValidateInvalidTimeSignature
+  ValidateInvalidTempo
+  ValidateInvalidScorePath
+
+  // ---- 空结构 ----
+  EmptyScore
+  EmptyPart
+  EmptyStaff
+  EmptyVoice
+  EmptyMeasure
+
+  // ---- 小节容量 ----
   ValidateMeasureOverflow
   MeasureUnderfilled
   PickupMeasureTooLong
   FinalMeasureTooLong
-  EmptyVoice
-  EmptyStaff
-  EmptyPart
+  FreeTimeMeasureUnsupported
+  CadenzaMeasureUnsupported
+
+  // ---- 声部对齐 ----
+  VoiceAlignmentMismatch
+  MeasureIndexMismatch
+  DuplicateMeasureIndex
+
+  // ---- MIDI 边界 ----
   ValidateInvalidChannel
   ValidateInvalidProgram
-  InvalidPPQ
+  InvalidMidiVelocity
+  InvalidMidiNote
+
+  // ---- Tie 链条 ----
   TieStartWithoutStop
   TieStopWithoutStart
+  TieContinueWithoutStart
+  TiePitchMismatch
+  TieDurationSuspicious
+
+  // ---- Repeat / Jump ----
   RepeatWithoutStart
+  RepeatStartWithoutEnd
   RepeatJumpTargetMissing
+  EndingWithoutRepeat
+  EndingRangeInvalid
+  CodaTargetMissing
+  SegnoTargetMissing
   UnreachableSection
-  VoiceAlignmentMismatch
+
+  // ---- 导出兼容性 ----
   UnsupportedNotation
+  UnsupportedLyric
+  UnsupportedClef
+  UnsupportedForMidi
+  UnsupportedForMusicXml
+  UnsupportedForGame
+
+  // ---- 通用 ----
   ScoreValidationUnsupported
 }
 
@@ -55,8 +98,18 @@ pub(all) enum ValidationTargetKind {
   VoiceTarget
   MeasureTarget
   EventTarget
-  RepeatTarget
   SectionTarget
+  RepeatTarget
+  EndingTarget
+  CodaTarget
+  SegnoTarget
+  ExportTarget
+}
+
+///|
+/// 校验规则 ID（用于追踪问题来源规则）
+pub(all) struct ValidationRuleId {
+  value : String
 }
 
 ///|
@@ -79,6 +132,7 @@ pub(all) struct ValidationIssue {
   location : ValidationLocation
   message : String
   suggestion : String
+  source : ValidationRuleId
 }
 
 ///|
@@ -86,8 +140,9 @@ pub(all) struct ValidationIssue {
 pub(all) struct ValidationReport {
   issues : Array[ValidationIssue]
   checked_targets : Int
-  error_count : Int
+  info_count : Int
   warning_count : Int
+  error_count : Int
   fatal_count : Int
 }
 
@@ -97,10 +152,64 @@ pub(all) struct ValidationOptions {
   strict_measure_capacity : Bool
   empty_voice_is_error : Bool
   empty_staff_is_error : Bool
+  empty_part_is_error : Bool
   check_repeats : Bool
   check_ties : Bool
   check_voice_alignment : Bool
   export_mode : Bool
+  check_midi_readiness : Bool
+  check_musicxml_readiness : Bool
+  check_game_readiness : Bool
+  unsupported_notation_is_error : Bool
+  warning_as_error : Bool
+}
+
+///|
+/// 校验上下文（用于传递层级路径信息）
+pub(all) struct ValidationContext {
+  part_index : Int
+  staff_index : Int
+  voice_index : Int
+  path_prefix : String
+}
+
+///|
+/// 校验档案（预设选项模板）
+pub(all) enum ValidationProfile {
+  EditingProfile
+  StrictProfile
+  MidiExportProfile
+  MusicXmlExportProfile
+  GameExportProfile
+  GoldenTestProfile
+}
+
+///|
+/// 校验错误（用于 JSON decode / profile 构造等）
+pub(all) enum ValidationError {
+  InvalidValidationProfile(String)
+  InvalidValidationOptions(String)
+  InvalidValidationReport(String)
+  InvalidValidationJson(String)
+  JsonDecodeError(String)
+  JsonEncodeError(String)
+  MissingJsonField(String)
+  ScoreLayoutError(String)
+}
+
+///|
+/// 字符串化
+pub fn ValidationError::to_string(self : ValidationError) -> String {
+  match self {
+    InvalidValidationProfile(msg) => "InvalidValidationProfile: \{msg}"
+    InvalidValidationOptions(msg) => "InvalidValidationOptions: \{msg}"
+    InvalidValidationReport(msg) => "InvalidValidationReport: \{msg}"
+    InvalidValidationJson(msg) => "InvalidValidationJson: \{msg}"
+    JsonDecodeError(msg) => "JsonDecodeError: \{msg}"
+    JsonEncodeError(msg) => "JsonEncodeError: \{msg}"
+    MissingJsonField(msg) => "MissingJsonField: \{msg}"
+    ScoreLayoutError(msg) => "ScoreLayoutError: \{msg}"
+  }
 }
 
 // ============================================================
@@ -110,14 +219,26 @@ pub(all) struct ValidationOptions {
 ///|
 /// 默认校验选项 — 普通编辑模式，warning 不会升级
 pub fn default_validation_options() -> ValidationOptions {
+  editing_validation_options()
+}
+
+///|
+/// 编辑模式校验选项 — 所有宽松检查
+pub fn editing_validation_options() -> ValidationOptions {
   {
     strict_measure_capacity: false,
     empty_voice_is_error: false,
     empty_staff_is_error: false,
+    empty_part_is_error: false,
     check_repeats: false,
     check_ties: false,
     check_voice_alignment: false,
     export_mode: false,
+    check_midi_readiness: false,
+    check_musicxml_readiness: false,
+    check_game_readiness: false,
+    unsupported_notation_is_error: false,
+    warning_as_error: false,
   }
 }
 
@@ -128,10 +249,16 @@ pub fn strict_validation_options() -> ValidationOptions {
     strict_measure_capacity: true,
     empty_voice_is_error: true,
     empty_staff_is_error: true,
-    check_repeats: false,
-    check_ties: false,
+    empty_part_is_error: true,
+    check_repeats: true,
+    check_ties: true,
     check_voice_alignment: true,
     export_mode: false,
+    check_midi_readiness: false,
+    check_musicxml_readiness: false,
+    check_game_readiness: false,
+    unsupported_notation_is_error: true,
+    warning_as_error: false,
   }
 }
 
@@ -142,10 +269,111 @@ pub fn export_validation_options() -> ValidationOptions {
     strict_measure_capacity: true,
     empty_voice_is_error: true,
     empty_staff_is_error: true,
+    empty_part_is_error: true,
     check_repeats: false,
     check_ties: false,
     check_voice_alignment: true,
     export_mode: true,
+    check_midi_readiness: false,
+    check_musicxml_readiness: false,
+    check_game_readiness: false,
+    unsupported_notation_is_error: false,
+    warning_as_error: false,
+  }
+}
+
+///|
+/// MIDI 导出前校验选项
+pub fn midi_export_validation_options() -> ValidationOptions {
+  {
+    strict_measure_capacity: true,
+    empty_voice_is_error: true,
+    empty_staff_is_error: true,
+    empty_part_is_error: true,
+    check_repeats: false,
+    check_ties: false,
+    check_voice_alignment: true,
+    export_mode: true,
+    check_midi_readiness: true,
+    check_musicxml_readiness: false,
+    check_game_readiness: false,
+    unsupported_notation_is_error: false,
+    warning_as_error: false,
+  }
+}
+
+///|
+/// MusicXML 导出前校验选项
+pub fn musicxml_export_validation_options() -> ValidationOptions {
+  {
+    strict_measure_capacity: true,
+    empty_voice_is_error: true,
+    empty_staff_is_error: true,
+    empty_part_is_error: true,
+    check_repeats: true,
+    check_ties: true,
+    check_voice_alignment: true,
+    export_mode: true,
+    check_midi_readiness: false,
+    check_musicxml_readiness: true,
+    check_game_readiness: false,
+    unsupported_notation_is_error: true,
+    warning_as_error: false,
+  }
+}
+
+///|
+/// Game IR 导出前校验选项
+pub fn game_export_validation_options() -> ValidationOptions {
+  {
+    strict_measure_capacity: true,
+    empty_voice_is_error: true,
+    empty_staff_is_error: true,
+    empty_part_is_error: true,
+    check_repeats: true,
+    check_ties: false,
+    check_voice_alignment: false,
+    export_mode: true,
+    check_midi_readiness: false,
+    check_musicxml_readiness: false,
+    check_game_readiness: true,
+    unsupported_notation_is_error: false,
+    warning_as_error: false,
+  }
+}
+
+///|
+/// Golden test 校验选项 — 最严格，warning 升级为 error
+pub fn golden_test_validation_options() -> ValidationOptions {
+  {
+    strict_measure_capacity: true,
+    empty_voice_is_error: true,
+    empty_staff_is_error: true,
+    empty_part_is_error: true,
+    check_repeats: true,
+    check_ties: true,
+    check_voice_alignment: true,
+    export_mode: true,
+    check_midi_readiness: true,
+    check_musicxml_readiness: true,
+    check_game_readiness: true,
+    unsupported_notation_is_error: true,
+    warning_as_error: true,
+  }
+}
+
+///|
+/// 根据档案返回对应校验选项
+pub fn validation_options_for_profile(
+  profile : ValidationProfile,
+) -> ValidationOptions {
+  match profile {
+    EditingProfile => editing_validation_options()
+    StrictProfile => strict_validation_options()
+    MidiExportProfile => midi_export_validation_options()
+    MusicXmlExportProfile => musicxml_export_validation_options()
+    GameExportProfile => game_export_validation_options()
+    GoldenTestProfile => golden_test_validation_options()
   }
 }
 
@@ -154,81 +382,230 @@ pub fn export_validation_options() -> ValidationOptions {
 // ============================================================
 
 ///|
-fn default_severity(code : ValidationCode) -> ValidationSeverity {
+/// 根据 profile 获取 ValidationCode 的默认严重级别。
+/// 部分 code 在不同 profile 下严重级别不同。
+pub fn validation_code_default_severity(
+  code : ValidationCode,
+  profile : ValidationProfile,
+) -> ValidationSeverity {
   match code {
-    ValidateMeasureOverflow => Error
-    MeasureUnderfilled => Warning
-    PickupMeasureTooLong => Error
-    FinalMeasureTooLong => Error
-    EmptyVoice => Warning
-    EmptyStaff => Warning
-    EmptyPart => Warning
-    ValidateInvalidChannel => Error
-    ValidateInvalidProgram => Error
-    InvalidPPQ => Fatal
-    TieStartWithoutStop => Error
-    TieStopWithoutStart => Error
-    RepeatWithoutStart => Error
-    RepeatJumpTargetMissing => Error
+    // ---- Fatal in all profiles ----
+    InvalidPPQ | ValidateInvalidScorePath => Fatal
+
+    // ---- Error in all profiles ----
+    ValidateInvalidTimeSignature
+    | ValidateInvalidTempo
+    | ValidateMeasureOverflow
+    | PickupMeasureTooLong
+    | FinalMeasureTooLong
+    | TieStartWithoutStop
+    | TieStopWithoutStart
+    | RepeatWithoutStart
+    | RepeatStartWithoutEnd
+    | RepeatJumpTargetMissing
+    | EndingWithoutRepeat
+    | CodaTargetMissing
+    | SegnoTargetMissing => Error
+
+    // ---- Profile-dependent ----
+    EmptyScore => if profile is EditingProfile { Warning } else { Error }
+    EmptyPart => if profile is EditingProfile { Warning } else { Error }
+    EmptyStaff =>
+      match profile {
+        EditingProfile | MidiExportProfile => Warning
+        _ => Error
+      }
+    EmptyVoice =>
+      match profile {
+        EditingProfile | MidiExportProfile => Warning
+        _ => Error
+      }
+    MeasureUnderfilled =>
+      match profile {
+        EditingProfile => Info
+        StrictProfile | MidiExportProfile => Warning
+        _ => Error
+      }
+    VoiceAlignmentMismatch =>
+      match profile {
+        EditingProfile => Info
+        StrictProfile | MidiExportProfile => Warning
+        _ => Error
+      }
+    ValidateInvalidChannel =>
+      match profile {
+        EditingProfile | MusicXmlExportProfile => Warning
+        _ => Error
+      }
+    ValidateInvalidProgram =>
+      match profile {
+        EditingProfile | MusicXmlExportProfile => Warning
+        _ => Error
+      }
+    TieContinueWithoutStart | TiePitchMismatch | TieDurationSuspicious => Error
+    EndingRangeInvalid => Error
+    UnsupportedNotation =>
+      match profile {
+        EditingProfile | MidiExportProfile => Info
+        StrictProfile | MusicXmlExportProfile => Warning
+        GoldenTestProfile => Error
+        _ => Error
+      }
+    UnsupportedForMidi =>
+      match profile {
+        EditingProfile
+        | StrictProfile
+        | GameExportProfile
+        | MusicXmlExportProfile => Info
+        MidiExportProfile | GoldenTestProfile => Error
+      }
+    UnsupportedForMusicXml =>
+      match profile {
+        EditingProfile
+        | MidiExportProfile
+        | GameExportProfile
+        | GoldenTestProfile => Info
+        MusicXmlExportProfile => Error
+        StrictProfile => Warning
+      }
+    UnsupportedForGame =>
+      match profile {
+        EditingProfile
+        | StrictProfile
+        | MidiExportProfile
+        | MusicXmlExportProfile => Info
+        GameExportProfile | GoldenTestProfile => Error
+      }
+    ScoreValidationUnsupported =>
+      match profile {
+        EditingProfile => Info
+        GoldenTestProfile => Error
+        _ => Warning
+      }
+
+    // ---- Default catch-all for new codes ----
+    EmptyMeasure => if profile is EditingProfile { Warning } else { Error }
+    FreeTimeMeasureUnsupported | CadenzaMeasureUnsupported => Warning
+    MeasureIndexMismatch | DuplicateMeasureIndex => Error
+    InvalidMidiVelocity | InvalidMidiNote => Error
     UnreachableSection => Warning
-    VoiceAlignmentMismatch => Warning
-    UnsupportedNotation => Warning
-    ScoreValidationUnsupported => Warning
+    UnsupportedLyric | UnsupportedClef =>
+      if profile is EditingProfile {
+        Info
+      } else {
+        Warning
+      }
   }
 }
 
 ///|
-fn default_suggestion(code : ValidationCode) -> String {
+/// 获取 ValidationCode 的默认修复建议（中文）
+pub fn validation_code_default_suggestion(code : ValidationCode) -> String {
   match code {
+    InvalidPPQ => "使用大于 0 的 PPQ"
+    ValidateInvalidTimeSignature =>
+      "使用合法拍号，例如 4/4、3/4、6/8"
+    ValidateInvalidTempo => "使用大于 0 的 BPM"
+    ValidateInvalidScorePath =>
+      "使用正确的路径格式，如 part[0]/staff[0]/voice[0]"
+    EmptyScore => "添加至少一个 part 或 track"
+    EmptyPart => "删除空 part 或添加 staff"
+    EmptyStaff => "删除空 staff 或添加 voice"
+    EmptyVoice => "删除空 voice 或添加 rest/note"
+    EmptyMeasure => "删除空小节或添加 rest"
     ValidateMeasureOverflow =>
       "缩短该小节事件、拆分跨小节 tie，或改为 CadenzaMeasure"
     MeasureUnderfilled =>
       "补 rest、标记为 PickupMeasure/FinalMeasure，或调整拍号"
     PickupMeasureTooLong => "缩短 pickup 小节或改为 NormalMeasure"
     FinalMeasureTooLong => "缩短 final 小节或改为 NormalMeasure"
-    EmptyVoice => "删除空 voice 或添加 rest/note"
-    EmptyStaff => "删除空 staff 或添加 voice"
-    EmptyPart => "删除空 part 或添加 staff"
+    FreeTimeMeasureUnsupported =>
+      "当前导出目标不支持 FreeTimeMeasure，请使用普通小节"
+    CadenzaMeasureUnsupported =>
+      "当前导出目标不支持 CadenzaMeasure，请使用普通小节"
+    VoiceAlignmentMismatch => "补齐 measure 或调整 voice 对齐"
+    MeasureIndexMismatch => "确保所有声部的 measure index 一致"
+    DuplicateMeasureIndex => "每声部内 measure index 必须唯一"
     ValidateInvalidChannel => "使用 0..15 的 MIDI channel"
-    ValidateInvalidProgram => "使用 0..127 的 program"
-    InvalidPPQ => "使用大于 0 的 PPQ"
+    ValidateInvalidProgram => "使用 0..127 的 MIDI program"
+    InvalidMidiVelocity => "velocity 必须在 0..127 范围内"
+    InvalidMidiNote => "MIDI note 必须在 0..127 范围内"
     TieStartWithoutStop => "添加对应 TieStop"
     TieStopWithoutStart => "添加对应 TieStart"
+    TieContinueWithoutStart => "TieContinue 必须有前置 TieStart"
+    TiePitchMismatch => "确保 tie start/stop 连接相同音高"
+    TieDurationSuspicious => "tie 连接的事件总时长异常，请检查"
     RepeatWithoutStart => "添加 RepeatStart 或移除 RepeatEnd"
+    RepeatStartWithoutEnd => "添加 RepeatEnd 或移除 RepeatStart"
     RepeatJumpTargetMissing => "添加目标 Segno/Coda/Fine 标记"
+    EndingWithoutRepeat => "添加相关 repeat 或移除 ending"
+    EndingRangeInvalid =>
+      "ending 范围无效，检查 start_measure/end_measure"
+    CodaTargetMissing => "添加 Coda 标记"
+    SegnoTargetMissing => "添加 Segno 标记"
     UnreachableSection => "检查 section 顺序和 repeat 跳转"
-    VoiceAlignmentMismatch => "补齐 measure 或调整 voice 对齐"
     UnsupportedNotation => "降级 notation 或扩展导出器"
+    UnsupportedLyric => "降级 lyric 或扩展导出器"
+    UnsupportedClef => "使用标准 clef 或扩展导出器"
+    UnsupportedForMidi => "MIDI 导出不支持此特性，请降级"
+    UnsupportedForMusicXml => "MusicXML 导出不支持此特性，请降级"
+    UnsupportedForGame => "Game IR 不支持此特性，请降级"
     ScoreValidationUnsupported => "使用更完整的 enhanced score 结构"
   }
 }
 
 ///|
-fn code_to_string(code : ValidationCode) -> String {
+/// 将 ValidationCode 转为字符串表示
+pub fn validation_code_to_string(code : ValidationCode) -> String {
   match code {
+    InvalidPPQ => "InvalidPPQ"
+    ValidateInvalidTimeSignature => "ValidateInvalidTimeSignature"
+    ValidateInvalidTempo => "ValidateInvalidTempo"
+    ValidateInvalidScorePath => "ValidateInvalidScorePath"
+    EmptyScore => "EmptyScore"
+    EmptyPart => "EmptyPart"
+    EmptyStaff => "EmptyStaff"
+    EmptyVoice => "EmptyVoice"
+    EmptyMeasure => "EmptyMeasure"
     ValidateMeasureOverflow => "ValidateMeasureOverflow"
     MeasureUnderfilled => "MeasureUnderfilled"
     PickupMeasureTooLong => "PickupMeasureTooLong"
     FinalMeasureTooLong => "FinalMeasureTooLong"
-    EmptyVoice => "EmptyVoice"
-    EmptyStaff => "EmptyStaff"
-    EmptyPart => "EmptyPart"
+    FreeTimeMeasureUnsupported => "FreeTimeMeasureUnsupported"
+    CadenzaMeasureUnsupported => "CadenzaMeasureUnsupported"
+    VoiceAlignmentMismatch => "VoiceAlignmentMismatch"
+    MeasureIndexMismatch => "MeasureIndexMismatch"
+    DuplicateMeasureIndex => "DuplicateMeasureIndex"
     ValidateInvalidChannel => "ValidateInvalidChannel"
     ValidateInvalidProgram => "ValidateInvalidProgram"
-    InvalidPPQ => "InvalidPPQ"
+    InvalidMidiVelocity => "InvalidMidiVelocity"
+    InvalidMidiNote => "InvalidMidiNote"
     TieStartWithoutStop => "TieStartWithoutStop"
     TieStopWithoutStart => "TieStopWithoutStart"
+    TieContinueWithoutStart => "TieContinueWithoutStart"
+    TiePitchMismatch => "TiePitchMismatch"
+    TieDurationSuspicious => "TieDurationSuspicious"
     RepeatWithoutStart => "RepeatWithoutStart"
+    RepeatStartWithoutEnd => "RepeatStartWithoutEnd"
     RepeatJumpTargetMissing => "RepeatJumpTargetMissing"
+    EndingWithoutRepeat => "EndingWithoutRepeat"
+    EndingRangeInvalid => "EndingRangeInvalid"
+    CodaTargetMissing => "CodaTargetMissing"
+    SegnoTargetMissing => "SegnoTargetMissing"
     UnreachableSection => "UnreachableSection"
-    VoiceAlignmentMismatch => "VoiceAlignmentMismatch"
     UnsupportedNotation => "UnsupportedNotation"
+    UnsupportedLyric => "UnsupportedLyric"
+    UnsupportedClef => "UnsupportedClef"
+    UnsupportedForMidi => "UnsupportedForMidi"
+    UnsupportedForMusicXml => "UnsupportedForMusicXml"
+    UnsupportedForGame => "UnsupportedForGame"
     ScoreValidationUnsupported => "ScoreValidationUnsupported"
   }
 }
 
 ///|
-fn severity_to_string(severity : ValidationSeverity) -> String {
+/// 将 ValidationSeverity 转为字符串
+pub fn validation_severity_to_string(severity : ValidationSeverity) -> String {
   match severity {
     Info => "Info"
     Warning => "Warning"
@@ -238,7 +615,8 @@ fn severity_to_string(severity : ValidationSeverity) -> String {
 }
 
 ///|
-fn target_kind_to_string(kind : ValidationTargetKind) -> String {
+/// 将 ValidationTargetKind 转为字符串
+pub fn validation_target_kind_to_string(kind : ValidationTargetKind) -> String {
   match kind {
     ValidateScoreTarget => "Score"
     PartTarget => "Part"
@@ -248,20 +626,26 @@ fn target_kind_to_string(kind : ValidationTargetKind) -> String {
     EventTarget => "Event"
     RepeatTarget => "Repeat"
     SectionTarget => "Section"
+    EndingTarget => "Ending"
+    CodaTarget => "Coda"
+    SegnoTarget => "Segno"
+    ExportTarget => "Export"
   }
 }
 
 // ============================================================
-// Report 构造与合并（内部）
+// Report 构造与合并（内部 + 公开）
 // ============================================================
 
 ///|
-fn new_empty_report() -> ValidationReport {
+/// 创建空校验报告
+pub fn validation_report_empty() -> ValidationReport {
   {
     issues: [],
     checked_targets: 0,
-    error_count: 0,
+    info_count: 0,
     warning_count: 0,
+    error_count: 0,
     fatal_count: 0,
   }
 }
@@ -271,14 +655,16 @@ fn bump_checked(report : ValidationReport, delta : Int) -> ValidationReport {
   {
     issues: report.issues,
     checked_targets: report.checked_targets + delta,
-    error_count: report.error_count,
+    info_count: report.info_count,
     warning_count: report.warning_count,
+    error_count: report.error_count,
     fatal_count: report.fatal_count,
   }
 }
 
 ///|
-fn add_issue_to_report(
+/// 向 report 追加一条 issue
+pub fn validation_report_add_issue(
   report : ValidationReport,
   issue : ValidationIssue,
 ) -> ValidationReport {
@@ -287,29 +673,32 @@ fn add_issue_to_report(
     issues.push(iss)
   }
   issues.push(issue)
-  let mut ec = report.error_count
+  let mut ic = report.info_count
   let mut wc = report.warning_count
+  let mut ec = report.error_count
   let mut fc = report.fatal_count
   match issue.severity {
+    Info => ic = ic + 1
+    Warning => wc = wc + 1
     Error => ec = ec + 1
     Fatal => {
       ec = ec + 1
       fc = fc + 1
     }
-    Warning => wc = wc + 1
-    _ => ()
   }
   {
     issues,
     checked_targets: report.checked_targets,
-    error_count: ec,
+    info_count: ic,
     warning_count: wc,
+    error_count: ec,
     fatal_count: fc,
   }
 }
 
 ///|
-fn merge_reports(
+/// 合并两份校验报告
+pub fn validation_report_merge(
   a : ValidationReport,
   b : ValidationReport,
 ) -> ValidationReport {
@@ -323,10 +712,34 @@ fn merge_reports(
   {
     issues,
     checked_targets: a.checked_targets + b.checked_targets,
-    error_count: a.error_count + b.error_count,
+    info_count: a.info_count + b.info_count,
     warning_count: a.warning_count + b.warning_count,
+    error_count: a.error_count + b.error_count,
     fatal_count: a.fatal_count + b.fatal_count,
   }
+}
+
+// ---- 内部别名（保持向后兼容）----
+
+///|
+fn new_empty_report() -> ValidationReport {
+  validation_report_empty()
+}
+
+///|
+fn add_issue_to_report(
+  report : ValidationReport,
+  issue : ValidationIssue,
+) -> ValidationReport {
+  validation_report_add_issue(report, issue)
+}
+
+///|
+fn merge_reports(
+  a : ValidationReport,
+  b : ValidationReport,
+) -> ValidationReport {
+  validation_report_merge(a, b)
 }
 
 ///|
@@ -351,14 +764,86 @@ fn make_location(
 }
 
 ///|
+/// 创建校验上下文（用于 Voice/Measure 层级校验传参）
+pub fn validation_context(
+  part_index : Int,
+  staff_index : Int,
+  voice_index : Int,
+  path_prefix : String,
+) -> ValidationContext {
+  { part_index, staff_index, voice_index, path_prefix }
+}
+
+///|
+fn default_context() -> ValidationContext {
+  { part_index: -1, staff_index: -1, voice_index: -1, path_prefix: "" }
+}
+
+///|
+/// 向后兼容的默认严重级别（v1 行为，无 profile 影响）
+fn _default_severity_v1(code : ValidationCode) -> ValidationSeverity {
+  match code {
+    ValidateMeasureOverflow => Error
+    MeasureUnderfilled => Warning
+    PickupMeasureTooLong => Error
+    FinalMeasureTooLong => Error
+    EmptyVoice => Warning
+    EmptyStaff => Warning
+    EmptyPart => Warning
+    EmptyScore => Warning
+    EmptyMeasure => Warning
+    ValidateInvalidChannel => Error
+    ValidateInvalidProgram => Error
+    InvalidPPQ => Fatal
+    TieStartWithoutStop => Error
+    TieStopWithoutStart => Error
+    TieContinueWithoutStart => Error
+    TiePitchMismatch => Error
+    TieDurationSuspicious => Error
+    RepeatWithoutStart => Error
+    RepeatStartWithoutEnd => Error
+    RepeatJumpTargetMissing => Error
+    EndingWithoutRepeat => Error
+    EndingRangeInvalid => Error
+    CodaTargetMissing => Error
+    SegnoTargetMissing => Error
+    UnreachableSection => Warning
+    VoiceAlignmentMismatch => Warning
+    UnsupportedNotation => Warning
+    ScoreValidationUnsupported => Warning
+    ValidateInvalidTimeSignature => Error
+    ValidateInvalidTempo => Error
+    ValidateInvalidScorePath => Fatal
+    MeasureIndexMismatch => Error
+    DuplicateMeasureIndex => Error
+    FreeTimeMeasureUnsupported => Warning
+    CadenzaMeasureUnsupported => Warning
+    InvalidMidiVelocity => Error
+    InvalidMidiNote => Error
+    UnsupportedLyric => Warning
+    UnsupportedClef => Warning
+    UnsupportedForMidi => Warning
+    UnsupportedForMusicXml => Warning
+    UnsupportedForGame => Warning
+  }
+}
+
+///|
 fn make_issue(
   code : ValidationCode,
   location : ValidationLocation,
   message : String,
 ) -> ValidationIssue {
-  let severity = default_severity(code)
-  let suggestion = default_suggestion(code)
-  { severity, code, location, message, suggestion }
+  let severity = _default_severity_v1(code)
+  let suggestion = validation_code_default_suggestion(code)
+  {
+    severity,
+    code,
+    location,
+    message,
+    suggestion,
+    source: { value: "validation" },
+  }
 }
 
 // ============================================================
@@ -385,6 +870,17 @@ pub fn validate_measure_report(
   _ppq : Int,
   options : ValidationOptions,
 ) -> ValidationReport {
+  validate_measure_report_ctx(measure, sig, default_context(), options)
+}
+
+///|
+/// 带上下文的 Measure 校验（含层级路径信息）
+pub fn validate_measure_report_ctx(
+  measure : Measure,
+  sig : TimeSignature,
+  context : ValidationContext,
+  options : ValidationOptions,
+) -> ValidationReport {
   let mut report = new_empty_report()
   report = bump_checked(report, 1)
   let effective_sig = match measure.signature {
@@ -393,16 +889,21 @@ pub fn validate_measure_report(
   }
   let capacity = effective_sig.measure_beats()
   let used = measure_events_beats(measure.events)
+  let m_path = if context.path_prefix == "" {
+    "measure[" + measure.index.to_string() + "]"
+  } else {
+    context.path_prefix + "/measure[" + measure.index.to_string() + "]"
+  }
   // 使用 0.000001 容差比较浮点
   if used > capacity + 0.000001 {
     let loc = make_location(
       MeasureTarget,
-      -1,
-      -1,
-      -1,
+      context.part_index,
+      context.staff_index,
+      context.voice_index,
       measure.index,
       -1,
-      "measure[" + measure.index.to_string() + "]",
+      m_path,
     )
     report = add_issue_to_report(
       report,
@@ -415,12 +916,12 @@ pub fn validate_measure_report(
   } else if used < capacity - 0.000001 && options.strict_measure_capacity {
     let loc = make_location(
       MeasureTarget,
-      -1,
-      -1,
-      -1,
+      context.part_index,
+      context.staff_index,
+      context.voice_index,
       measure.index,
       -1,
-      "measure[" + measure.index.to_string() + "]",
+      m_path,
     )
     report = add_issue_to_report(
       report,
@@ -444,38 +945,60 @@ pub fn validate_voice_report(
   voice : Voice,
   options : ValidationOptions,
 ) -> ValidationReport {
+  validate_voice_report_ctx(voice, default_context(), options)
+}
+
+///|
+/// 带上下文的 Voice 校验
+pub fn validate_voice_report_ctx(
+  voice : Voice,
+  context : ValidationContext,
+  options : ValidationOptions,
+) -> ValidationReport {
   let mut report = new_empty_report()
   report = bump_checked(report, 1)
+  let voice_path = if context.path_prefix == "" {
+    "voice[\{voice.name}]"
+  } else {
+    context.path_prefix + "/voice[\{voice.name}]"
+  }
   // 空声部检查
   if voice.measures.length() == 0 {
     let code = EmptyVoice
-    let sever = if options.empty_voice_is_error {
+    let sever = if options.empty_voice_is_error || options.warning_as_error {
       Error
     } else {
-      default_severity(code)
+      validation_code_default_severity(code, EditingProfile)
     }
     let loc = make_location(
       VoiceTarget,
+      context.part_index,
+      context.staff_index,
+      context.voice_index,
       -1,
       -1,
-      -1,
-      -1,
-      -1,
-      "voice[\{voice.name}]",
+      voice_path,
     )
     report = add_issue_to_report(report, {
       severity: sever,
       code,
       location: loc,
-      message: "空声部：voice[\{voice.name}] 无 measure",
-      suggestion: default_suggestion(code),
+      message: "空声部：\{voice_path} 无 measure",
+      suggestion: validation_code_default_suggestion(code),
+      source: { value: "validation" },
     })
   }
-  // 递归校验每个 measure（使用 4/4 + 480 作为默认，measure 自带 sig 优先）
+  // 递归校验每个 measure
   let default_sig = four_four()
   for i = 0; i < voice.measures.length(); i = i + 1 {
     let m = voice.measures[i]
-    let sub = validate_measure_report(m, default_sig, 480, options)
+    let m_ctx = {
+      part_index: context.part_index,
+      staff_index: context.staff_index,
+      voice_index: context.voice_index,
+      path_prefix: voice_path,
+    }
+    let sub = validate_measure_report_ctx(m, default_sig, m_ctx, options)
     report = merge_reports(report, sub)
   }
   report
@@ -501,27 +1024,42 @@ pub fn validate_staff_report(
   staff : Staff,
   options : ValidationOptions,
 ) -> ValidationReport {
+  validate_staff_report_ctx(staff, default_context(), options)
+}
+
+///|
+/// 带上下文的 Staff 校验
+pub fn validate_staff_report_ctx(
+  staff : Staff,
+  context : ValidationContext,
+  options : ValidationOptions,
+) -> ValidationReport {
   let mut report = new_empty_report()
   report = bump_checked(report, 1)
+  let staff_path = if context.path_prefix == "" {
+    "staff[\{staff.name}]"
+  } else {
+    context.path_prefix + "/staff[\{staff.name}]"
+  }
   // Channel 检查
   match staff.channel {
     Some(c) =>
       if !is_valid_channel_c(c) {
         let loc = make_location(
           StaffTarget,
+          context.part_index,
+          context.staff_index,
           -1,
           -1,
           -1,
-          -1,
-          -1,
-          "staff[\{staff.name}]",
+          staff_path,
         )
         report = add_issue_to_report(
           report,
           make_issue(
             ValidateInvalidChannel,
             loc,
-            "非法 MIDI channel：\{c}，staff[\{staff.name}]",
+            "非法 MIDI channel：\{c}，\{staff_path}",
           ),
         )
       }
@@ -533,19 +1071,19 @@ pub fn validate_staff_report(
       if !is_valid_program_c(p) {
         let loc = make_location(
           StaffTarget,
+          context.part_index,
+          context.staff_index,
           -1,
           -1,
           -1,
-          -1,
-          -1,
-          "staff[\{staff.name}]",
+          staff_path,
         )
         report = add_issue_to_report(
           report,
           make_issue(
             ValidateInvalidProgram,
             loc,
-            "非法 MIDI program：\{p}，staff[\{staff.name}]",
+            "非法 MIDI program：\{p}，\{staff_path}",
           ),
         )
       }
@@ -554,26 +1092,27 @@ pub fn validate_staff_report(
   // 空 staff 检查
   if staff.voices.length() == 0 {
     let code = EmptyStaff
-    let sever = if options.empty_staff_is_error {
+    let sever = if options.empty_staff_is_error || options.warning_as_error {
       Error
     } else {
-      default_severity(code)
+      validation_code_default_severity(code, EditingProfile)
     }
     let loc = make_location(
       StaffTarget,
+      context.part_index,
+      context.staff_index,
       -1,
       -1,
       -1,
-      -1,
-      -1,
-      "staff[\{staff.name}]",
+      staff_path,
     )
     report = add_issue_to_report(report, {
       severity: sever,
       code,
       location: loc,
-      message: "空 staff：staff[\{staff.name}] 无 voice",
-      suggestion: default_suggestion(code),
+      message: "空 staff：\{staff_path} 无 voice",
+      suggestion: validation_code_default_suggestion(code),
+      source: { value: "validation" },
     })
   }
   // 多声部对齐检查
@@ -588,26 +1127,75 @@ pub fn validate_staff_report(
     if !aligned {
       let loc = make_location(
         StaffTarget,
+        context.part_index,
+        context.staff_index,
         -1,
         -1,
         -1,
-        -1,
-        -1,
-        "staff[\{staff.name}]",
+        staff_path,
       )
       report = add_issue_to_report(
         report,
         make_issue(
           VoiceAlignmentMismatch,
           loc,
-          "声部对齐不一致：staff[\{staff.name}] 各 voice 的 measure 数量不相等",
+          "声部对齐不一致：\{staff_path} 各 voice 的 measure 数量不相等",
         ),
       )
     }
   }
   // 递归校验每个 voice
-  for i = 0; i < staff.voices.length(); i = i + 1 {
-    let sub = validate_voice_report(staff.voices[i], options)
+  for vi = 0; vi < staff.voices.length(); vi = vi + 1 {
+    let v_ctx = {
+      part_index: context.part_index,
+      staff_index: context.staff_index,
+      voice_index: vi,
+      path_prefix: staff_path + "/voice[" + vi.to_string() + "]",
+    }
+    let sub = validate_voice_report_ctx(staff.voices[vi], v_ctx, options)
+    report = merge_reports(report, sub)
+  }
+  report
+}
+
+// ============================================================
+// 校验逻辑 — Part
+// ============================================================
+
+///|
+/// 校验 Part：空 part 检查、递归校验 staff。
+pub fn validate_part_report(
+  part : Part,
+  options : ValidationOptions,
+) -> ValidationReport {
+  let mut report = new_empty_report()
+  report = bump_checked(report, 1)
+  let part_path = "part[\{part.name}]"
+  if part.staves.length() == 0 {
+    let code = EmptyPart
+    let sever = if options.empty_part_is_error || options.warning_as_error {
+      Error
+    } else {
+      validation_code_default_severity(code, EditingProfile)
+    }
+    let loc = make_location(PartTarget, -1, -1, -1, -1, -1, part_path)
+    report = add_issue_to_report(report, {
+      severity: sever,
+      code,
+      location: loc,
+      message: "空 part：\{part_path} 无 staff",
+      suggestion: validation_code_default_suggestion(code),
+      source: { value: "validation" },
+    })
+  }
+  for si = 0; si < part.staves.length(); si = si + 1 {
+    let s_ctx = {
+      part_index: -1,
+      staff_index: si,
+      voice_index: -1,
+      path_prefix: part_path + "/staff[" + si.to_string() + "]",
+    }
+    let sub = validate_staff_report_ctx(part.staves[si], s_ctx, options)
     report = merge_reports(report, sub)
   }
   report
@@ -641,12 +1229,55 @@ pub fn validate_score_layout_report(
       make_issue(InvalidPPQ, loc, "非法 PPQ：\{layout.ppq}，必须 > 0"),
     )
   }
+  // 初始拍号检查（仅报告非法拍号）
+  if !is_valid_time_signature(
+      layout.initial_signature.numerator,
+      layout.initial_signature.denominator,
+    ) {
+    let loc = make_location(
+      ValidateScoreTarget,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      "score_layout",
+    )
+    report = add_issue_to_report(
+      report,
+      make_issue(
+        ValidateInvalidTimeSignature,
+        loc,
+        "非法初始拍号：\{layout.initial_signature.numerator}/\{layout.initial_signature.denominator}",
+      ),
+    )
+  }
+  // 初始速度检查
+  if layout.initial_tempo.bpm <= 0 {
+    let loc = make_location(
+      ValidateScoreTarget,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      "score_layout",
+    )
+    report = add_issue_to_report(
+      report,
+      make_issue(
+        ValidateInvalidTempo,
+        loc,
+        "非法初始速度：\{layout.initial_tempo.bpm} BPM，必须 > 0",
+      ),
+    )
+  }
   // 空整体检查
   if layout.parts.length() == 0 {
     report = add_issue_to_report(
       report,
       make_issue(
-        EmptyPart,
+        EmptyScore,
         make_location(ValidateScoreTarget, -1, -1, -1, -1, -1, "score_layout"),
         "空 ScoreLayout：无 part",
       ),
@@ -655,32 +1286,27 @@ pub fn validate_score_layout_report(
   // 遍历 part → staff → voice → measure
   for pi = 0; pi < layout.parts.length(); pi = pi + 1 {
     let part = layout.parts[pi]
+    let part_path = "part[" + pi.to_string() + "]"
     if part.staves.length() == 0 {
-      let loc = make_location(
-        PartTarget,
-        pi,
-        -1,
-        -1,
-        -1,
-        -1,
-        "part[" + pi.to_string() + "]",
-      )
-      report = add_issue_to_report(
-        report,
-        make_issue(
-          EmptyPart,
-          loc,
-          "空 part：part[" + pi.to_string() + "][\{part.name}] 无 staff",
-        ),
-      )
+      let code = EmptyPart
+      let sever = if options.empty_part_is_error || options.warning_as_error {
+        Error
+      } else {
+        validation_code_default_severity(code, EditingProfile)
+      }
+      let loc = make_location(PartTarget, pi, -1, -1, -1, -1, part_path)
+      report = add_issue_to_report(report, {
+        severity: sever,
+        code,
+        location: loc,
+        message: "空 part：\{part_path}[\{part.name}] 无 staff",
+        suggestion: validation_code_default_suggestion(code),
+        source: { value: "validation" },
+      })
     }
     for si = 0; si < part.staves.length(); si = si + 1 {
       let staff = part.staves[si]
-      let staff_path = "part[" +
-        pi.to_string() +
-        "]/staff[" +
-        si.to_string() +
-        "]"
+      let staff_path = part_path + "/staff[" + si.to_string() + "]"
       report = bump_checked(report, 1)
       // Channel 检查
       match staff.channel {
@@ -717,10 +1343,10 @@ pub fn validate_score_layout_report(
       // 空 staff 检查
       if staff.voices.length() == 0 {
         let code = EmptyStaff
-        let sever = if options.empty_staff_is_error {
+        let sever = if options.empty_staff_is_error || options.warning_as_error {
           Error
         } else {
-          default_severity(code)
+          validation_code_default_severity(code, EditingProfile)
         }
         let loc = make_location(StaffTarget, pi, si, -1, -1, -1, staff_path)
         report = add_issue_to_report(report, {
@@ -728,7 +1354,8 @@ pub fn validate_score_layout_report(
           code,
           location: loc,
           message: "空 staff：\{staff_path}[\{staff.name}] 无 voice",
-          suggestion: default_suggestion(code),
+          suggestion: validation_code_default_suggestion(code),
+          source: { value: "validation" },
         })
       }
       // 多声部对齐
@@ -752,6 +1379,7 @@ pub fn validate_score_layout_report(
           )
         }
       }
+      // MIDI readiness — velocity / note 范围检查（在 staff 层级无需检查，在 voice/event 层级检查）
       // 递归校验每个 voice
       for vi = 0; vi < staff.voices.length(); vi = vi + 1 {
         let voice = staff.voices[vi]
@@ -760,10 +1388,11 @@ pub fn validate_score_layout_report(
         // 空 voice 检查
         if voice.measures.length() == 0 {
           let code = EmptyVoice
-          let sever = if options.empty_voice_is_error {
+          let sever = if options.empty_voice_is_error ||
+            options.warning_as_error {
             Error
           } else {
-            default_severity(code)
+            validation_code_default_severity(code, EditingProfile)
           }
           let loc = make_location(VoiceTarget, pi, si, vi, -1, -1, voice_path)
           report = add_issue_to_report(report, {
@@ -771,7 +1400,8 @@ pub fn validate_score_layout_report(
             code,
             location: loc,
             message: "空声部：\{voice_path}[\{voice.name}] 无 measure",
-            suggestion: default_suggestion(code),
+            suggestion: validation_code_default_suggestion(code),
+            source: { value: "validation" },
           })
         }
         // 递归校验每个 measure
@@ -914,6 +1544,34 @@ pub fn validate_score_report(
 }
 
 // ============================================================
+// Export readiness — 导出前快速校验
+// ============================================================
+
+///|
+/// MIDI 导出 readiness 校验 — 关注 PPQ/channel/program/velocity/note/tick
+pub fn validate_midi_export_ready(layout : ScoreLayout) -> ValidationReport {
+  validate_score_layout_report(layout, midi_export_validation_options())
+}
+
+///|
+/// MusicXML 导出 readiness 校验 — 关注 measure capacity/voice/notation/tie/repeat
+pub fn validate_musicxml_export_ready(layout : ScoreLayout) -> ValidationReport {
+  validate_score_layout_report(layout, musicxml_export_validation_options())
+}
+
+///|
+/// Game IR 导出 readiness 校验 — 关注 section/loop boundaries/transition
+pub fn validate_game_export_ready(layout : ScoreLayout) -> ValidationReport {
+  validate_score_layout_report(layout, game_export_validation_options())
+}
+
+///|
+/// 判断 report 是否阻止导出（有 Error 或 Fatal 即阻止）
+pub fn validation_report_is_export_blocking(report : ValidationReport) -> Bool {
+  report.fatal_count > 0 || report.error_count > 0
+}
+
+// ============================================================
 // Report 查询
 // ============================================================
 
@@ -941,6 +1599,18 @@ pub fn validation_report_warning_count(report : ValidationReport) -> Int {
   report.warning_count
 }
 
+///|
+/// report 中 Fatal 总数
+pub fn validation_report_fatal_count(report : ValidationReport) -> Int {
+  report.fatal_count
+}
+
+///|
+/// report 中 Info 总数
+pub fn validation_report_info_count(report : ValidationReport) -> Int {
+  report.info_count
+}
+
 // ============================================================
 // Report 导出 — JSON
 // ============================================================
@@ -949,12 +1619,12 @@ pub fn validation_report_warning_count(report : ValidationReport) -> Int {
 /// 将 issue 序列化为 JSON 字符串
 fn issue_to_json(issue : ValidationIssue) -> String {
   "{\"severity\":\"" +
-  severity_to_string(issue.severity) +
+  validation_severity_to_string(issue.severity) +
   "\",\"code\":\"" +
-  code_to_string(issue.code) +
+  validation_code_to_string(issue.code) +
   "\",\"location\":{" +
   "\"target_kind\":\"" +
-  target_kind_to_string(issue.location.target_kind) +
+  validation_target_kind_to_string(issue.location.target_kind) +
   "\",\"part_index\":" +
   issue.location.part_index.to_string() +
   ",\"staff_index\":" +
@@ -971,13 +1641,17 @@ fn issue_to_json(issue : ValidationIssue) -> String {
   json_escape(issue.message) +
   ",\"suggestion\":" +
   json_escape(issue.suggestion) +
+  ",\"source\":" +
+  json_escape(issue.source.value) +
   "}"
 }
 
 ///|
 /// 将 ValidationReport 序列化为 JSON 字符串。
 pub fn validation_report_to_json(report : ValidationReport) -> String {
-  let mut s = "{\"error_count\":" +
+  let mut s = "{\"info_count\":" +
+    report.info_count.to_string() +
+    ",\"error_count\":" +
     report.error_count.to_string() +
     ",\"warning_count\":" +
     report.warning_count.to_string() +
@@ -1008,15 +1682,17 @@ pub fn validation_report_to_summary(report : ValidationReport) -> String {
     report.warning_count.to_string() +
     " 个，致命 " +
     report.fatal_count.to_string() +
+    " 个，信息 " +
+    report.info_count.to_string() +
     " 个，共检查 " +
     report.checked_targets.to_string() +
     " 个目标。\n"
   for iss in report.issues {
     s = s +
       "[" +
-      severity_to_string(iss.severity) +
+      validation_severity_to_string(iss.severity) +
       "] " +
-      code_to_string(iss.code) +
+      validation_code_to_string(iss.code) +
       ": " +
       iss.message +
       " (建议: " +
@@ -1024,6 +1700,87 @@ pub fn validation_report_to_summary(report : ValidationReport) -> String {
       ")\n"
   }
   s
+}
+
+///|
+/// 将 ValidationReport 转换为 golden test 用确定性文本。
+/// 按 path/code/severity 稳定排序后输出。
+pub fn validation_report_to_golden_text(report : ValidationReport) -> String {
+  if report.issues.length() == 0 {
+    return "GOLDEN: 0 issues"
+  }
+  // 复制 issues 并排序（path → code → severity）
+  let sorted = []
+  for iss in report.issues {
+    sorted.push(iss)
+  }
+  // 冒泡排序（稳定排序）
+  let n = sorted.length()
+  for i = 0; i < n; i = i + 1 {
+    for j = 0; j < n - 1 - i; j = j + 1 {
+      let a = sorted[j]
+      let b = sorted[j + 1]
+      let cmp = golden_compare(a, b)
+      if cmp > 0 {
+        let tmp = sorted[j]
+        sorted[j] = sorted[j + 1]
+        sorted[j + 1] = tmp
+      }
+    }
+  }
+  let mut s = "GOLDEN: fatal=" +
+    report.fatal_count.to_string() +
+    " error=" +
+    report.error_count.to_string() +
+    " warning=" +
+    report.warning_count.to_string() +
+    " info=" +
+    report.info_count.to_string() +
+    " checked=" +
+    report.checked_targets.to_string() +
+    "\n"
+  for iss in sorted {
+    s = s +
+      validation_severity_to_string(iss.severity) +
+      "|" +
+      validation_code_to_string(iss.code) +
+      "|" +
+      iss.location.path +
+      "|" +
+      iss.message +
+      "\n"
+  }
+  s
+}
+
+///|
+fn golden_compare(a : ValidationIssue, b : ValidationIssue) -> Int {
+  let p = a.location.path.compare(b.location.path)
+  if p != 0 {
+    return p
+  }
+  let c = validation_code_to_string(a.code).compare(
+    validation_code_to_string(b.code),
+  )
+  if c != 0 {
+    return c
+  }
+  validation_severity_to_string(a.severity).compare(
+    validation_severity_to_string(b.severity),
+  )
+}
+
+///|
+/// 获取 ValidationProfile 的字符串表示
+pub fn validation_profile_to_string(profile : ValidationProfile) -> String {
+  match profile {
+    EditingProfile => "EditingProfile"
+    StrictProfile => "StrictProfile"
+    MidiExportProfile => "MidiExportProfile"
+    MusicXmlExportProfile => "MusicXmlExportProfile"
+    GameExportProfile => "GameExportProfile"
+    GoldenTestProfile => "GoldenTestProfile"
+  }
 }
 
 // ============================================================

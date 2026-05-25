@@ -871,8 +871,9 @@ pub fn musicxml_validate_export_ready(
   let mut report = {
     issues: [],
     checked_targets: 1,
-    error_count: 0,
+    info_count: 0,
     warning_count: 0,
+    error_count: 0,
     fatal_count: 0,
   }
 
@@ -965,7 +966,14 @@ fn _musicxml_add_issue(
     event_index: -1,
     path: "",
   }
-  let issue = { severity, code, location: loc, message, suggestion: "" }
+  let issue = {
+    severity,
+    code,
+    location: loc,
+    message,
+    suggestion: "",
+    source: { value: "musicxml" },
+  }
   let xs = []
   for i = 0; i < report.issues.length(); i = i + 1 {
     xs.push(report.issues[i])
@@ -978,8 +986,9 @@ fn _musicxml_add_issue(
   {
     issues: xs,
     checked_targets: report.checked_targets,
-    error_count: ec,
+    info_count: report.info_count,
     warning_count: wc,
+    error_count: ec,
     fatal_count: fc,
   }
 }

@@ -172,6 +172,8 @@ pub fn e(Int) -> Pitch
 
 pub fn eb(Int) -> Pitch
 
+pub fn editing_validation_options() -> ValidationOptions
+
 pub fn eighth() -> Duration
 
 pub fn electric_bass_finger() -> Int
@@ -262,6 +264,8 @@ pub fn fs(Int) -> Pitch
 
 pub fn g(Int) -> Pitch
 
+pub fn game_export_validation_options() -> ValidationOptions
+
 pub fn gb(Int) -> Pitch
 
 pub fn generate_accompaniment_checked(Track, AccompanimentPattern, GenerationConfig) -> Result[Score, GenerateError]
@@ -295,6 +299,8 @@ pub fn generation_request_to_json(GenerationRequest) -> String
 pub fn generation_response_from_json(String) -> Result[GenerationResponse, ExternalGenerationError]
 
 pub fn generation_response_to_json(GenerationResponse) -> String
+
+pub fn golden_test_validation_options() -> ValidationOptions
 
 pub fn gs(Int) -> Pitch
 
@@ -374,6 +380,8 @@ pub fn melody_str(String) -> Track
 
 pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
 
+pub fn midi_export_validation_options() -> ValidationOptions
+
 pub fn midi_note_compare(Int, Int) -> Int
 
 pub fn midi_score_to_bytes(MidiScore) -> Bytes
@@ -395,6 +403,8 @@ pub fn motif(Array[Int], RhythmPattern) -> Motif
 pub fn motif_checked(Array[Int], RhythmPattern) -> Result[Motif, MotifError]
 
 pub fn motif_to_track_checked(Motif, Key, Int, Duration) -> Result[Track, MotifError]
+
+pub fn musicxml_export_validation_options() -> ValidationOptions
 
 pub fn musicxml_to_string_checked(MusicXmlScore, MusicXmlExportOptions) -> Result[String, MusicXmlError]
 
@@ -626,6 +636,8 @@ pub fn validate_channel(Int) -> Bool
 
 pub fn validate_controller(Int) -> Bool
 
+pub fn validate_game_export_ready(ScoreLayout) -> ValidationReport
+
 pub fn validate_generation_patch(GenerationPatch, ScoreContext) -> Result[Unit, ExternalGenerationError]
 
 pub fn validate_generation_request(GenerationRequest, GenerationProviderInfo) -> Result[Unit, ExternalGenerationError]
@@ -634,11 +646,19 @@ pub fn validate_measure(Measure, TimeSignature, Int) -> Result[Unit, ScoreError]
 
 pub fn validate_measure_report(Measure, TimeSignature, Int, ValidationOptions) -> ValidationReport
 
+pub fn validate_measure_report_ctx(Measure, TimeSignature, ValidationContext, ValidationOptions) -> ValidationReport
+
+pub fn validate_midi_export_ready(ScoreLayout) -> ValidationReport
+
 pub fn validate_midi_note(Int) -> Bool
 
 pub fn validate_midi_score(MidiScore) -> Result[Unit, MidiError]
 
+pub fn validate_musicxml_export_ready(ScoreLayout) -> ValidationReport
+
 pub fn validate_part(Part, TimeSignature, Int) -> Result[Unit, ScoreError]
+
+pub fn validate_part_report(Part, ValidationOptions) -> ValidationReport
 
 pub fn validate_ppq(Int) -> Bool
 
@@ -654,6 +674,8 @@ pub fn validate_staff(Staff, TimeSignature, Int) -> Result[Unit, ScoreError]
 
 pub fn validate_staff_report(Staff, ValidationOptions) -> ValidationReport
 
+pub fn validate_staff_report_ctx(Staff, ValidationContext, ValidationOptions) -> ValidationReport
+
 pub fn validate_tick(Int) -> Bool
 
 pub fn validate_velocity(Int) -> Bool
@@ -662,17 +684,49 @@ pub fn validate_voice(Voice, TimeSignature, Int) -> Result[Unit, ScoreError]
 
 pub fn validate_voice_report(Voice, ValidationOptions) -> ValidationReport
 
+pub fn validate_voice_report_ctx(Voice, ValidationContext, ValidationOptions) -> ValidationReport
+
+pub fn validation_code_default_severity(ValidationCode, ValidationProfile) -> ValidationSeverity
+
+pub fn validation_code_default_suggestion(ValidationCode) -> String
+
+pub fn validation_code_to_string(ValidationCode) -> String
+
+pub fn validation_context(Int, Int, Int, String) -> ValidationContext
+
+pub fn validation_options_for_profile(ValidationProfile) -> ValidationOptions
+
+pub fn validation_profile_to_string(ValidationProfile) -> String
+
+pub fn validation_report_add_issue(ValidationReport, ValidationIssue) -> ValidationReport
+
+pub fn validation_report_empty() -> ValidationReport
+
 pub fn validation_report_error_count(ValidationReport) -> Int
+
+pub fn validation_report_fatal_count(ValidationReport) -> Int
 
 pub fn validation_report_has_errors(ValidationReport) -> Bool
 
 pub fn validation_report_has_warnings(ValidationReport) -> Bool
+
+pub fn validation_report_info_count(ValidationReport) -> Int
+
+pub fn validation_report_is_export_blocking(ValidationReport) -> Bool
+
+pub fn validation_report_merge(ValidationReport, ValidationReport) -> ValidationReport
+
+pub fn validation_report_to_golden_text(ValidationReport) -> String
 
 pub fn validation_report_to_json(ValidationReport) -> String
 
 pub fn validation_report_to_summary(ValidationReport) -> String
 
 pub fn validation_report_warning_count(ValidationReport) -> Int
+
+pub fn validation_severity_to_string(ValidationSeverity) -> String
+
+pub fn validation_target_kind_to_string(ValidationTargetKind) -> String
 
 pub fn vary_motif_checked(Motif, MotifVariationStrategy) -> Result[Motif, MotifError]
 
@@ -1834,25 +1888,68 @@ pub(all) struct TupletRatio {
 }
 
 pub(all) enum ValidationCode {
+  InvalidPPQ
+  ValidateInvalidTimeSignature
+  ValidateInvalidTempo
+  ValidateInvalidScorePath
+  EmptyScore
+  EmptyPart
+  EmptyStaff
+  EmptyVoice
+  EmptyMeasure
   ValidateMeasureOverflow
   MeasureUnderfilled
   PickupMeasureTooLong
   FinalMeasureTooLong
-  EmptyVoice
-  EmptyStaff
-  EmptyPart
+  FreeTimeMeasureUnsupported
+  CadenzaMeasureUnsupported
+  VoiceAlignmentMismatch
+  MeasureIndexMismatch
+  DuplicateMeasureIndex
   ValidateInvalidChannel
   ValidateInvalidProgram
-  InvalidPPQ
+  InvalidMidiVelocity
+  InvalidMidiNote
   TieStartWithoutStop
   TieStopWithoutStart
+  TieContinueWithoutStart
+  TiePitchMismatch
+  TieDurationSuspicious
   RepeatWithoutStart
+  RepeatStartWithoutEnd
   RepeatJumpTargetMissing
+  EndingWithoutRepeat
+  EndingRangeInvalid
+  CodaTargetMissing
+  SegnoTargetMissing
   UnreachableSection
-  VoiceAlignmentMismatch
   UnsupportedNotation
+  UnsupportedLyric
+  UnsupportedClef
+  UnsupportedForMidi
+  UnsupportedForMusicXml
+  UnsupportedForGame
   ScoreValidationUnsupported
 }
+
+pub(all) struct ValidationContext {
+  part_index : Int
+  staff_index : Int
+  voice_index : Int
+  path_prefix : String
+}
+
+pub(all) enum ValidationError {
+  InvalidValidationProfile(String)
+  InvalidValidationOptions(String)
+  InvalidValidationReport(String)
+  InvalidValidationJson(String)
+  JsonDecodeError(String)
+  JsonEncodeError(String)
+  MissingJsonField(String)
+  ScoreLayoutError(String)
+}
+pub fn ValidationError::to_string(Self) -> String
 
 pub(all) struct ValidationIssue {
   severity : ValidationSeverity
@@ -1860,6 +1957,7 @@ pub(all) struct ValidationIssue {
   location : ValidationLocation
   message : String
   suggestion : String
+  source : ValidationRuleId
 }
 
 pub(all) struct ValidationLocation {
@@ -1876,18 +1974,38 @@ pub(all) struct ValidationOptions {
   strict_measure_capacity : Bool
   empty_voice_is_error : Bool
   empty_staff_is_error : Bool
+  empty_part_is_error : Bool
   check_repeats : Bool
   check_ties : Bool
   check_voice_alignment : Bool
   export_mode : Bool
+  check_midi_readiness : Bool
+  check_musicxml_readiness : Bool
+  check_game_readiness : Bool
+  unsupported_notation_is_error : Bool
+  warning_as_error : Bool
+}
+
+pub(all) enum ValidationProfile {
+  EditingProfile
+  StrictProfile
+  MidiExportProfile
+  MusicXmlExportProfile
+  GameExportProfile
+  GoldenTestProfile
 }
 
 pub(all) struct ValidationReport {
   issues : Array[ValidationIssue]
   checked_targets : Int
-  error_count : Int
+  info_count : Int
   warning_count : Int
+  error_count : Int
   fatal_count : Int
+}
+
+pub(all) struct ValidationRuleId {
+  value : String
 }
 
 pub(all) enum ValidationSeverity {
@@ -1904,8 +2022,12 @@ pub(all) enum ValidationTargetKind {
   VoiceTarget
   MeasureTarget
   EventTarget
-  RepeatTarget
   SectionTarget
+  RepeatTarget
+  EndingTarget
+  CodaTarget
+  SegnoTarget
+  ExportTarget
 }
 
 pub(all) struct Voice {

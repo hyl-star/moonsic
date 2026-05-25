@@ -2199,6 +2199,306 @@ test "validate_ffi_invalid_json" {
 }
 
 // ============================================================
+// 校验模块 v2 扩展测试 (validate.mbt v2 — profile / golden / export readiness)
+// ============================================================
+
+///|
+/// 校验 v2：profile 构造函数覆盖所有预设
+test "validate_v2: all profile option constructors" {
+  let edit = @moonsic.editing_validation_options()
+  assert_true(!edit.strict_measure_capacity)
+  assert_true(!edit.check_ties)
+  assert_true(!edit.check_midi_readiness)
+
+  let strict = @moonsic.strict_validation_options()
+  assert_true(strict.strict_measure_capacity)
+  assert_true(strict.check_ties)
+  assert_true(strict.check_voice_alignment)
+
+  let midi = @moonsic.midi_export_validation_options()
+  assert_true(midi.check_midi_readiness)
+  assert_true(!midi.check_ties)
+
+  let mxml = @moonsic.musicxml_export_validation_options()
+  assert_true(mxml.check_musicxml_readiness)
+  assert_true(mxml.check_ties)
+
+  let game = @moonsic.game_export_validation_options()
+  assert_true(game.check_game_readiness)
+  assert_true(game.check_repeats)
+
+  let golden = @moonsic.golden_test_validation_options()
+  assert_true(golden.warning_as_error)
+  assert_true(golden.check_midi_readiness)
+  assert_true(golden.check_musicxml_readiness)
+  assert_true(golden.check_game_readiness)
+}
+
+///|
+/// 校验 v2：validation_options_for_profile 映射正确
+test "validate_v2: validation_options_for_profile" {
+  let opts = @moonsic.validation_options_for_profile(@moonsic.EditingProfile)
+  assert_true(!opts.strict_measure_capacity)
+  assert_true(!opts.check_ties)
+
+  let opts2 = @moonsic.validation_options_for_profile(
+    @moonsic.GoldenTestProfile,
+  )
+  assert_true(opts2.warning_as_error)
+  assert_true(opts2.check_midi_readiness)
+}
+
+///|
+/// 校验 v2：validation_report_empty 初始状态全零
+test "validate_v2: validation_report_empty" {
+  let r = @moonsic.validation_report_empty()
+  assert_eq(r.checked_targets, 0)
+  assert_eq(r.error_count, 0)
+  assert_eq(r.warning_count, 0)
+  assert_eq(r.fatal_count, 0)
+  assert_eq(r.info_count, 0)
+  assert_eq(r.issues.length(), 0)
+}
+
+///|
+/// 校验 v2：validation_report_add_issue 正确计数
+test "validate_v2: validation_report_add_issue" {
+  let r = @moonsic.validation_report_empty()
+  // 使用 validate_voice_report 生成一条 issue
+  let v = @moonsic.empty_voice("Empty")
+  let sub = @moonsic.validate_voice_report(
+    v,
+    @moonsic.strict_validation_options(),
+  )
+  assert_true(sub.issues.length() > 0)
+  // 将生成的 issue 通过 pub API 追加到空 report
+  let first_issue = sub.issues[0]
+  let r2 = @moonsic.validation_report_add_issue(r, first_issue)
+  assert_eq(r2.error_count, 1)
+  assert_eq(r2.issues.length(), 1)
+}
+
+///|
+/// 校验 v2：validation_report_merge 合并两份报告
+test "validate_v2: validation_report_merge" {
+  let v1 = @moonsic.empty_voice("A")
+  let v2 = @moonsic.empty_voice("B")
+  let opts = @moonsic.strict_validation_options()
+  let r1 = @moonsic.validate_voice_report(v1, opts)
+  let r2 = @moonsic.validate_voice_report(v2, opts)
+  let merged = @moonsic.validation_report_merge(r1, r2)
+  assert_eq(merged.error_count, r1.error_count + r2.error_count)
+  assert_eq(merged.issues.length(), r1.issues.length() + r2.issues.length())
+}
+
+///|
+/// 校验 v2：validation_report_fatal_count 和 info_count
+test "validate_v2: validation_report_fatal_and_info_count" {
+  let r = @moonsic.validation_report_empty()
+  assert_eq(@moonsic.validation_report_fatal_count(r), 0)
+  assert_eq(@moonsic.validation_report_info_count(r), 0)
+  // 空 voice 在默认模式下产生 warning，不是 error/fatal
+  let v = @moonsic.empty_voice("Test")
+  let r2 = @moonsic.validate_voice_report(
+    v,
+    @moonsic.default_validation_options(),
+  )
+  assert_eq(@moonsic.validation_report_fatal_count(r2), 0)
+}
+
+///|
+/// 校验 v2：validation_report_is_export_blocking
+test "validate_v2: validation_report_is_export_blocking" {
+  let r = @moonsic.validation_report_empty()
+  assert_true(!@moonsic.validation_report_is_export_blocking(r))
+  // 有 error 则 blocking
+  let v = @moonsic.empty_voice("Test")
+  let r2 = @moonsic.validate_voice_report(
+    v,
+    @moonsic.strict_validation_options(),
+  )
+  assert_true(@moonsic.validation_report_is_export_blocking(r2))
+}
+
+///|
+/// 校验 v2：validation_code_to_string 公开可用
+test "validate_v2: validation_code_to_string" {
+  let s = @moonsic.validation_code_to_string(@moonsic.InvalidPPQ)
+  assert_eq(s, "InvalidPPQ")
+  let s2 = @moonsic.validation_code_to_string(@moonsic.EmptyVoice)
+  assert_eq(s2, "EmptyVoice")
+}
+
+///|
+/// 校验 v2：validation_severity_to_string 公开可用
+test "validate_v2: validation_severity_to_string" {
+  assert_eq(@moonsic.validation_severity_to_string(@moonsic.Error), "Error")
+  assert_eq(@moonsic.validation_severity_to_string(@moonsic.Warning), "Warning")
+  assert_eq(@moonsic.validation_severity_to_string(@moonsic.Info), "Info")
+  assert_eq(@moonsic.validation_severity_to_string(@moonsic.Fatal), "Fatal")
+}
+
+///|
+/// 校验 v2：validation_target_kind_to_string 公开可用
+test "validate_v2: validation_target_kind_to_string" {
+  assert_eq(
+    @moonsic.validation_target_kind_to_string(@moonsic.ValidateScoreTarget),
+    "Score",
+  )
+  assert_eq(
+    @moonsic.validation_target_kind_to_string(@moonsic.MeasureTarget),
+    "Measure",
+  )
+}
+
+///|
+/// 校验 v2：validation_code_default_suggestion 公开可用
+test "validate_v2: validation_code_default_suggestion" {
+  let s = @moonsic.validation_code_default_suggestion(@moonsic.InvalidPPQ)
+  assert_true(s.contains("PPQ"))
+  let s2 = @moonsic.validation_code_default_suggestion(@moonsic.EmptyVoice)
+  assert_true(s2.contains("rest"))
+}
+
+///|
+/// 校验 v2：validation_code_default_severity 按 profile 区分
+test "validate_v2: validation_code_default_severity_by_profile" {
+  // MeasureUnderfilled: Editing=Info, Strict=Warning, MidiExport=Warning
+  let s1 = @moonsic.validation_code_default_severity(
+    @moonsic.MeasureUnderfilled,
+    @moonsic.EditingProfile,
+  )
+  assert_true(s1 is @moonsic.Info)
+  let s2 = @moonsic.validation_code_default_severity(
+    @moonsic.MeasureUnderfilled,
+    @moonsic.StrictProfile,
+  )
+  assert_true(s2 is @moonsic.Warning)
+  let s3 = @moonsic.validation_code_default_severity(
+    @moonsic.MeasureUnderfilled,
+    @moonsic.GoldenTestProfile,
+  )
+  assert_true(s3 is @moonsic.Error)
+}
+
+///|
+/// 校验 v2：validate_part_report 空 part 产生 EmptyPart
+test "validate_v2: validate_part_report_empty_part" {
+  let p = @moonsic.make_part("Empty", []).unwrap()
+  let opts = @moonsic.strict_validation_options()
+  let report = @moonsic.validate_part_report(p, opts)
+  assert_true(@moonsic.validation_report_has_errors(report))
+}
+
+///|
+/// 校验 v2：validate_part_report 合法 part 不产生错误
+test "validate_v2: validate_part_report_valid" {
+  let sig = @moonsic.four_four()
+  let events = [@moonsic.n(@moonsic.c(4), @moonsic.quarter())]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let opts = @moonsic.default_validation_options()
+  let report = @moonsic.validate_part_report(p, opts)
+  assert_true(!@moonsic.validation_report_is_export_blocking(report))
+}
+
+///|
+/// 校验 v2：validate_midi_export_ready 检查 MIDI 就绪
+test "validate_v2: validate_midi_export_ready_valid" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let report = @moonsic.validate_midi_export_ready(sl)
+  assert_true(!@moonsic.validation_report_is_export_blocking(report))
+}
+
+///|
+/// 校验 v2：validate_musicxml_export_ready 检查 MusicXML 就绪
+test "validate_v2: validate_musicxml_export_ready_valid" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let report = @moonsic.validate_musicxml_export_ready(sl)
+  assert_true(!@moonsic.validation_report_is_export_blocking(report))
+}
+
+///|
+/// 校验 v2：validate_game_export_ready 检查 Game IR 就绪
+test "validate_v2: validate_game_export_ready_valid" {
+  let sig = @moonsic.four_four()
+  let events = [
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.f(4), @moonsic.quarter()),
+  ]
+  let m = @moonsic.make_measure(0, Some(sig), events).unwrap()
+  let v = @moonsic.make_voice("RH", [m]).unwrap()
+  let s = @moonsic.make_staff("Piano", Some(0), Some(0), None, [v]).unwrap()
+  let p = @moonsic.make_part("Keyboard", [s]).unwrap()
+  let sl = @moonsic.make_score_layout("Test", 480, [p]).unwrap()
+  let report = @moonsic.validate_game_export_ready(sl)
+  assert_true(!@moonsic.validation_report_is_export_blocking(report))
+}
+
+///|
+/// 校验 v2：validation_report_to_golden_text 确定性输出
+test "validate_v2: validation_report_to_golden_text" {
+  let r = @moonsic.validation_report_empty()
+  let text = @moonsic.validation_report_to_golden_text(r)
+  assert_true(text.contains("GOLDEN"))
+  assert_true(text.contains("0 issues"))
+  // 添加一条 issue 后 golden text 应包含 severity/code/path
+  let v = @moonsic.empty_voice("Test")
+  let r2 = @moonsic.validate_voice_report(
+    v,
+    @moonsic.strict_validation_options(),
+  )
+  let text2 = @moonsic.validation_report_to_golden_text(r2)
+  assert_true(text2.contains("EmptyVoice"))
+  assert_true(text2.contains("voice[Test]"))
+}
+
+///|
+/// 校验 v2：validation_report_to_json 包含 info_count
+test "validate_v2: validation_report_to_json_has_info_count" {
+  let r = @moonsic.validation_report_empty()
+  let json = @moonsic.validation_report_to_json(r)
+  assert_true(json.contains("info_count"))
+  assert_true(json.contains("error_count"))
+}
+
+///|
+/// 校验 v2：validation_context 创建
+test "validate_v2: validation_context_creation" {
+  let ctx = @moonsic.validation_context(0, 1, 2, "part[P]/staff[S]")
+  assert_eq(ctx.part_index, 0)
+  assert_eq(ctx.staff_index, 1)
+  assert_eq(ctx.voice_index, 2)
+  assert_eq(ctx.path_prefix, "part[P]/staff[S]")
+}
+
+// ============================================================
 // 专业曲谱结构增强模块测试 (score_enhanced.mbt)
 // ============================================================
 
