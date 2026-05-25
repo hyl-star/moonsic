@@ -1,10 +1,11 @@
 // ============================================================
-// v1.5 浣滄洸蹇嵎鍑芥暟 鈥?璁╃畝鍗曟棆寰嬫洿鐭?// ============================================================
+// v1.5 作曲快捷函数 — 让简单旋律更短
+// ============================================================
 
-// --- 闊抽珮蹇嵎鏋勯€?---
+// --- 音高快捷构造 ---
 
 ///|
-/// 鑷劧闊抽珮蹇嵎鏋勯€狅細c(4) = pitch(C, Natural, 4)
+/// 自然音高快捷构造：c(4) = pitch(C, Natural, 4)
 pub fn c(octave : Int) -> Pitch {
   pitch(C, Natural, octave)
 }
@@ -39,10 +40,10 @@ pub fn b(octave : Int) -> Pitch {
   pitch(B, Natural, octave)
 }
 
-// --- 鍗囧彿蹇嵎鏋勯€?---
+// --- 升号快捷构造 ---
 
 ///|
-/// 鍗囧彿闊抽珮锛歝s(4) = pitch(C, Sharp, 4) = C#4
+/// 升号音高：cs(4) = pitch(C, Sharp, 4) = C#4
 pub fn cs(octave : Int) -> Pitch {
   pitch(C, Sharp, octave)
 }
@@ -63,12 +64,12 @@ pub fn gs(octave : Int) -> Pitch {
 }
 
 ///|
-// as(octave) 鍥?as 鏄?MoonBit 鍏抽敭瀛楋紝v1.5 涓嶆彁渚涖€傝鐢?pitch(A, Sharp, octave)
+// as(octave) 因 as 是 MoonBit 关键字，v1.5 不提供。请用 pitch(A, Sharp, octave)
 
-// --- 闄嶅彿蹇嵎鏋勯€?---
+// --- 降号快捷构造 ---
 
 ///|
-/// 闄嶅彿闊抽珮锛歞b(4) = pitch(D, Flat, 4) = Db4
+/// 降号音高：db(4) = pitch(D, Flat, 4) = Db4
 pub fn db(octave : Int) -> Pitch {
   pitch(D, Flat, octave)
 }
@@ -93,7 +94,7 @@ pub fn bb(octave : Int) -> Pitch {
   pitch(B, Flat, octave)
 }
 
-// --- 鏃跺€煎揩鎹锋瀯閫?---
+// --- 时值快捷构造 ---
 
 ///|
 pub fn whole() -> Duration {
@@ -120,78 +121,78 @@ pub fn sixteenth() -> Duration {
   Duration::Sixteenth
 }
 
-// --- 浜嬩欢蹇嵎鏋勯€?---
+// --- 事件快捷构造 ---
 
 ///|
-/// 蹇嵎闊崇锛歯(c(4), quarter()) = Note(note(c(4), Quarter))
+/// 快捷音符：n(c(4), quarter()) = Note(note(c(4), Quarter))
 pub fn n(pitch : Pitch, duration : Duration) -> MusicEvent {
   Note(note(pitch, duration))
 }
 
 ///|
-/// 蹇嵎闊崇锛堟寚瀹氬姏搴︼級
+/// 快捷音符（指定力度）
 pub fn nv(pitch : Pitch, duration : Duration, velocity : Int) -> MusicEvent {
   Note(note_with_velocity(pitch, duration, velocity))
 }
 
 ///|
-/// 蹇嵎浼戞锛歳(half()) = Rest(rest(Half))
+/// 快捷休止：r(half()) = Rest(rest(Half))
 pub fn r(duration : Duration) -> MusicEvent {
   Rest(rest(duration))
 }
 
 ///|
-/// 蹇嵎鍜屽鸡锛歝h([c(4), e(4), g(4)], quarter())
+/// 快捷和弦：ch([c(4), e(4), g(4)], quarter())
 pub fn ch(pitches : Array[Pitch], duration : Duration) -> MusicEvent {
   Chord(chord(pitches, duration))
 }
 
 ///|
-/// 澶т笁鍜屽鸡锛歮ajor(c(4), half()) = C E G
+/// 大三和弦：major(c(4), half()) = C E G
 pub fn major(root : Pitch, duration : Duration) -> MusicEvent {
   Chord(chord([root, root.transpose(4), root.transpose(7)], duration))
 }
 
 ///|
-/// 灏忎笁鍜屽鸡锛歮inor(a(3), half()) = A C E
+/// 小三和弦：minor(a(3), half()) = A C E
 pub fn minor(root : Pitch, duration : Duration) -> MusicEvent {
   Chord(chord([root, root.transpose(3), root.transpose(7)], duration))
 }
 
 ///|
-/// 鍑忎笁鍜屽鸡锛歞im(b(3), half()) = B D F
+/// 减三和弦：dim(b(3), half()) = B D F
 pub fn dim(root : Pitch, duration : Duration) -> MusicEvent {
   chord_quality(root, DiminishedTriad, duration)
 }
 
 ///|
-/// 澧炰笁鍜屽鸡锛歛ug(c(4), half()) = C E G#
+/// 增三和弦：aug(c(4), half()) = C E G#
 pub fn aug(root : Pitch, duration : Duration) -> MusicEvent {
   chord_quality(root, AugmentedTriad, duration)
 }
 
 ///|
-/// 灞炰竷鍜屽鸡锛歞om7(g(3), half()) = G B D F
+/// 属七和弦：dom7(g(3), half()) = G B D F
 pub fn dom7(root : Pitch, duration : Duration) -> MusicEvent {
   chord_quality(root, DominantSeventh, duration)
 }
 
 ///|
-/// 澶т竷鍜屽鸡锛歮aj7(c(4), half()) = C E G B
+/// 大七和弦：maj7(c(4), half()) = C E G B
 pub fn maj7(root : Pitch, duration : Duration) -> MusicEvent {
   chord_quality(root, MajorSeventh, duration)
 }
 
 ///|
-/// 灏忎竷鍜屽鸡锛歮in7(a(3), half()) = A C E G
+/// 小七和弦：min7(a(3), half()) = A C E G
 pub fn min7(root : Pitch, duration : Duration) -> MusicEvent {
   chord_quality(root, MinorSeventh, duration)
 }
 
-// --- 杞ㄩ亾/涔愯氨蹇嵎鏋勯€?---
+// --- 轨道/乐谱快捷构造 ---
 
 ///|
-/// 蹇嵎杞ㄩ亾锛歮elody([...]) = track([...])
+/// 快捷轨道：melody([...]) = track([...])
 pub fn melody(events : Array[MusicEvent]) -> Track {
   track(events)
 }
@@ -202,13 +203,13 @@ pub fn melody_with_channel(events : Array[MusicEvent], channel : Int) -> Track {
 }
 
 ///|
-/// 鍗曡建閬撲箰璋憋紙榛樿 120 BPM, 4/4锛?
+/// 单轨道乐谱（默认 120 BPM, 4/4）
 pub fn score1(track : Track) -> Score {
   score([track])
 }
 
 ///|
-/// 蹇嵎涔愯氨鏋勯€狅細score_with([lead, harmony], 120, four_four())
+/// 快捷乐谱构造：score_with([lead, harmony], 120, four_four())
 pub fn score_with(
   tracks : Array[Track],
   bpm : Int,
@@ -217,10 +218,10 @@ pub fn score_with(
   score_with_tempo(tracks, tempo(bpm), time_signature)
 }
 
-// --- 鏂囨湰璁拌氨瑙ｆ瀽鍣?(v6) ---
+// --- 文本记谱解析器 (v6) ---
 
 ///|
-/// 浠庢枃鏈В鏋愭棆寰嬨€傛敮鎸侊細`C4q` `F#4e` `Rq` `[C4 E4 G4]h` `C4q:80` `x4` `#娉ㄩ噴`
+/// 从文本解析旋律。支持：`C4q` `F#4e` `Rq` `[C4 E4 G4]h` `C4q:80` `x4` `#注释`
 pub fn melody_str(input : String) -> Track {
   let (events, repeat, _pos) = parse_line(input, 0)
   let all = []
@@ -233,7 +234,7 @@ pub fn melody_str(input : String) -> Track {
 }
 
 ///|
-/// 浠庡畬鏁翠箰璋辨枃鏈В鏋?Score銆傛敮鎸?`tempo N`銆乣time N/D` 鎸囦护銆?
+/// 从完整乐谱文本解析 Score。支持 `tempo N`、`time N/D` 指令。
 pub fn score_str(input : String) -> Score {
   let mut bpm = 120
   let mut ts = four_four()
@@ -279,7 +280,7 @@ pub fn score_str(input : String) -> Score {
   score_with_tempo([track(all_events)], tempo(bpm), ts)
 }
 
-// --- 鍐呴儴瑙ｆ瀽鍑芥暟 ---
+// --- 内部解析函数 ---
 
 ///|
 fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
@@ -346,7 +347,7 @@ fn parse_line(input : String, pos : Int) -> (Array[MusicEvent], Int, Int) {
 }
 
 ///|
-/// 鍐呴儴瑙ｆ瀽锛氫粠浣嶇疆 p 瑙ｆ瀽闊抽珮锛岃繑鍥?(Pitch, 鏂颁綅缃?
+/// 内部解析：从位置 p 解析音高，返回 (Pitch, 新位置)
 fn parse_pitch_at(input : String, p : Int) -> (Pitch, Int) {
   let class = match input[p] {
     'C' => C
@@ -436,15 +437,16 @@ fn match_prefix(p : Int, input : String, prefix : String) -> Bool {
   j == pl
 }
 
-// --- 鐙珛瑙ｆ瀽 API ---
+// --- 独立解析 API ---
 
 ///|
-/// 浠庢枃鏈В鏋愰煶楂樸€傛敮鎸?"C4"銆?F#3"銆?Bb5" 绛夋牸寮忋€?/// 杩斿洖 Result[Pitch, String]锛岄潪娉曡緭鍏ユ椂杩斿洖 Err銆?
+/// 从文本解析音高。支持 "C4"、"F#3"、"Bb5" 等格式。
+/// 返回 Result[Pitch, String]，非法输入时返回 Err。
 pub fn parse_pitch(input : String) -> Result[Pitch, TheoryError] {
   if input.length() < 2 {
     return Err(InvalidPitch("expected pitch like C4, F#3, or Bb5"))
   }
-  // 瑙ｆ瀽闊冲悕
+  // 解析音名
   let class = match input[0] {
     'C' => C
     'D' => D
@@ -456,13 +458,13 @@ pub fn parse_pitch(input : String) -> Result[Pitch, TheoryError] {
     _ => return Err(InvalidPitch("unknown pitch class in \{input}"))
   }
   let mut pos = 1
-  // 瑙ｆ瀽鍙€夊彉闊宠鍙?
+  // 解析可选变音记号
   let mut acc = Natural
   if pos < input.length() && (input[pos] == '#' || input[pos] == 'b') {
     acc = if input[pos] == '#' { Sharp } else { Flat }
     pos = pos + 1
   }
-  // 瑙ｆ瀽鍏害鏁板瓧锛堟敮鎸佸浣嶆暟瀛楋級
+  // 解析八度数字（支持多位数字）
   if pos >= input.length() {
     return Err(InvalidPitch("missing octave in \{input}"))
   }
@@ -479,7 +481,7 @@ pub fn parse_pitch(input : String) -> Result[Pitch, TheoryError] {
   if octave < -1 {
     return Err(InvalidPitch("invalid octave in \{input}"))
   }
-  // 涓嶅厑璁告湁鍓╀綑瀛楃
+  // 不允许有剩余字符
   if new_pos < input.length() {
     return Err(InvalidPitch("trailing characters in \{input}"))
   }
@@ -492,7 +494,7 @@ pub fn parse_pitch(input : String) -> Result[Pitch, TheoryError] {
 }
 
 ///|
-/// 鍐呴儴锛氫粠 pos 璇诲彇鍏害鏁板瓧锛岃繑鍥?(鍏害鍊? 鏂颁綅缃?
+/// 内部：从 pos 读取八度数字，返回 (八度值, 新位置)
 fn read_octave(input : String, pos : Int) -> (Int, Int) {
   let mut p = pos
   let mut sign = 1
@@ -514,12 +516,13 @@ fn read_octave(input : String, pos : Int) -> (Int, Int) {
 }
 
 ///|
-/// 浠庢枃鏈В鏋愰煶绾с€傛敮鎸?"C"銆?C#"銆?Db" 绛夋牸寮忥紙鏃犲叓搴︽暟瀛楋級銆?/// 杩斿洖鐨?PitchClass 浠呭寘鍚煶鍚嶏紙瀛楁瘝閮ㄥ垎锛夛紝鍙橀煶璁板彿涓嶅瓨鍌ㄥ湪 PitchClass 涓€?
+/// 从文本解析音级。支持 "C"、"C#"、"Db" 等格式（无八度数字）。
+/// 返回的 PitchClass 仅包含音名（字母部分），变音记号不存储在 PitchClass 中。
 pub fn parse_pitch_class(input : String) -> Result[PitchClass, TheoryError] {
   if input.length() == 0 {
     return Err(InvalidPitch("empty pitch class"))
   }
-  // 瑙ｆ瀽闊冲悕
+  // 解析音名
   let pc = match input[0] {
     'C' => C
     'D' => D
@@ -531,23 +534,24 @@ pub fn parse_pitch_class(input : String) -> Result[PitchClass, TheoryError] {
     _ => return Err(InvalidPitch("unknown pitch class in \{input}"))
   }
   let len = input.length()
-  // 浠呴煶鍚嶏細鍚堟硶
+  // 仅音名：合法
   if len == 1 {
     return Ok(pc)
   }
-  // 闊冲悕 + 涓€涓彉闊宠鍙凤細鍚堟硶
+  // 音名 + 一个变音记号：合法
   if len == 2 && (input[1] == '#' || input[1] == 'b') {
     return Ok(pc)
   }
-  // 鍚叓搴︽暟瀛楁垨鍏朵粬瀛楃锛氫笉鍚堟硶
+  // 含八度数字或其他字符：不合法
   Err(InvalidPitch("invalid pitch class syntax: \{input}"))
 }
 
-// --- FFI JSON 鍖呰 ---
+// --- FFI JSON 包装 ---
 
 ///|
-/// FFI 鍖呰锛氳В鏋愰煶楂樺瓧绗︿覆骞惰繑鍥?JSON 鏍煎紡鐨?MIDI 缂栧彿銆?/// 杈撳叆 "C4" 鈫?{"ok":true,"value":60}
-/// 杈撳叆 "X9" 鈫?{"ok":false,"error":"Invalid pitch"}
+/// FFI 包装：解析音高字符串并返回 JSON 格式的 MIDI 编号。
+/// 输入 "C4" → {"ok":true,"value":60}
+/// 输入 "X9" → {"ok":false,"error":"Invalid pitch"}
 pub fn ffi_parse_pitch_to_midi(input : String) -> String {
   match parse_pitch(input) {
     Ok(p) => ffi_ok_value(p.to_midi().to_string())
@@ -556,11 +560,12 @@ pub fn ffi_parse_pitch_to_midi(input : String) -> String {
 }
 
 ///|
-/// FFI 鍖呰锛氳В鏋愬拰寮﹀瓧绗︿覆骞惰繑鍥?JSON 鏍煎紡鐨勯煶绾у垪琛ㄣ€?/// 杈撳叆 "Cm7" 鈫?{"ok":true,"value":["C","Eb","G","Bb"]}
+/// FFI 包装：解析和弦字符串并返回 JSON 格式的音级列表。
+/// 输入 "Cm7" → {"ok":true,"value":["C","Eb","G","Bb"]}
 pub fn ffi_parse_chord_tones(input : String) -> String {
   match parse_chord(input) {
     Ok(c) => {
-      // 浣跨敤 pitch 鐨?class+accidental 浠ヤ繚鐣欏彉闊宠鍙凤紙濡?"Eb" 鑰岄潪 "E"锛?
+      // 使用 pitch 的 class+accidental 以保留变音记号（如 "Eb" 而非 "E"）
       let mut notes_str = "["
       for i = 0; i < c.pitches.length(); i = i + 1 {
         let p = c.pitches[i]
@@ -578,7 +583,8 @@ pub fn ffi_parse_chord_tones(input : String) -> String {
 }
 
 ///|
-/// FFI 鍖呰锛氳В鏋愰煶闃跺瓧绗︿覆骞惰繑鍥?JSON 鏍煎紡鐨勯煶绾у垪琛ㄣ€?/// 杈撳叆 "C major" 鈫?{"ok":true,"value":["C","D","E","F","G","A","B"]}
+/// FFI 包装：解析音阶字符串并返回 JSON 格式的音级列表。
+/// 输入 "C major" → {"ok":true,"value":["C","D","E","F","G","A","B"]}
 pub fn ffi_build_scale(input : String) -> String {
   match parse_scale(input) {
     Ok(s) => {

@@ -1,7 +1,8 @@
 // ============================================================
-// v3 闊充箰鐞嗚 鈥?闊崇▼銆侀煶闃躲€佸拰寮﹀搧璐ㄣ€佸拰寮﹁繘琛?// ============================================================
+// v3 音乐理论 — 音程、音阶、和弦品质、和弦进行
+// ============================================================
 
-// --- 闊崇▼ ---
+// --- 音程 ---
 
 ///|
 pub const UNISON : Int = 0
@@ -42,7 +43,7 @@ pub const MAJOR_SEVENTH : Int = 11
 ///|
 pub const OCTAVE : Int = 12
 
-// --- 闊抽樁 ---
+// --- 音阶 ---
 
 ///|
 pub fn scale(
@@ -64,7 +65,7 @@ pub fn scale(
   pitches
 }
 
-// --- 闊崇骇 ---
+// --- 音级 ---
 
 ///|
 /// Legacy scale-degree helper. Prefer `degree_checked` when invalid input must be reported.
@@ -91,7 +92,7 @@ pub fn degree_checked(
   midi_to_pitch_checked(base_midi + intervals[index] + octave_offset * 12)
 }
 
-// --- 鍜屽鸡鍝佽川 ---
+// --- 和弦品质 ---
 
 ///|
 pub(all) enum ChordQuality {
@@ -109,7 +110,7 @@ pub(all) enum ChordQuality {
 }
 
 ///|
-/// 鍜屽鸡鍝佽川鐨勫崐闊抽棿闅旀ā寮?
+/// 和弦品质的半音间隔模式
 pub fn ChordQuality::intervals(self : ChordQuality) -> Array[Int] {
   match self {
     MajorTriad => [0, 4, 7]
@@ -127,7 +128,7 @@ pub fn ChordQuality::intervals(self : ChordQuality) -> Array[Int] {
 }
 
 ///|
-/// 閫氳繃鍜屽鸡鍝佽川鏋勫缓鍜屽鸡
+/// 通过和弦品质构建和弦
 pub fn chord_quality(
   root : Pitch,
   quality : ChordQuality,
@@ -141,7 +142,7 @@ pub fn chord_quality(
   Chord(chord(pitches, duration))
 }
 
-// --- 缃楅┈鏁板瓧 ---
+// --- 罗马数字 ---
 
 ///|
 pub(all) enum RomanNumeral {
@@ -155,7 +156,7 @@ pub(all) enum RomanNumeral {
 }
 
 ///|
-/// 鑾峰彇缃楅┈鏁板瓧鍦ㄦ寚瀹氳皟涓殑鏍归煶
+/// 获取罗马数字在指定调中的根音
 fn roman_root(root : Pitch, kind : ScaleKind, rn : RomanNumeral) -> Pitch {
   let deg = match rn {
     I => 1
@@ -170,7 +171,7 @@ fn roman_root(root : Pitch, kind : ScaleKind, rn : RomanNumeral) -> Pitch {
 }
 
 ///|
-/// 鍒ゆ柇缃楅┈鏁板瓧鍦ㄦ寚瀹氳皟涓槸澶т笁鍜屽鸡
+/// 判断罗马数字在指定调中是大三和弦
 fn is_major_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
   match kind {
     Major =>
@@ -192,7 +193,7 @@ fn is_major_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
 }
 
 ///|
-/// 鍒ゆ柇缃楅┈鏁板瓧鍦ㄦ寚瀹氳皟涓槸鍑忎笁鍜屽鸡
+/// 判断罗马数字在指定调中是减三和弦
 fn is_dim_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
   match kind {
     Major =>
@@ -210,7 +211,7 @@ fn is_dim_in_key(kind : ScaleKind, rn : RomanNumeral) -> Bool {
 }
 
 ///|
-/// 鍜屽鸡杩涜锛氭牴鎹皟寮忚嚜鍔ㄩ€夋嫨澶т笁/灏忎笁/鍑忎笁鍜屽鸡
+/// 和弦进行：根据调式自动选择大三/小三/减三和弦
 pub fn progression(
   root : Pitch,
   kind : ScaleKind,
@@ -232,16 +233,16 @@ pub fn progression(
   track(events)
 }
 
-// --- 鍜屽鸡鏂囨湰瑙ｆ瀽 ---
+// --- 和弦文本解析 ---
 
 ///|
-/// 浠庢枃鏈В鏋愬拰寮︺€傛敮鎸?"C"銆?Cm"銆?Cmaj7"銆?Dm7"銆?G7"銆?F#dim" 绛夋牸寮忋€?
+/// 从文本解析和弦。支持 "C"、"Cm"、"Cmaj7"、"Dm7"、"G7"、"F#dim" 等格式。
 pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   if input.length() == 0 {
     return Err(InvalidChord("empty chord string"))
   }
 
-  // 瑙ｆ瀽鏍归煶瀛楁瘝
+  // 解析根音字母
   let root_class = match input[0] {
     'C' => C
     'D' => D
@@ -254,7 +255,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   }
   let mut pos = 1
 
-  // 瑙ｆ瀽鍙€夌殑鍙橀煶璁板彿
+  // 解析可选的变音记号
   let mut accidental = Natural
   if pos < input.length() {
     if input[pos] == '#' {
@@ -266,7 +267,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
     }
   }
 
-  // 瑙ｆ瀽鍜屽鸡鍝佽川鍚庣紑
+  // 解析和弦品质后缀
   let (quality, end_pos) = parse_chord_quality(input, pos)
   if end_pos != input.length() {
     return Err(
@@ -276,7 +277,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
     )
   }
 
-  // 鏋勫缓鍜屽鸡锛堜娇鐢ㄥ叓搴?4 鍜岄粯璁ゅ洓鍒嗛煶绗︽椂鍊硷紝姝ｇ‘鎷煎啓锛?
+  // 构建和弦（使用八度 4 和默认四分音符时值，正确拼写）
   let root = pitch(root_class, accidental, 4)
   let root_midi = root.to_midi()
   let semitone_intervals = quality.intervals()
@@ -286,7 +287,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   for i = 0; i < semitone_intervals.length(); i = i + 1 {
     let target_midi = root_midi + semitone_intervals[i]
     let expected_class = class_from_index((root_cls + letter_offsets[i]) % 7)
-    // 鎵惧埌浣?expected_class 鏈€鎺ヨ繎 target_midi 鐨勫叓搴?
+    // 找到使 expected_class 最接近 target_midi 的八度
     let target_octave = target_midi / 12 - 1
     let natural = (target_octave + 1) * 12 + expected_class.base_semitone()
     let mut diff = target_midi - natural
@@ -314,7 +315,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
 }
 
 ///|
-/// 鍜屽鸡鍝佽川瀵瑰簲鐨勫瓧姣嶆杩涳紙鍦ㄥ瓧姣嶇┖闂翠腑鐨勫亸绉伙級
+/// 和弦品质对应的字母步进（在字母空间中的偏移）
 fn chord_letter_steps(quality : ChordQuality) -> Array[Int] {
   match quality {
     MajorTriad => [0, 2, 4]
@@ -332,12 +333,12 @@ fn chord_letter_steps(quality : ChordQuality) -> Array[Int] {
 }
 
 ///|
-/// 瑙ｆ瀽鍜屽鸡鍝佽川鍚庣紑锛堝唴閮ㄥ嚱鏁帮級
+/// 解析和弦品质后缀（内部函数）
 fn parse_chord_quality(input : String, pos : Int) -> (ChordQuality, Int) {
   if pos >= input.length() {
     return (MajorTriad, pos)
   }
-  // 浼樺厛鍖归厤杈冮暱鐨勬ā寮?
+  // 优先匹配较长的模式
   if match_chord_str(input, pos, "maj7") {
     (MajorSeventh, pos + 4)
   } else if match_chord_str(input, pos, "dim7") {
@@ -364,7 +365,7 @@ fn parse_chord_quality(input : String, pos : Int) -> (ChordQuality, Int) {
 }
 
 ///|
-/// 妫€鏌ュ瓧绗︿覆浠?pos 寮€濮嬫槸鍚﹀尮閰?target
+/// 检查字符串从 pos 开始是否匹配 target
 fn match_chord_str(s : String, pos : Int, target : String) -> Bool {
   let len = target.length()
   if pos + len > s.length() {
@@ -381,7 +382,7 @@ fn match_chord_str(s : String, pos : Int, target : String) -> Bool {
 }
 
 ///|
-/// 杩斿洖鍜屽鸡鍖呭惈鐨勯煶绾у垪琛紙鍘婚噸锛屾寜鍜屽鸡鍐呴『搴忥級
+/// 返回和弦包含的音级列表（去重，按和弦内顺序）
 pub fn chord_tones(chord : Chord) -> Array[PitchClass] {
   let classes = []
   for p in chord.pitches {
@@ -402,7 +403,7 @@ pub fn chord_tones(chord : Chord) -> Array[PitchClass] {
 }
 
 ///|
-/// PitchClass 鐩哥瓑姣旇緝锛圥itchClass 鏈?derive Eq锛?
+/// PitchClass 相等比较（PitchClass 未 derive Eq）
 fn pitch_class_eq(a : PitchClass, b : PitchClass) -> Bool {
   match a {
     C =>

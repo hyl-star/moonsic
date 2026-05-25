@@ -141,6 +141,57 @@ API / text notation -> Score -> NoteEvent -> MIDI / WAV / browser events
 | `hat(dur)` | Closed hat (42) |
 | `basic_beat(bars)` | 3-track drum pattern |
 
+### Generation
+
+| Function | Description |
+|----------|-------------|
+| `generate_melody_checked(key, rhythm)` | Generate melody with structured errors |
+| `generate_chord_progression_checked(context, bars)` | Generate chord progression |
+| `generate_accompaniment_checked(context, pattern)` | Generate accompaniment pattern |
+
+### Rhythm and Motif
+
+| Function | Description |
+|----------|-------------|
+| `rhythm_pattern_checked(cells)` | Build rhythm pattern with validation |
+| `motif_checked(degrees, rhythm)` | Build melodic motif |
+| `repeat_motif_checked(motif, count)` | Repeat motif into phrase pattern |
+| `join_patterns_checked(patterns)` | Concatenate multiple phrase patterns |
+| `fit_pattern_to_bars_checked(pattern, time_sig)` | Fit pattern to bar boundaries |
+
+### Enhanced Score Structure
+
+| Function | Description |
+|----------|-------------|
+| `make_section_checked(kind, label, start, end)` | Create section marker |
+| `enhanced_measure_checked(beats)` | Build enhanced measure |
+| `score_to_enhanced_layout_checked(score, ppq)` | Convert score to enhanced layout |
+| `enhanced_layout_to_score_checked(layout)` | Convert enhanced layout back to score |
+
+### Validation
+
+| Function | Description |
+|----------|-------------|
+| `validate_score_layout_report(layout)` | Validate score layout, return report |
+| `validation_report_has_errors(report)` | Check if report contains errors |
+| `validation_report_to_json(report)` | Serialize report to JSON |
+
+### MusicXML Export
+
+| Function | Description |
+|----------|-------------|
+| `score_to_musicxml_checked(score, options)` | Export score to MusicXML with validation |
+| `musicxml_to_string_checked(doc, doctype)` | Serialize MusicXML document to string |
+| `score_to_musicxml_string_checked(score)` | Convenience: score to MusicXML string in one call |
+
+### External Generator Adapter
+
+| Function | Description |
+|----------|-------------|
+| `generation_request_checked(task, constraints)` | Build validated generation request |
+| `deterministic_mock_generate(request)` | Deterministic mock generator |
+| `generation_request_to_json(request)` | Serialize request to JSON |
+
 ## Text Notation
 
 ```moonbit nocheck
@@ -318,6 +369,12 @@ accompany.mbt                    Multi-track accompaniment templates
 pitch_class_rules.mbt            Shared pitch-class letter ordering rules
 parse_number_util.mbt            Shared ASCII number parser for time/JSON paths
 ffi_json.mbt                     Shared JSON response helpers for FFI wrappers
+generate.mbt                     Rule-based music generation: melody, chords, bass, accompaniment
+rhythm.mbt                       Rhythm template, motif, pattern transform, repeat, join
+score_enhanced.mbt               Professional score structure: Section, Repeat, Ending, Notation, Lyric
+validate.mbt                     Non-blocking score validation with structured issue reports
+musicxml.mbt                     MusicXML export: score-to-MusicXML conversion, validation
+adapter.mbt                      External generator protocol: request/response, mock provider
 moonsic_*_test.mbt               Split blackbox tests by module area
 web/                             Browser playback engine (scheduler + ADSR + loop)
 cmd/main/                        CLI entry point (generates browser demo data)
@@ -326,7 +383,7 @@ cmd/main/                        CLI entry point (generates browser demo data)
 ## Development Commands
 
 ```bash
-moon test              # Run tests (465 tests)
+moon test              # Run tests (602 tests)
 moon check             # Type check
 moon info              # Update pkg.generated.mbti
 moon fmt               # Format code

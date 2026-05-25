@@ -889,8 +889,8 @@ pub(all) enum GenerateMode {
   MelodyOnly
   ChordsOnly
   BassOnly
-  Accompaniment
-  GameLoop
+  AccompanimentMode
+  GameLoopMode
 }
 
 pub(all) struct GeneratedPhrase {
@@ -1013,9 +1013,9 @@ pub(all) enum GenerationTaskKind {
   MelodyContinuation
   ChordProgression
   BassLine
-  Accompaniment
+  AccompanimentTask
   RhythmPatternGen
-  GameLoop
+  GameLoopTask
   Variation
   Orchestration
 }
@@ -1336,8 +1336,8 @@ pub(all) enum NotationKind {
   Articulation(ArticulationKind)
   SlurStart
   SlurStop
-  TieStart
-  TieStop
+  NotationTieStart
+  NotationTieStop
   Dynamic(DynamicMark)
   Fermata
   Breath
@@ -1608,15 +1608,15 @@ pub(all) struct ScoreContext {
 }
 
 pub(all) enum ScoreError {
-  InvalidMeasure(String)
-  InvalidVoice(String)
-  InvalidStaff(String)
-  InvalidPart(String)
+  LayoutInvalidMeasure(String)
+  LayoutInvalidVoice(String)
+  LayoutInvalidStaff(String)
+  LayoutInvalidPart(String)
   InvalidScoreLayout(String)
-  MeasureOverflow(String)
+  LayoutMeasureOverflow(String)
   InvalidPPQ(Int)
-  InvalidChannel(Int)
-  InvalidProgram(Int)
+  LayoutInvalidChannel(Int)
+  LayoutInvalidProgram(Int)
 }
 pub fn ScoreError::to_string(Self) -> String
 
@@ -1646,10 +1646,10 @@ pub(all) enum ScoreStructureError {
   InvalidSection(String)
   InvalidRepeat(String)
   InvalidEnding(String)
-  InvalidMeasure(String)
-  InvalidVoice(String)
-  InvalidStaff(String)
-  InvalidPart(String)
+  StructInvalidMeasure(String)
+  StructInvalidVoice(String)
+  StructInvalidStaff(String)
+  StructInvalidPart(String)
   InvalidNotation(String)
   InvalidLyric(String)
   InvalidPickup(String)
@@ -1812,15 +1812,15 @@ pub(all) struct TupletRatio {
 }
 
 pub(all) enum ValidationCode {
-  MeasureOverflow
+  ValidateMeasureOverflow
   MeasureUnderfilled
   PickupMeasureTooLong
   FinalMeasureTooLong
   EmptyVoice
   EmptyStaff
   EmptyPart
-  InvalidChannel
-  InvalidProgram
+  ValidateInvalidChannel
+  ValidateInvalidProgram
   InvalidPPQ
   TieStartWithoutStop
   TieStopWithoutStart
@@ -1876,7 +1876,7 @@ pub(all) enum ValidationSeverity {
 }
 
 pub(all) enum ValidationTargetKind {
-  ScoreTarget
+  ValidateScoreTarget
   PartTarget
   StaffTarget
   VoiceTarget
