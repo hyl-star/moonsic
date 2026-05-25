@@ -461,6 +461,7 @@ pub(all) struct Tempo {
 }
 
 ///|
+/// @deprecated Use tempo_checked instead.
 /// 创建速度，BPM 必须 > 0
 /// Legacy throwing tempo constructor. Prefer `tempo_checked` in library/FFI code.
 pub fn tempo(bpm : Int) -> Tempo {

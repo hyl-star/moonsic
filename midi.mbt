@@ -32,7 +32,8 @@ pub fn Score::to_midi_bytes(self : Score) -> Bytes {
 }
 
 ///|
-/// Legacy throwing MIDI export. Prefer `to_midi_bytes_with_ppq_checked`.
+/// @deprecated Use to_midi_bytes_with_ppq_checked instead.
+/// Legacy throwing MIDI export.
 pub fn Score::to_midi_bytes_with_ppq(self : Score, ppq : Int) -> Bytes {
   match self.to_midi_bytes_with_ppq_checked(ppq) {
     Ok(bytes) => bytes

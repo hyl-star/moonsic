@@ -545,6 +545,7 @@ fn midi_event_to_caimeox(event : MidiEvent, delta : Int) -> @midi.Event {
 }
 
 ///|
+/// @deprecated Use midi_score_to_bytes_checked instead.
 pub fn midi_score_to_bytes(score : MidiScore) -> Bytes {
   match midi_score_to_bytes_checked(score) {
     Ok(bytes) => bytes
@@ -582,6 +583,7 @@ pub fn midi_score_to_bytes_checked(
 }
 
 ///|
+/// @deprecated Use score_to_midi_bytes_checked instead.
 pub fn score_to_midi_bytes(score : Score, ppq : Int) -> Bytes {
   match score_to_midi_bytes_checked(score, ppq) {
     Ok(bytes) => bytes

@@ -1083,6 +1083,7 @@ pub fn ffi_parse_time_sig(input : String) -> String {
 }
 
 ///|
+/// @deprecated Use ffi_duration_ticks_json instead.
 /// FFI 时值转 tick：入 "q",480 → {"ok":true,"ticks":480}
 pub fn ffi_duration_ticks(input : String, ppq : Int) -> String {
   match parse_dur_unit(input) {
@@ -1105,6 +1106,7 @@ pub fn ffi_parse_tempo(input : String) -> String {
 }
 
 ///|
+/// @deprecated Use ffi_ticks_to_seconds_json instead.
 /// FFI tick→秒：入 480,120.0,480 → {"ok":true,"seconds":0.5}
 pub fn ffi_ticks_to_seconds(ticks : Int, bpm : Double, ppq : Int) -> String {
   match ticks_to_seconds(ticks, bpm, ppq) {
@@ -1114,6 +1116,7 @@ pub fn ffi_ticks_to_seconds(ticks : Int, bpm : Double, ppq : Int) -> String {
 }
 
 ///|
+/// @deprecated Use ffi_bar_length_json instead.
 /// FFI 小节长度：入 "4/4",480 → {"ok":true,"ticks":1920}
 pub fn ffi_bar_length(sig : String, ppq : Int) -> String {
   match parse_time_sig(sig) {

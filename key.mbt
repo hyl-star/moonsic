@@ -47,7 +47,8 @@ fn key_spelling(tonic_midi : Int) -> Array[Accidental] {
 }
 
 ///|
-/// Legacy degree accessor. Prefer `key_degree_checked` for checked API.
+/// @deprecated Use key_degree_checked instead.
+/// Legacy degree accessor.
 pub fn Key::degree(self : Key, deg : Int, base_octave : Int) -> Pitch {
   match self.key_degree_checked(deg, base_octave) {
     Ok(p) => p
