@@ -46,12 +46,32 @@ fn key_spelling(tonic_midi : Int) -> Array[Accidental] {
 }
 
 ///|
+/// Legacy degree accessor. Prefer `key_degree_checked` for checked API.
 pub fn Key::degree(self : Key, deg : Int, base_octave : Int) -> Pitch {
+  match key_degree_checked(self, deg, base_octave) {
+    Ok(p) => p
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+/// Checked key-aware scale degree accessor.
+/// Returns the pitch for a given scale degree (1-based), respecting the key's
+/// spelling (accidentals from the key signature).
+/// Returns `Err(InvalidInterval)` if deg <= 0.
+pub fn Key::key_degree_checked(
+  self : Key,
+  deg : Int,
+  base_octave : Int,
+) -> Result[Pitch, TheoryError] {
+  if deg <= 0 {
+    return Err(InvalidInterval("scale degree must be > 0, got \{deg}"))
+  }
   let intervals = self.kind.intervals()
   let spellings = key_spelling(self.tonic.to_midi())
   let octave_shift = (deg - 1) / intervals.length()
   let idx = (deg - 1) % intervals.length()
-  // 音名由音级决定（1=F, 2=G, 3=A, 4=B, ...）
+  // 音名由音级决定（按字母顺序从主音开始）
   let tonic_class_idx = match self.tonic.class {
     C => 0
     D => 1
@@ -78,7 +98,7 @@ pub fn Key::degree(self : Key, deg : Int, base_octave : Int) -> Pitch {
     Natural
   }
   let target_octave = base_octave + octave_shift
-  pitch(class, accidental, target_octave)
+  Ok(pitch(class, accidental, target_octave))
 }
 
 ///|

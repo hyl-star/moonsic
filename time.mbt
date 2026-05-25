@@ -447,6 +447,25 @@ pub fn seconds_to_ticks(seconds : Double, bpm : Double, ppq : Int) -> Int {
   (seconds * bpm * ppq.to_double() / 60.0).to_int()
 }
 
+///|
+/// 秒数 → tick 数（checked，验证 ppq/bpm/seconds 合法性）
+pub fn seconds_to_ticks_checked(
+  seconds : Double,
+  bpm : Double,
+  ppq : Int,
+) -> Result[Int, TimeError] {
+  if ppq <= 0 {
+    return Err(InvalidPPQ("PPQ 必须 > 0，当前：\{ppq}"))
+  }
+  if bpm <= 0.0 {
+    return Err(InvalidTempo("BPM 必须 > 0，当前：\{bpm}"))
+  }
+  if seconds < 0.0 {
+    return Err(InvalidTick("秒数不能为负数：\{seconds}"))
+  }
+  Ok((seconds * bpm * ppq.to_double() / 60.0).to_int())
+}
+
 // ============================================================
 // 解析层
 // ============================================================

@@ -550,6 +550,8 @@ pub fn score_with_tempo(Array[Track], Tempo, TimeSignature) -> Score
 
 pub fn seconds_to_ticks(Double, Double, Int) -> Int
 
+pub fn seconds_to_ticks_checked(Double, Double, Int) -> Result[Int, TimeError]
+
 pub fn section(String, Array[Track]) -> Section
 
 pub fn signature_at_bar(TimeMap, Int) -> (Int, Int)

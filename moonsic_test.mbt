@@ -2895,3 +2895,267 @@ test "pitch_v2: invalid_frequency_error_to_string" {
   let e = @moonsic.InvalidFrequency(-1.0)
   assert_true(e.to_string().contains("无效频率"))
 }
+
+// ============================================================
+// Rhythm/Time 稳定化 — 边界与转换测试 (v2)
+// ============================================================
+
+///|
+/// 边界：5/4 小节长度 @ 480ppq = 2400 ticks
+test "time_boundary: bar_length_5_4" {
+  let sig = @moonsic.time_signature(5, 4)
+  let ticks = @moonsic.bar_length_ticks(sig, 480).unwrap()
+  assert_eq(ticks, 2400)
+}
+
+///|
+/// 边界：7/8 小节长度 @ 480ppq = 1680 ticks
+test "time_boundary: bar_length_7_8" {
+  let sig = @moonsic.time_signature(7, 8)
+  let ticks = @moonsic.bar_length_ticks(sig, 480).unwrap()
+  assert_eq(ticks, 1680)
+}
+
+///|
+/// 边界：960 ticks @ 120bpm @ 480ppq = 1.0 秒
+test "time_boundary: ticks_to_seconds_960_at_120" {
+  let sec = @moonsic.ticks_to_seconds(960, 120.0, 480).unwrap()
+  assert_true(sec > 0.99 && sec < 1.01)
+}
+
+///|
+/// 边界：三分附点 (dots=3) — 15/8 倍率, quarter → 900 ticks
+test "time_boundary: rhythm_duration_triple_dotted" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.DurQuarter,
+    dots: 3,
+    tuplet: None,
+  }
+  let ticks = @moonsic.rhythm_duration_to_ticks(d, 480).unwrap()
+  assert_eq(ticks, 900)
+}
+
+///|
+/// 边界：附点数 > 3 应返回错误
+test "time_boundary: rhythm_duration_dots_excessive_err" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.DurQuarter,
+    dots: 4,
+    tuplet: None,
+  }
+  let r = @moonsic.rhythm_duration_to_ticks(d, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+/// 边界：连音比为 3:0 (normal=0) 应返回错误
+test "time_boundary: rhythm_duration_tuplet_invalid_err" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.DurEighth,
+    dots: 0,
+    tuplet: Some(@moonsic.TupletRatio::{ actual: 3, normal: 0 }),
+  }
+  let r = @moonsic.rhythm_duration_to_ticks(d, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+/// 边界：5:4 连音八分 @ 480ppq = 192 ticks
+/// 公式：480 * 1/2 * 4/5 = 192
+test "time_boundary: rhythm_duration_tuplet_5_4_eighth" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.DurEighth,
+    dots: 0,
+    tuplet: Some(@moonsic.TupletRatio::{ actual: 5, normal: 4 }),
+  }
+  let ticks = @moonsic.rhythm_duration_to_ticks(d, 480).unwrap()
+  assert_eq(ticks, 192)
+}
+
+///|
+/// 边界：64分音符 @ 480ppq = 30 ticks
+test "time_boundary: rhythm_duration_sixtyfourth" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.SixtyFourth,
+    dots: 0,
+    tuplet: None,
+  }
+  let ticks = @moonsic.rhythm_duration_to_ticks(d, 480).unwrap()
+  assert_eq(ticks, 30)
+}
+
+///|
+/// 边界：128分音符 @ 480ppq = 15 ticks
+test "time_boundary: rhythm_duration_128th" {
+  let d = @moonsic.RhythmDuration::{
+    unit: @moonsic.OneTwentyEighth,
+    dots: 0,
+    tuplet: None,
+  }
+  let ticks = @moonsic.rhythm_duration_to_ticks(d, 480).unwrap()
+  assert_eq(ticks, 15)
+}
+
+///|
+/// 边界：全音符 @ 480ppq = 1920 ticks
+test "time_boundary: bar_length_full_whole" {
+  let sig = @moonsic.time_signature(4, 4)
+  let bar_ticks = @moonsic.bar_length_ticks(sig, 480).unwrap()
+  // 4/4 小节 = 1920 ticks（恰好等于全音符）
+  let whole = @moonsic.RhythmDuration::{
+    unit: @moonsic.DurWhole,
+    dots: 0,
+    tuplet: None,
+  }
+  let whole_ticks = @moonsic.rhythm_duration_to_ticks(whole, 480).unwrap()
+  assert_eq(bar_ticks, 1920)
+  assert_eq(whole_ticks, 1920)
+}
+
+///|
+/// 边界：seconds_to_ticks_checked 合法输入（1.0s @ 120bpm @ 480ppq → 960 ticks）
+test "time_boundary: seconds_to_ticks_checked_valid" {
+  let r = @moonsic.seconds_to_ticks_checked(1.0, 120.0, 480)
+  assert_true(r is Ok(_))
+  assert_eq(r.unwrap(), 960)
+}
+
+///|
+/// 边界：seconds_to_ticks_checked ppq=0 返回错误
+test "time_boundary: seconds_to_ticks_checked_invalid_ppq" {
+  let r = @moonsic.seconds_to_ticks_checked(1.0, 120.0, 0)
+  assert_true(r is Err(_))
+}
+
+///|
+/// 边界：seconds_to_ticks_checked bpm=0 返回错误
+test "time_boundary: seconds_to_ticks_checked_invalid_bpm" {
+  let r = @moonsic.seconds_to_ticks_checked(1.0, 0.0, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+/// 边界：seconds_to_ticks_checked 秒数为负返回错误
+test "time_boundary: seconds_to_ticks_checked_negative" {
+  let r = @moonsic.seconds_to_ticks_checked(-1.0, 120.0, 480)
+  assert_true(r is Err(_))
+}
+
+///|
+/// 边界：position_to_ticks bar=2 beat=1 offset=0, 4/4 @ 480 → 4320
+test "time_boundary: position_to_ticks_bar2_beat1" {
+  let pos = @moonsic.BarPosition::{
+    bar: 2,
+    beat: @moonsic.rational(1, 1).unwrap(),
+    offset: @moonsic.rational(0, 1).unwrap(),
+  }
+  let sig = @moonsic.time_signature(4, 4)
+  let ticks = @moonsic.position_to_ticks(pos, sig, 480).unwrap()
+  assert_eq(ticks, 4320)
+}
+
+///|
+/// 边界：position_to_ticks bar=0 beat=2 offset=1/2, 4/4 @ 480 → 1200
+/// 小节开始 0 + 2 拍 (960) + 半拍 (480*0.5=240) = 1200
+test "time_boundary: position_to_ticks_with_offset" {
+  let pos = @moonsic.BarPosition::{
+    bar: 0,
+    beat: @moonsic.rational(2, 1).unwrap(),
+    offset: @moonsic.rational(1, 2).unwrap(),
+  }
+  let sig = @moonsic.time_signature(4, 4)
+  let ticks = @moonsic.position_to_ticks(pos, sig, 480).unwrap()
+  assert_eq(ticks, 1200)
+}
+
+///|
+/// 边界：position → ticks → position 往返一致
+test "time_boundary: position_ticks_roundtrip" {
+  let sig = @moonsic.time_signature(4, 4)
+  let pos = @moonsic.BarPosition::{
+    bar: 3,
+    beat: @moonsic.rational(3, 1).unwrap(),
+    offset: @moonsic.rational(1, 4).unwrap(),
+  }
+  let ticks = @moonsic.position_to_ticks(pos, sig, 480).unwrap()
+  let pos2 = @moonsic.ticks_to_position(ticks, sig, 480).unwrap()
+  assert_eq(pos2.bar, 3)
+  // beat should be 3 (integer)
+  assert_true(@moonsic.rational_is_integer(pos2.beat))
+  assert_eq(@moonsic.rational_to_int(pos2.beat).unwrap(), 3)
+  // offset should be 1/4 (120/480)
+  assert_eq(pos2.offset.numerator, 1)
+  assert_eq(pos2.offset.denominator, 4)
+}
+
+///|
+/// 边界：TimeMap 多速度段 4 segment 累加
+/// tick 0-480@120, 480-960@60, 960-1440@30
+/// seg1: 0.5s, seg2: 1.0s, seg3: 2.0s → total 3.5s
+test "time_boundary: timemap_multi_tempo_3_changes" {
+  let sig = @moonsic.time_signature(4, 4)
+  let tm = @moonsic.make_time_map(480, sig, 120.0).unwrap()
+  let tm2 = @moonsic.add_tempo_change(tm, @moonsic.TempoChange::{
+    at_tick: 480,
+    tempo_bpm: 60.0,
+  })
+  let tm3 = @moonsic.add_tempo_change(tm2, @moonsic.TempoChange::{
+    at_tick: 960,
+    tempo_bpm: 30.0,
+  })
+  // seg1: 0..480 @ 120 = 0.5s
+  // seg2: 480..960 @ 60 = 1.0s
+  // seg3: 960..1440 @ 30 = 2.0s
+  // total: 3.5s
+  let sec = @moonsic.ticks_to_seconds_timemap(1440, tm3).unwrap()
+  assert_true(sec > 3.49 && sec < 3.51)
+}
+
+///|
+/// 边界：Parsed "q." then to_ticks @ 480 = 720
+test "time_boundary: parsed_dotted_quarter_to_ticks" {
+  let dur = @moonsic.parse_dur_unit("q.").unwrap()
+  let ticks = @moonsic.rhythm_duration_to_ticks(dur, 480).unwrap()
+  assert_eq(ticks, 720)
+}
+
+///|
+/// 边界：Parsed "q.." then to_ticks @ 480 = 840
+test "time_boundary: parsed_double_dotted_to_ticks" {
+  let dur = @moonsic.parse_dur_unit("q..").unwrap()
+  let ticks = @moonsic.rhythm_duration_to_ticks(dur, 480).unwrap()
+  assert_eq(ticks, 840)
+}
+
+///|
+/// 边界：Parsed "3:2 8" then to_ticks @ 480 = 160
+test "time_boundary: parsed_triplet_eighth_to_ticks" {
+  let dur = @moonsic.parse_dur_unit("3:2 8").unwrap()
+  let ticks = @moonsic.rhythm_duration_to_ticks(dur, 480).unwrap()
+  assert_eq(ticks, 160)
+}
+
+///|
+/// 边界：Rational to_double 负值
+test "time_boundary: rational_to_double_negative" {
+  let r = @moonsic.rational(-3, 4).unwrap()
+  let d = @moonsic.rational_to_double(r)
+  assert_true(d < -0.74 && d > -0.76)
+}
+
+///|
+/// 边界：Rational is_integer 零值
+test "time_boundary: rational_is_integer_zero" {
+  let r = @moonsic.rational(0, 5).unwrap()
+  assert_true(@moonsic.rational_is_integer(r))
+}
+
+///|
+/// 边界：tick=0 位置转换
+test "time_boundary: ticks_to_position_tick_zero" {
+  let sig = @moonsic.time_signature(4, 4)
+  let pos = @moonsic.ticks_to_position(0, sig, 480).unwrap()
+  assert_eq(pos.bar, 0)
+  assert_eq(pos.beat.numerator, 0)
+  assert_eq(pos.offset.numerator, 0)
+}

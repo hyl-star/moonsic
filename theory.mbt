@@ -236,7 +236,8 @@ pub fn progression(
 // --- 和弦文本解析 ---
 
 ///|
-/// 从文本解析和弦。支持 "C"、"Cm"、"Cmaj7"、"Dm7"、"G7"、"F#dim" 等格式。
+/// 从文本解析和弦。支持 "C"、"Cm"、"Cmaj7"、"Dm7"、"G7"、"F#dim"、"C+"、"CM7"、
+/// "F#maj7"、"Bdim7"、"Cmin7" 等格式。
 pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   if input.length() == 0 {
     return Err(InvalidChord("empty chord string"))
@@ -268,7 +269,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   }
 
   // 解析和弦品质后缀
-  let (quality, end_pos) = parse_chord_quality(input, pos)
+  let (quality, end_pos) = parse_chord_quality_internal(input, pos)
   if end_pos != input.length() {
     return Err(
       InvalidChord(
@@ -281,7 +282,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
   let root = pitch(root_class, accidental, 4)
   let root_midi = root.to_midi()
   let semitone_intervals = quality.intervals()
-  let letter_offsets = chord_letter_steps(quality)
+  let letter_offsets = chord_quality_letter_steps(quality)
   let root_cls = class_index(root_class)
   let pitches = []
   for i = 0; i < semitone_intervals.length(); i = i + 1 {
@@ -316,7 +317,7 @@ pub fn parse_chord(input : String) -> Result[Chord, TheoryError] {
 
 ///|
 /// 和弦品质对应的字母步进（在字母空间中的偏移）
-fn chord_letter_steps(quality : ChordQuality) -> Array[Int] {
+pub fn chord_quality_letter_steps(quality : ChordQuality) -> Array[Int] {
   match quality {
     MajorTriad => [0, 2, 4]
     MinorTriad => [0, 2, 4]
@@ -333,32 +334,72 @@ fn chord_letter_steps(quality : ChordQuality) -> Array[Int] {
 }
 
 ///|
-/// 解析和弦品质后缀（内部函数）
-fn parse_chord_quality(input : String, pos : Int) -> (ChordQuality, Int) {
+/// 从文本解析和弦品质后缀。支持 "maj7"、"M7"、"dim7"、"o7"、"m7b5"、"min7"、
+/// "m7"、"dim"、"o"、"aug"、"+"、"min"、"m"、"7"、"sus2"、"sus4" 等。
+/// 返回 `Ok(ChordQuality)` 或 `Err(InvalidChord)`。
+pub fn parse_chord_quality_checked(
+  input : String,
+) -> Result[ChordQuality, TheoryError] {
+  if input.length() == 0 {
+    return Err(InvalidChord("empty chord quality"))
+  }
+  let (quality, end_pos) = parse_chord_quality_internal(input, 0)
+  if end_pos != input.length() {
+    return Err(
+      InvalidChord(
+        "trailing chord suffix: \{input[end_pos:input.length()].to_owned()}",
+      ),
+    )
+  }
+  Ok(quality)
+}
+
+///|
+/// 内部：解析和弦品质后缀，按最长优先匹配
+/// 返回 (ChordQuality, 消费到的位置)
+fn parse_chord_quality_internal(
+  input : String,
+  pos : Int,
+) -> (ChordQuality, Int) {
   if pos >= input.length() {
     return (MajorTriad, pos)
   }
-  // 优先匹配较长的模式
+  // 4-char 模式（最长优先）
   if match_chord_str(input, pos, "maj7") {
     (MajorSeventh, pos + 4)
   } else if match_chord_str(input, pos, "dim7") {
     (Diminished7, pos + 4)
   } else if match_chord_str(input, pos, "m7b5") {
     (HalfDiminished7, pos + 4)
-  } else if match_chord_str(input, pos, "m7") {
-    (MinorSeventh, pos + 2)
-  } else if match_chord_str(input, pos, "dim") {
-    (DiminishedTriad, pos + 3)
-  } else if match_chord_str(input, pos, "aug") {
-    (AugmentedTriad, pos + 3)
-  } else if match_chord_str(input, pos, "m") {
-    (MinorTriad, pos + 1)
-  } else if match_chord_str(input, pos, "7") {
-    (DominantSeventh, pos + 1)
+  } else if match_chord_str(input, pos, "min7") {
+    (MinorSeventh, pos + 4)
   } else if match_chord_str(input, pos, "sus2") {
     (Suspended2, pos + 4)
   } else if match_chord_str(input, pos, "sus4") {
     (Suspended4, pos + 4)
+  } else if match_chord_str(input, pos, "dim") {
+    // 3-char
+    (DiminishedTriad, pos + 3)
+  } else if match_chord_str(input, pos, "aug") {
+    (AugmentedTriad, pos + 3)
+  } else if match_chord_str(input, pos, "min") {
+    (MinorTriad, pos + 3)
+  } else if match_chord_str(input, pos, "m7") {
+    // 2-char
+    (MinorSeventh, pos + 2)
+  } else if match_chord_str(input, pos, "M7") {
+    (MajorSeventh, pos + 2)
+  } else if match_chord_str(input, pos, "o7") {
+    (Diminished7, pos + 2)
+  } else if match_chord_str(input, pos, "o") {
+    // 1-char（必须在 "o7" 之后）
+    (DiminishedTriad, pos + 1)
+  } else if input[pos] == '+' {
+    (AugmentedTriad, pos + 1)
+  } else if match_chord_str(input, pos, "m") {
+    (MinorTriad, pos + 1)
+  } else if match_chord_str(input, pos, "7") {
+    (DominantSeventh, pos + 1)
   } else {
     (MajorTriad, pos)
   }
@@ -367,6 +408,90 @@ fn parse_chord_quality(input : String, pos : Int) -> (ChordQuality, Int) {
 ///|
 /// 检查字符串从 pos 开始是否匹配 target
 fn match_chord_str(s : String, pos : Int, target : String) -> Bool {
+  let len = target.length()
+  if pos + len > s.length() {
+    return false
+  }
+  let mut i = 0
+  while i < len {
+    if s[pos + i] != target[i] {
+      return false
+    }
+    i = i + 1
+  }
+  true
+}
+
+///|
+/// 从文本解析音阶品质。支持 "major"、"ionian"、"minor"、"natural minor"、
+/// "aeolian"、"major pentatonic"、"minor pentatonic"、"harmonic minor"、
+/// "melodic minor"、"dorian"、"phrygian"、"lydian"、"mixolydian"、
+/// "locrian"、"chromatic" 等。
+/// 返回 `Ok(ScaleKind)` 或 `Err(InvalidScale)`。
+pub fn parse_scale_kind_checked(
+  input : String,
+) -> Result[ScaleKind, TheoryError] {
+  let trimmed = input.trim().to_owned()
+  if trimmed.length() == 0 {
+    return Err(InvalidScale("empty scale kind"))
+  }
+  let (kind, end_pos) = match parse_scale_kind_internal(trimmed, 0) {
+    Ok(v) => v
+    Err(e) => return Err(e)
+  }
+  let remaining = trimmed[end_pos:trimmed.length()].trim()
+  if remaining.length() > 0 {
+    return Err(
+      InvalidScale("trailing scale kind suffix: \{remaining.to_owned()}"),
+    )
+  }
+  Ok(kind)
+}
+
+///|
+/// 内部：从位置 p 解析音阶品质名称，返回 (ScaleKind, 新位置)
+fn parse_scale_kind_internal(
+  input : String,
+  pos : Int,
+) -> Result[(ScaleKind, Int), TheoryError] {
+  if match_at(input, pos, "major pentatonic") {
+    Ok((MajorPentatonic, pos + "major pentatonic".length()))
+  } else if match_at(input, pos, "minor pentatonic") {
+    Ok((MinorPentatonic, pos + "minor pentatonic".length()))
+  } else if match_at(input, pos, "harmonic minor") {
+    Ok((HarmonicMinor, pos + "harmonic minor".length()))
+  } else if match_at(input, pos, "melodic minor") {
+    Ok((MelodicMinor, pos + "melodic minor".length()))
+  } else if match_at(input, pos, "natural minor") {
+    Ok((NaturalMinor, pos + "natural minor".length()))
+  } else if match_at(input, pos, "major") {
+    Ok((Major, pos + "major".length()))
+  } else if match_at(input, pos, "ionian") {
+    Ok((Major, pos + "ionian".length()))
+  } else if match_at(input, pos, "minor") {
+    Ok((NaturalMinor, pos + "minor".length()))
+  } else if match_at(input, pos, "aeolian") {
+    Ok((NaturalMinor, pos + "aeolian".length()))
+  } else if match_at(input, pos, "dorian") {
+    Ok((Dorian, pos + "dorian".length()))
+  } else if match_at(input, pos, "phrygian") {
+    Ok((Phrygian, pos + "phrygian".length()))
+  } else if match_at(input, pos, "lydian") {
+    Ok((Lydian, pos + "lydian".length()))
+  } else if match_at(input, pos, "mixolydian") {
+    Ok((Mixolydian, pos + "mixolydian".length()))
+  } else if match_at(input, pos, "locrian") {
+    Ok((Locrian, pos + "locrian".length()))
+  } else if match_at(input, pos, "chromatic") {
+    Ok((Chromatic, pos + "chromatic".length()))
+  } else {
+    Err(InvalidScale("unknown scale type: \{input}"))
+  }
+}
+
+///|
+/// 内部：检查字符串从 pos 开始是否匹配 target
+fn match_at(s : String, pos : Int, target : String) -> Bool {
   let len = target.length()
   if pos + len > s.length() {
     return false
