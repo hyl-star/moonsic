@@ -1,68 +1,48 @@
+<details open>
+<summary><b>中文</b> | <a href="#english">English ↓</a></summary>
+
 # moonsic
 
-moonsic is a MoonBit music IR and export library with MIDI, WAV, and browser event output.
+MoonBit 音乐语义库 — 用强类型描述音乐，导出 MIDI/WAV/浏览器事件。
 
-## Quick Start
+## 快速开始
 
-```moonbit nocheck
-///|
+```moonbit
 let chords = progression(c(3), Major, [I, V, VI, IV], half())
-
-///|
 let lead = melody_str("C4q D4q E4q G4q")
-
-///|
 let song = score_with([chords, lead], 120, four_four())
-
-///|
-let midi = song.to_midi_bytes_with_ppq_checked(480)
-
-///|
-let wav = song.to_wav_bytes()
+let midi = song.to_midi_bytes()  // MIDI 字节流
+let wav = song.to_wav_bytes()    // WAV 音频
 ```
 
-## Core Concepts
+## 核心概念
 
-- **Pitch** — pitch class + accidental + octave, e.g. `c(4)` = C4 (MIDI 60).
-- **Duration** — `whole()`, `half()`, `quarter()`, `eighth()`, `sixteenth()`, `dotted()`.
-- **MusicEvent** — track element: `Note`, `Rest`, or `Chord`.
-- **Track** — ordered sequence of events with channel, instrument, volume, pan, mute.
-- **Score** — tempo + time signature + multiple tracks.
-- **NoteEvent** — runtime event with absolute start time, duration, MIDI note, velocity, channel.
+- **Pitch** — 音高 = 音名 + 变音记号 + 八度，`c(4)` = C4 (MIDI 60)
+- **Duration** — 时值：`whole()` `half()` `quarter()` `eighth()` `sixteenth()` `dotted()`
+- **MusicEvent** — 轨道事件：`Note` | `Rest` | `Chord`
+- **Track** — 有序事件序列，带通道/乐器/音量/声像/静音
+- **Score** — 速度 + 拍号 + 多轨道
+- **NoteEvent** — 运行时事件：start/duration/midi/velocity/channel
 
-Pipeline:
+数据流：
 
 ```text
-API / text notation -> Score -> NoteEvent -> MIDI / WAV / browser events
+API / 文本记谱 → Score → NoteEvent → MIDI / WAV / 浏览器事件 → 声音
 ```
 
-## Compose With MoonBit API
+## API 速览
 
-### Pitch shortcuts
+### 音高
+| 函数 | 结果 | MIDI |
+|------|------|------|
+| `c(4)` `d(4)` `e(4)` `f(4)` `g(4)` `a(4)` `b(4)` | 自然音 | 60~71 |
+| `cs(4)` `ds(4)` `fs(4)` `gs(4)` | 升号 | 61~68 |
+| `db(4)` `eb(4)` `gb(4)` `ab(4)` `bb(4)` | 降号 | 61~70 |
+| `pitch(C, Sharp, 4)` | 完整构造 | — |
 
-| Function | Result | MIDI |
-|----------|--------|------|
-| `c(4)` | C4 | 60 |
-| `d(4)` | D4 | 62 |
-| `e(4)` | E4 | 64 |
-| `f(4)` | F4 | 65 |
-| `g(4)` | G4 | 67 |
-| `a(4)` | A4 | 69 |
-| `b(4)` | B4 | 71 |
-| `cs(4)` | C#4 | 61 |
-| `ds(4)` | D#4 | 63 |
-| `fs(4)` | F#4 | 66 |
-| `gs(4)` | G#4 | 68 |
-| `db(4)` | Db4 | 61 |
-| `eb(4)` | Eb4 | 63 |
-| `gb(4)` | Gb4 | 66 |
-| `ab(4)` | Ab4 | 68 |
-| `bb(4)` | Bb4 | 70 |
-
-### Duration
-
-| Function | Beats |
-|----------|-------|
+### 时值
+| 函数 | 拍数 |
+|------|------|
 | `whole()` | 4.0 |
 | `half()` | 2.0 |
 | `quarter()` | 1.0 |
@@ -70,334 +50,227 @@ API / text notation -> Score -> NoteEvent -> MIDI / WAV / browser events
 | `sixteenth()` | 0.25 |
 | `dotted(quarter())` | 1.5 |
 
-### Events
+### 事件
+| 函数 | 说明 |
+|------|------|
+| `n(c(4), quarter())` | 音符（力度100） |
+| `nv(c(4), quarter(), 64)` | 指定力度 |
+| `r(half())` | 休止 |
+| `major(c(3), half())` | 大三和弦 |
+| `minor(a(3), half())` | 小三和弦 |
+| `dim` `aug` `dom7` `maj7` `min7` | 其他和弦 |
+| `ch([c(4),e(4),g(4)], q())` | 自定义和弦 |
+
+### 轨道与乐谱
+| 函数 | 说明 |
+|------|------|
+| `melody([...])` | 创建轨道 |
+| `score1(track)` | 单轨乐谱 |
+| `score_with([tracks], bpm, ts)` | 多轨乐谱 |
+| `track.transpose(n)` | 移调 |
+| `track.stretch(f)` `track.concat` `track.reverse` | 变换 |
+
+### 乐理
+| 函数 | 说明 |
+|------|------|
+| `scale(root, kind, octaves)` | 音阶 |
+| `degree(root, kind, n)` | 第N级 |
+| `progression(root, kind, [I,IV,V], dur)` | 和弦进行 |
+| `roman_progression(key, "I V vi IV", dur)` | 文本进行 |
+| `voice_lead(chords)` | 声部引导 |
+| `bass_from_progression(chords, style, oct)` | 低音 |
+| `arpeggiate(chords, step_dur)` | 琶音 |
+
+### 文本记谱
+```moonbit
+let t = melody_str("C4q D4q [E4 G4]h Rq D4q:64 x2")
+let s = score_str("tempo 140\ntime 3/4\nC4q D4q E4q")
+```
+格式：`音名[变音][八度]时值[:力度]`。和弦：`[音1 音2...]时值`。重复：`xN`。
+
+### 导出
+
+| 函数 | 输出 |
+|------|------|
+| `song.to_midi_bytes()` | MIDI 字节流 (SMF Format 1) |
+| `song.to_wav_bytes()` | WAV 字节流 (44100Hz 16-bit mono) |
+| `score_to_json(song)` | JSON 字符串 |
+| `score_to_musicxml_string_checked(s, opts)` | MusicXML 字符串 |
+
+### 曲谱结构（进阶）
+| 模块 | 内容 |
+|------|------|
+| `score_layout.mbt` | Measure/Voice/Staff/Part/ScoreLayout |
+| `score_enhanced.mbt` | Section/Repeat/Ending/Notation/Lyric/Tie |
+| `validate.mbt` | ValidationProfile + 导出就绪校验 |
+
+### 生成
+| 模块 | 内容 |
+|------|------|
+| `generate.mbt` | 旋律/和弦/bass/伴奏/游戏循环生成 |
+| `rhythm.mbt` | 节奏模板/动机/模式变换 |
+
+### 协议
+| 模块 | 内容 |
+|------|------|
+| `adapter.mbt` | 外部生成器协议 (GenerationRequest/Response) |
+| `game_music.mbt` | 游戏音频 IR (Cue/Loop/Stinger/Transition) |
+
+## 项目结构
+
+```
+core.mbt        核心音乐模型
+runtime.mbt     事件运行时 + 浏览器导出
+midi.mbt        MIDI 导出
+wav.mbt         WAV 渲染
+helpers.mbt     快捷 API + 文本解析器
+theory.mbt      乐理：音程/音阶/和弦
+patterns.mbt    轨道变换
+instruments.mbt GM 乐器
+arpeggio.mbt    琶音生成
+bass.mbt        低音生成
+drums.mbt       鼓组
+harmony.mbt     罗马数字 + 声部引导
+key.mbt         调号拼写
+structure.mbt   Section/arrange
+time.mbt        节奏时间：Rational/Tuplet/TimeMap
+interval.mbt    音程计算
+scale_struct.mbt Scale 结构
+theory_error.mbt TheoryError
+serialize.mbt   JSON 编解码
+score_layout.mbt 曲谱布局
+score_midi.mbt  MIDI 语义适配
+score_enhanced.mbt 专业曲谱结构
+validate.mbt    校验报告
+musicxml.mbt    MusicXML 导出
+playback.mbt    播放时间线
+generate.mbt    音乐生成
+rhythm.mbt      节奏/动机
+adapter.mbt     外部生成器协议
+game_music.mbt  游戏音频 IR
+benchmark.mbt   性能基准
+web/            浏览器编辑器 + 播放器
+```
+
+## 命令
+
+```bash
+moon test          # 849 tests
+moon run cmd/main  # CLI demo
+moon fmt           # 格式化
+moon info          # 更新接口
+```
+
+## API 稳定性
+
+**Stable**：Pitch/Duration 构造器、事件构造器、Track/Score 构造、Music 操作（transpose/stretch/repeat/concat）、Render/export（to_midi_bytes/to_wav_bytes）、核心类型
+
+**Experimental**：`melody_str`/`score_str`、`roman_progression`/`accompany`/`voice_lead`、Bass/Arpeggio 生成器、Style 枚举、newv1plus 模块
+
+</details>
+
+---
+
+<div id="english">
+
+# moonsic
+
+MoonBit music IR and export library with MIDI, WAV, and browser event output.
+
+## Quick Start
+
+```moonbit
+let chords = progression(c(3), Major, [I, V, VI, IV], half())
+let lead = melody_str("C4q D4q E4q G4q")
+let song = score_with([chords, lead], 120, four_four())
+let midi = song.to_midi_bytes()
+let wav = song.to_wav_bytes()
+```
+
+## Core Concepts
+
+- **Pitch** — class + accidental + octave, `c(4)` = C4 (MIDI 60)
+- **Duration** — `whole()` `half()` `quarter()` `eighth()` `sixteenth()` `dotted()`
+- **MusicEvent** — `Note` | `Rest` | `Chord`
+- **Track** — ordered events with channel/instrument/volume/pan/mute
+- **Score** — tempo + time signature + tracks
+- **NoteEvent** — runtime event: start/duration/midi/velocity/channel
+
+Pipeline: `API / text notation → Score → NoteEvent → MIDI / WAV / browser events → sound`
+
+## Pitch Shortcuts
+
+| Function | Result | MIDI |
+|----------|--------|------|
+| `c(4)`..`b(4)` | natural | 60-71 |
+| `cs(4)`..`gs(4)` | sharp | 61-68 |
+| `db(4)`..`bb(4)` | flat | 61-70 |
+
+## Events
 
 | Function | Description |
 |----------|-------------|
-| `n(c(4), quarter())` | Note with default velocity 100 |
-| `nv(c(4), quarter(), 64)` | Note with explicit velocity |
-| `r(half())` | Rest |
-| `major(c(3), half())` | Major triad C E G |
-| `minor(a(3), half())` | Minor triad A C E |
-| `dim(b(3), half())` | Diminished triad B D F |
-| `aug(c(4), half())` | Augmented triad C E G# |
-| `dom7(g(3), half())` | Dominant 7th G B D F |
-| `maj7(c(4), half())` | Major 7th C E G B |
-| `min7(a(3), half())` | Minor 7th A C E G |
-| `ch([c(4),e(4),g(4)], quarter())` | Custom chord |
+| `n(p, d)` | Note with default velocity |
+| `nv(p, d, v)` | Note with velocity |
+| `r(d)` | Rest |
+| `major(r, d)` / `minor(r, d)` | Triads |
+| `dim` `aug` `dom7` `maj7` `min7` | Other chords |
 
-### Track and Score
+## Track & Score
 
 | Function | Description |
 |----------|-------------|
-| `melody([...])` | Create track from events |
-| `melody_with_channel([...], ch)` | Track with channel |
-| `track_with_channel([...], ch)` | Explicit channel track |
-| `score1(track)` | Single-track score (120 BPM, 4/4) |
-| `score_with([tracks], bpm, time_sig)` | Multi-track score |
-| `empty_track()` | Empty track |
+| `melody([...])` | Create track |
+| `score1(t)` | Single-track score |
+| `score_with([tracks], bpm, ts)` | Multi-track score |
+| `track.transpose/stretch/concat/reverse` | Transforms |
 
-### Music Operations
+## Theory
 
 | Function | Description |
 |----------|-------------|
-| `track.transpose(n)` | Transpose track by n semitones |
-| `track.stretch(factor)` | Stretch durations |
-| `track.repeat(count)` | Repeat track N times |
-| `track.concat(other)` | Concatenate two tracks |
-| `track.reverse()` | Reverse event order |
-| `track.map_velocity(f)` | Map velocity function over all events |
-| `track.up_octave()` | Raise one octave |
-| `track.down_octave()` | Lower one octave |
-| `track.duration_beats()` | Total beats |
-| `track.with_volume(v)` | Set track volume (0.0..) |
-| `track.with_pan(p)` | Set track pan (-1.0..1.0) |
-
-### Theory
-
-| Function | Description |
-|----------|-------------|
-| `scale(root, kind, octaves)` | Build scale pitches |
-| `degree_checked(root, kind, n)` | Nth scale degree with structured errors |
-| `degree(root, kind, n)` | Legacy throwing scale-degree helper |
-| `key(tonic, kind)` | Key with spelling table |
-| `progression(root, kind, [I, IV, V], dur)` | Chord progression |
-| `roman_progression(key, "I V vi IV", dur)` | Text-based progression |
-| `voice_lead(chords)` | Apply voice leading |
-| `bass_from_progression(chords, style, octave)` | Generate bass line |
-| `arpeggiate(chords, step_dur)` | Arpeggiate chords |
-| `arpeggiate_dir(chords, step_dur, style)` | Arpeggiate with style |
-
-### Instrument and Drums
-
-| Function | Description |
-|----------|-------------|
-| `instrument(track, program)` | Set MIDI instrument |
-| `acoustic_grand_piano()` | Program 0 |
-| `violin()` | Program 40 |
-| `drum_note(note, dur, vel)` | Drum event |
-| `kick(dur)` | Kick drum (36) |
-| `snare(dur)` | Snare drum (38) |
-| `hat(dur)` | Closed hat (42) |
-| `basic_beat(bars)` | 3-track drum pattern |
-
-### Generation
-
-| Function | Description |
-|----------|-------------|
-| `generate_melody_checked(key, rhythm)` | Generate melody with structured errors |
-| `generate_chord_progression_checked(context, bars)` | Generate chord progression |
-| `generate_accompaniment_checked(context, pattern)` | Generate accompaniment pattern |
-
-### Rhythm and Motif
-
-| Function | Description |
-|----------|-------------|
-| `rhythm_pattern_checked(cells)` | Build rhythm pattern with validation |
-| `motif_checked(degrees, rhythm)` | Build melodic motif |
-| `repeat_motif_checked(motif, count)` | Repeat motif into phrase pattern |
-| `join_patterns_checked(patterns)` | Concatenate multiple phrase patterns |
-| `fit_pattern_to_bars_checked(pattern, time_sig)` | Fit pattern to bar boundaries |
-
-### Enhanced Score Structure
-
-| Function | Description |
-|----------|-------------|
-| `make_section_checked(kind, label, start, end)` | Create section marker |
-| `enhanced_measure_checked(beats)` | Build enhanced measure |
-| `score_to_enhanced_layout_checked(score, ppq)` | Convert score to enhanced layout |
-| `enhanced_layout_to_score_checked(layout)` | Convert enhanced layout back to score |
-
-### Validation
-
-| Function | Description |
-|----------|-------------|
-| `validate_score_layout_report(layout)` | Validate score layout, return report |
-| `validation_report_has_errors(report)` | Check if report contains errors |
-| `validation_report_to_json(report)` | Serialize report to JSON |
-
-### MusicXML Export
-
-| Function | Description |
-|----------|-------------|
-| `score_to_musicxml_checked(score, options)` | Export score to MusicXML with validation |
-| `musicxml_to_string_checked(doc, doctype)` | Serialize MusicXML document to string |
-| `score_to_musicxml_string_checked(score)` | Convenience: score to MusicXML string in one call |
-
-### External Generator Adapter
-
-| Function | Description |
-|----------|-------------|
-| `generation_request_checked(task, constraints)` | Build validated generation request |
-| `deterministic_mock_generate(request)` | Deterministic mock generator |
-| `generation_request_to_json(request)` | Serialize request to JSON |
+| `scale(root, kind, n)` | Build scale |
+| `degree(root, kind, n)` | Nth degree |
+| `progression(root, kind, rns, dur)` | Chord progression |
+| `roman_progression(key, text, dur)` | Text-based progression |
+| `voice_lead(chords)` | Voice leading |
+| `bass_from_progression` / `arpeggiate` | Generators |
 
 ## Text Notation
 
-```moonbit nocheck
-///|
+```moonbit
 let t = melody_str("C4q D4q [E4 G4]h Rq D4q:64 x2")
-
-///|
-let s = score_str("tempo 140\ntime 3/4\nC4q D4q E4q")
 ```
+Format: `Note[Accidental]OctaveDuration[:Velocity]`. Chord: `[P1 P2...]Dur`. Repeat: `xN`.
 
-Format: `[Note][Accidental][Octave][Duration][:Velocity]`.  
-Chord format: `[Pitch1 Pitch2 ...]Duration`.  
-Repeat suffix: `xN`. Line comments: `# comment`.
+## Export
 
-## Export MIDI
-
-```moonbit nocheck
-///|
-let bytes = song.to_midi_bytes_with_ppq_checked(480)
-
-///|
-let bytes = song.to_midi_bytes_with_ppq_checked(960)
-```
-
-Exports multi-track MIDI with tempo meta event, time signature, instrument program change, and NoteOn/NoteOff ordering. Produces Standard MIDI File (SMF) format 1. Can be saved to `.mid` and opened in DAWs or notation software. The legacy `to_midi_bytes` and `to_midi_bytes_with_ppq` helpers are kept for compatibility and may abort on invalid input; new code should prefer checked APIs.
-
-## Export WAV
-
-```moonbit nocheck
-///|
-let wav = song.to_wav_bytes() // 44100Hz 16-bit mono PCM
-```
-
-v1 includes simple built-in sine-wave synthesis with ADSR envelope, normalize, and master gain. Future `moondsp` backend integration is on the roadmap.
-
-## Browser Playback
-
-```bash
-moon run cmd/main | Out-File -Encoding utf8 web/demo-events.js  # Generate data (PowerShell requires utf8)
-py -m http.server 8000 -d web              # Start server
-# Open http://localhost:8000, click Play
-```
-
-The demo loads moonsic-generated event data or falls back to a hardcoded melody. Supports loop playback, ADSR synthesis, and drum synthesis.
-
-## API Stability
-
-**Stable API** (intended to remain backward-compatible through v1.x):
-- Pitch and duration constructors (`c(4)`, `quarter()`, etc.)
-- Event constructors (`n()`, `nv()`, `r()`, `ch()`, `major()`, `minor()`, etc.)
-- Track/Score builders (`melody()`, `score1()`, `score_with()`, `track()`)
-- Music operations (`transpose`, `stretch`, `repeat`, `concat`, `reverse`, `map_velocity`)
-- Render/export (`to_midi_bytes_with_ppq_checked`, `to_wav_bytes`, `note_events_to_browser_js`)
-- Core types (`Pitch`, `Duration`, `Note`, `Chord`, `Rest`, `MusicEvent`, `Track`, `Score`, `NoteEvent`)
-
-**Experimental API** (evolving, may change in minor versions):
-- `melody_str` / `score_str` text parser
-- `roman_progression` / `accompany` / `voice_lead`
-- Bass and arpeggio generators (`bass_from_progression`, `arpeggiate_dir`)
-- Style enums (`BassStyle`, `ArpStyle`, `AccompanimentStyle`)
-
-## Checked vs Convenience API
-
-moonsic provides two styles of API for critical functions:
-
-| Style | Behavior | Example |
-|-------|----------|---------|
-| **Checked API** | Returns `Result[T, String]`, never aborts on invalid input | `tempo_checked(120)` -> `Ok(Tempo)` |
-| **Convenience API** | May `abort()` on invalid input (legacy behavior, kept for compatibility) | `tempo(120)` |
-
-**New code should prefer checked APIs.** Convenience APIs are retained solely for backward compatibility but may abort when given invalid inputs such as negative tempo, out-of-range MIDI notes, or invalid PPQ values.
-
-### Legacy API to Recommended API
-
-| Legacy API | Recommended Checked API |
-|------------|------------------------|
-| `tempo` | `tempo_checked` |
-| `midi_to_pitch` | `midi_to_pitch_checked` |
-| `to_midi_bytes` | `to_midi_bytes_with_ppq_checked` |
-| `to_midi_bytes_with_ppq` | `to_midi_bytes_with_ppq_checked` |
-| `degree` | `degree_checked` |
-| Typed FFI time helpers (`ffi_duration_ticks`, etc.) | JSON-string FFI wrappers (`ffi_duration_ticks_json`, etc.) |
-
-### API Stability Levels
-
-Every public API is classified into one of these levels:
-
-| Level | Commitment |
-|-------|-----------|
-| **Stable** | v1.x will not break signature or semantics |
-| **CheckedPreferred** | Legacy API kept for compatibility; checked variant recommended for new code |
-| **Experimental** | Signature may adjust in v1.x minor versions |
-| **Legacy** | Retained for backward compatibility; docs point to replacement API |
-| **Internal** | No external compatibility promise; may change without notice |
-
-## Feature Status
-
-| Module | Status | Notes |
-|--------|--------|-------|
-| Core model (Pitch, Duration, Note, Track, Score) | **Stable** | Backward-compatible through v1.x |
-| Text notation parser (`melody_str`, `score_str`) | **Experimental** | DSL syntax may evolve |
-| MIDI export (`to_midi_bytes_with_ppq_checked`) | **Stable** | Standard MIDI File format 1 |
-| WAV export (`to_wav_bytes`) | **Stable** | 44100 Hz 16-bit mono PCM |
-| Browser event export | **Stable** | WebAudio scheduler integration |
-| Theory (scales, chords, progression) | **Stable** | Core theory; roman parser experimental |
-| Accompaniment / Bass / Arpeggio | **Experimental** | Style enums and defaults may adjust |
-| Harmony (roman numerals, voice leading) | **Experimental** | Parser coverage expanding |
-| MusicXML export | **Planned** | Design doc in `todo/`; not yet implemented |
-| External generator protocol | **Planned** | Design doc in `todo/`; not yet implemented |
-| AI / ML integration | **Planned** | Roadmap item; no runtime code yet |
-
-## Module Coverage
-
-| Module | Docs | Examples | Tests | Benchmark |
-|--------|------|----------|-------|-----------|
-| Theory (scales, chords, key, roman, voice lead) | README | demo | required | suggested |
-| Time (BPM, tempo, ticks, bar length) | README | demo | required | suggested |
-| Score / Structure (section, arrange, layer, pad) | README | demo | required | suggested |
-| MIDI / Web / WAV export | README | demo | required | required |
-| Serialize / JSON / FFI | README | suggested | required | required |
-| Generation (accompany, bass, arpeggio, drums) | README | demo | required | required |
-| MusicXML export | planned | planned | planned | suggested |
-| External generator protocol | planned | planned | planned | not required |
-
-## Release Quality Checklist
-
-Every release must pass these gates:
-
-| Gate | Command | Required |
-|------|---------|----------|
-| Interface update | `moon info` | yes |
-| Code formatting | `moon fmt` | yes |
-| All tests pass | `moon test` | yes |
-| README accuracy review | manual / `grep` | yes |
-| `.mbti` diff review | manual diff after `moon info` | yes |
-| Benchmark smoke | benchmark command | recommended |
-
-After `moon info`, always review `pkg.generated.mbti` diffs to confirm API changes are intentional and compatible.
-
-## Version Policy
-
-| Phase | Breaking Changes Allowed |
-|-------|-------------------------|
-| v1.x patch | Not allowed |
-| v1.x minor | Experimental API only |
-| v2 alpha | Package split and migration permitted |
-| v2 stable | New stability commitments established |
-
-moonsic is currently in **v1.x** (single-package library). No physical package split is planned during v1.x.
-
-## Data Model Notes
-
-- `Duration` in `core.mbt` is the legacy convenience duration used by note/chord helpers. Use the richer `RhythmDuration` APIs in `time.mbt` when tuplets, dots, PPQ conversion, or strict validation matter.
-- `Scale.tones` is kept as a compatibility view of pitch-class letters. Use `Scale.spelled_tones` for spelling-aware output such as F# major, Bb minor, and JSON/user-facing notation.
-- Strict FFI entry points should prefer the JSON-string wrappers such as `ffi_duration_ticks_json`, `ffi_ticks_to_seconds_json`, and `ffi_bar_length_json`; typed FFI helpers are retained for compatibility.
+| Function | Output |
+|----------|--------|
+| `song.to_midi_bytes()` | MIDI bytes (SMF Format 1) |
+| `song.to_wav_bytes()` | WAV bytes (44100Hz 16-bit mono) |
+| `score_to_json(song)` | JSON string |
+| `score_to_musicxml_string_checked(s, opts)` | MusicXML string |
 
 ## Project Structure
 
 ```
-core.mbt                         Core music model: Pitch, Duration, Note, Chord, Rest, MusicEvent, Track, Score
-runtime.mbt                      Event runtime: NoteEvent, track/song flattening, browser JS export
-midi.mbt                         MIDI compatibility layer: frequency helpers and checked export wrappers
-helpers.mbt                      Composition shortcuts: pitch/duration/event builders, text parser
-theory.mbt                       Music theory: intervals, scales, chord qualities, chord progression
-patterns.mbt                     Track transforms: concat, reverse, stretch, map_velocity, octave
-instruments.mbt                  GM instrument presets
-arpeggio.mbt                     Arpeggio generator
-bass.mbt                         Bass line generator
-drums.mbt                        Drum constants and basic beat
-harmony.mbt                      Roman numeral parser and voice leading
-key.mbt                          Key-aware pitch spelling
-structure.mbt                    Section, arrange, layer, pad_to
-wav.mbt                          WAV/PCM export
-accompany.mbt                    Multi-track accompaniment templates
-pitch_class_rules.mbt            Shared pitch-class letter ordering rules
-parse_number_util.mbt            Shared ASCII number parser for time/JSON paths
-ffi_json.mbt                     Shared JSON response helpers for FFI wrappers
-generate.mbt                     Rule-based music generation: melody, chords, bass, accompaniment
-rhythm.mbt                       Rhythm template, motif, pattern transform, repeat, join
-score_enhanced.mbt               Professional score structure: Section, Repeat, Ending, Notation, Lyric
-validate.mbt                     Non-blocking score validation with structured issue reports
-musicxml.mbt                     MusicXML export: score-to-MusicXML conversion, validation
-adapter.mbt                      External generator protocol: request/response, mock provider
-moonsic_*_test.mbt               Split blackbox tests by module area
-web/                             Browser playback engine (scheduler + ADSR + loop)
-cmd/main/                        CLI entry point (generates browser demo data)
+core.mbt · runtime.mbt · midi.mbt · wav.mbt · helpers.mbt · theory.mbt
+patterns.mbt · instruments.mbt · arpeggio.mbt · bass.mbt · drums.mbt
+harmony.mbt · key.mbt · structure.mbt · time.mbt · interval.mbt
+scale_struct.mbt · theory_error.mbt · serialize.mbt · score_layout.mbt
+score_midi.mbt · score_enhanced.mbt · validate.mbt · musicxml.mbt
+playback.mbt · generate.mbt · rhythm.mbt · adapter.mbt · game_music.mbt
+benchmark.mbt · web/
 ```
 
-## Development Commands
+## Commands
 
 ```bash
-moon test              # Run tests (602 tests)
-moon check             # Type check
-moon info              # Update pkg.generated.mbti
-moon fmt               # Format code
-moon run cmd/main      # Generate browser demo data
+moon test          # 849 tests
+moon run cmd/main  # CLI demo
+moon fmt
+moon info
 ```
 
-After `moon info`, review `pkg.generated.mbti` diffs to confirm API changes are intentional.
-
-## Roadmap
-
-- **Post-v1** - Split theory/time/score/export packages for cleaner dependency boundaries
-- **Post-v1** - DSL compiler and stronger text-to-Score diagnostics
-- **Post-v1** - `moondsp` WAV backend and adaptive real-time scheduling
-- **v2** - Package architecture: `moonsic-core` (Pitch/Duration), `moonsic-theory`, `moonsic-time`, `moonsic-score`, `moonsic-midi`, `moonsic-wav`, `moonsic-musicxml`, `moonsic-gen` (generators), `moonsic-web`. See `todo/newv1plus7.md` for detailed v2 package plan.
-- **v2** - Deprecation period for legacy convenience APIs before removal in v2 stable
-
-Prior version summaries are maintained in `todo/` design documents.
+</div>
