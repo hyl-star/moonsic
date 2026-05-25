@@ -2153,6 +2153,511 @@ test "generate_error_to_string" {
 }
 
 // ============================================================
+// 生成器确定性与边界测试 (generate.mbt — v2 稳定化)
+// ============================================================
+
+///|
+/// 确定性：和弦进行相同输入两次产生相同输出
+test "generate_v2: chord_progression_deterministic" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let degrees = [1, 5, 6, 4]
+  let dur = @moonsic.Duration::Quarter
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.ChordsOnly,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let r1 = @moonsic.generate_chord_progression_checked(
+    key, degrees, dur, config,
+  )
+  let r2 = @moonsic.generate_chord_progression_checked(
+    key, degrees, dur, config,
+  )
+  let t1 = match r1 {
+    Ok(t) => t
+    Err(e) => abort(e.to_string())
+  }
+  let t2 = match r2 {
+    Ok(t) => t
+    Err(e) => abort(e.to_string())
+  }
+  assert_eq(t1.event_count(), t2.event_count())
+  for i = 0; i < t1.event_count(); i = i + 1 {
+    match (t1.events[i], t2.events[i]) {
+      (@moonsic.Chord(c1), @moonsic.Chord(c2)) =>
+        assert_eq(c1.pitches[0].to_midi(), c2.pitches[0].to_midi())
+      _ => abort("event mismatch at index \{i}")
+    }
+  }
+}
+
+///|
+/// 确定性：低音生成相同输入两次产生相同输出
+test "generate_v2: bass_deterministic" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.BassOnly,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(2),
+    range_high: @moonsic.c(4),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let prog_result = @moonsic.generate_chord_progression_checked(
+    key,
+    [1, 5, 6, 4],
+    @moonsic.Duration::Quarter,
+    config,
+  )
+  let progression = prog_result.unwrap()
+  let r1 = @moonsic.generate_bass_checked(
+    progression,
+    @moonsic.RootBass,
+    config,
+  )
+  let r2 = @moonsic.generate_bass_checked(
+    progression,
+    @moonsic.RootBass,
+    config,
+  )
+  let t1 = match r1 {
+    Ok(t) => t
+    Err(e) => abort(e.to_string())
+  }
+  let t2 = match r2 {
+    Ok(t) => t
+    Err(e) => abort(e.to_string())
+  }
+  assert_eq(t1.event_count(), t2.event_count())
+  for i = 0; i < t1.event_count(); i = i + 1 {
+    match (t1.events[i], t2.events[i]) {
+      (@moonsic.Note(n1), @moonsic.Note(n2)) =>
+        assert_eq(n1.pitch.to_midi(), n2.pitch.to_midi())
+      _ => abort("event mismatch")
+    }
+  }
+}
+
+///|
+/// 确定性：伴奏生成相同输入两次产生相同输出
+test "generate_v2: accompaniment_deterministic" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.AccompanimentMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let prog_result = @moonsic.generate_chord_progression_checked(
+    key,
+    [1, 4, 5, 1],
+    @moonsic.Duration::Quarter,
+    config,
+  )
+  let progression = prog_result.unwrap()
+  let r1 = @moonsic.generate_accompaniment_checked(
+    progression,
+    @moonsic.ArpeggioUpDown,
+    config,
+  )
+  let r2 = @moonsic.generate_accompaniment_checked(
+    progression,
+    @moonsic.ArpeggioUpDown,
+    config,
+  )
+  let s1 = match r1 {
+    Ok(s) => s
+    Err(e) => abort(e.to_string())
+  }
+  let s2 = match r2 {
+    Ok(s) => s
+    Err(e) => abort(e.to_string())
+  }
+  assert_eq(s1.track_count(), s2.track_count())
+  for ti = 0; ti < s1.track_count(); ti = ti + 1 {
+    assert_eq(s1.tracks[ti].event_count(), s2.tracks[ti].event_count())
+    for ei = 0; ei < s1.tracks[ti].event_count(); ei = ei + 1 {
+      match (s1.tracks[ti].events[ei], s2.tracks[ti].events[ei]) {
+        (@moonsic.Note(n1), @moonsic.Note(n2)) =>
+          assert_eq(n1.pitch.to_midi(), n2.pitch.to_midi())
+        (@moonsic.Rest(_), @moonsic.Rest(_)) => ()
+        _ => abort("event mismatch: track=\{ti}, event=\{ei}")
+      }
+    }
+  }
+}
+
+///|
+/// 确定性：游戏循环相同输入两次产生相同输出
+test "generate_v2: game_loop_deterministic" {
+  let context = @moonsic.GenerationContext::{
+    key: @moonsic.key(@moonsic.c(4), @moonsic.Major),
+    scale: @moonsic.build_scale(@moonsic.C, @moonsic.Major),
+    progression: [1, 4, 5, 1],
+    time_signature: @moonsic.four_four(),
+    tempo: @moonsic.default_tempo(),
+    bars: 4,
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.GameLoopMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let r1 = @moonsic.generate_game_loop_checked(context, 4, config)
+  let r2 = @moonsic.generate_game_loop_checked(context, 4, config)
+  let s1 = match r1 {
+    Ok(s) => s
+    Err(e) => abort(e.to_string())
+  }
+  let s2 = match r2 {
+    Ok(s) => s
+    Err(e) => abort(e.to_string())
+  }
+  assert_eq(s1.track_count(), s2.track_count())
+  for ti = 0; ti < s1.track_count(); ti = ti + 1 {
+    assert_eq(s1.tracks[ti].event_count(), s2.tracks[ti].event_count())
+  }
+}
+
+///|
+/// 错误路径：bars=0 -> InvalidGenerationConfig
+test "generate_v2: game_loop_checked_bars_zero" {
+  let context = @moonsic.GenerationContext::{
+    key: @moonsic.key(@moonsic.c(4), @moonsic.Major),
+    scale: @moonsic.build_scale(@moonsic.C, @moonsic.Major),
+    progression: [1, 5, 6, 4],
+    time_signature: @moonsic.four_four(),
+    tempo: @moonsic.default_tempo(),
+    bars: 4,
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.GameLoopMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let result = @moonsic.generate_game_loop_checked(context, 0, config)
+  match result {
+    Err(@moonsic.InvalidGenerationConfig(_)) => ()
+    _ => abort("expected InvalidGenerationConfig")
+  }
+}
+
+///|
+/// 错误路径：bars=-1 -> InvalidGenerationConfig
+test "generate_v2: game_loop_checked_bars_negative" {
+  let context = @moonsic.GenerationContext::{
+    key: @moonsic.key(@moonsic.c(4), @moonsic.Major),
+    scale: @moonsic.build_scale(@moonsic.C, @moonsic.Major),
+    progression: [1, 5, 6, 4],
+    time_signature: @moonsic.four_four(),
+    tempo: @moonsic.default_tempo(),
+    bars: 4,
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.GameLoopMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let result = @moonsic.generate_game_loop_checked(context, -1, config)
+  match result {
+    Err(@moonsic.InvalidGenerationConfig(_)) => ()
+    _ => abort("expected InvalidGenerationConfig")
+  }
+}
+
+///|
+/// 边界：空和弦进行仍产出 2 轨 Score（旋律+空和弦轨）
+test "generate_v2: game_loop_checked_empty_progression" {
+  let context = @moonsic.GenerationContext::{
+    key: @moonsic.key(@moonsic.c(4), @moonsic.Major),
+    scale: @moonsic.build_scale(@moonsic.C, @moonsic.Major),
+    progression: [],
+    time_signature: @moonsic.four_four(),
+    tempo: @moonsic.default_tempo(),
+    bars: 2,
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.GameLoopMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let result = @moonsic.generate_game_loop_checked(context, 2, config)
+  assert_true(result is Ok(_))
+  let score = match result {
+    Ok(s) => s
+    Err(e) => abort(e.to_string())
+  }
+  assert_eq(score.track_count(), 2)
+  // 和弦轨应为空
+  assert_eq(score.tracks[1].event_count(), 0)
+}
+
+///|
+/// 覆盖：全部 7 种 MelodyContour 均产生有效 Track（4 事件）
+test "generate_v2: melody_checked_all_contours" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let rhythm = @moonsic.rhythm_template(@moonsic.FourQuarters)
+  let contours = [
+    @moonsic.StepwiseUp,
+    @moonsic.StepwiseDown,
+    @moonsic.Arch,
+    @moonsic.InvertedArch,
+    @moonsic.Wave,
+    @moonsic.Static,
+    @moonsic.ChordTone,
+  ]
+  for i = 0; i < contours.length(); i = i + 1 {
+    let config = @moonsic.GenerationConfig::{
+      mode: @moonsic.MelodyOnly,
+      contour: contours[i],
+      range_low: @moonsic.c(4),
+      range_high: @moonsic.c(6),
+      seed: None,
+      voice_leading: @moonsic.KeepInRange,
+      allow_rests: false,
+      max_leap: 12,
+    }
+    let result = @moonsic.generate_melody_checked(key, rhythm, config)
+    match result {
+      Ok(t) => {
+        assert_eq(t.event_count(), rhythm.cells.length())
+        // 所有事件应为 Note
+        for evt in t.events {
+          match evt {
+            @moonsic.Note(_) => ()
+            _ => abort("expected Note event, contour index=\{i}")
+          }
+        }
+      }
+      Err(e) => abort("contour \{i} failed: \{e.to_string()}")
+    }
+  }
+}
+
+///|
+/// 边界：allow_rests=true + 含休止的节奏模板 → 产出 Rest 事件
+test "generate_v2: melody_checked_with_rests" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let cells = [
+    @moonsic.RhythmCell::{
+      duration: @moonsic.Quarter,
+      is_rest: true,
+      accent: @moonsic.NoAccent,
+      tie_to_next: false,
+    },
+    @moonsic.RhythmCell::{
+      duration: @moonsic.Quarter,
+      is_rest: false,
+      accent: @moonsic.NoAccent,
+      tie_to_next: false,
+    },
+    @moonsic.RhythmCell::{
+      duration: @moonsic.Quarter,
+      is_rest: true,
+      accent: @moonsic.NoAccent,
+      tie_to_next: false,
+    },
+    @moonsic.RhythmCell::{
+      duration: @moonsic.Quarter,
+      is_rest: false,
+      accent: @moonsic.NoAccent,
+      tie_to_next: false,
+    },
+  ]
+  let rhythm = match @moonsic.rhythm_pattern_checked(cells) {
+    Ok(p) => p
+    Err(e) => abort(e.to_string())
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.MelodyOnly,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: true,
+    max_leap: 12,
+  }
+  let result = @moonsic.generate_melody_checked(key, rhythm, config)
+  match result {
+    Ok(t) => {
+      assert_eq(t.event_count(), 4)
+      match t.events[0] {
+        @moonsic.Rest(_) => ()
+        _ => abort("event 0 should be Rest")
+      }
+      match t.events[1] {
+        @moonsic.Note(_) => ()
+        _ => abort("event 1 should be Note")
+      }
+      match t.events[2] {
+        @moonsic.Rest(_) => ()
+        _ => abort("event 2 should be Rest")
+      }
+      match t.events[3] {
+        @moonsic.Note(_) => ()
+        _ => abort("event 3 should be Note")
+      }
+    }
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+/// 覆盖：全部 9 种 AccompanimentPattern 均返回 Ok 且至少 1 轨
+test "generate_v2: accompaniment_checked_all_patterns" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.AccompanimentMode,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(3),
+    range_high: @moonsic.c(5),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let prog_result = @moonsic.generate_chord_progression_checked(
+    key,
+    [1, 4, 5, 1],
+    @moonsic.Duration::Quarter,
+    config,
+  )
+  let progression = prog_result.unwrap()
+  let patterns = [
+    @moonsic.BlockChord,
+    @moonsic.ArpeggioUp,
+    @moonsic.ArpeggioDown,
+    @moonsic.ArpeggioUpDown,
+    @moonsic.Alberti,
+    @moonsic.Pad,
+    @moonsic.RootBass,
+    @moonsic.RootFifthBass,
+    @moonsic.WalkingBass,
+  ]
+  for i = 0; i < patterns.length(); i = i + 1 {
+    let result = @moonsic.generate_accompaniment_checked(
+      progression,
+      patterns[i],
+      config,
+    )
+    match result {
+      Ok(s) => assert_true(s.track_count() >= 1)
+      Err(e) => abort("pattern \{i} failed: \{e.to_string()}")
+    }
+  }
+}
+
+///|
+/// 短语生成：ChordsOnly 模式产出含和弦事件的 GeneratedPhrase
+test "generate_v2: phrase_checked_chords_mode" {
+  let context = @moonsic.GenerationContext::{
+    key: @moonsic.key(@moonsic.c(4), @moonsic.Major),
+    scale: @moonsic.build_scale(@moonsic.C, @moonsic.Major),
+    progression: [1, 4, 5, 1],
+    time_signature: @moonsic.four_four(),
+    tempo: @moonsic.default_tempo(),
+    bars: 1,
+  }
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.ChordsOnly,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(4),
+    range_high: @moonsic.c(6),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let result = @moonsic.generate_phrase_checked(context, config)
+  match result {
+    Ok(phrase) => {
+      assert_eq(phrase.track.event_count(), 4)
+      // 所有事件应为 Chord
+      for evt in phrase.track.events {
+        match evt {
+          @moonsic.Chord(_) => ()
+          _ => abort("expected Chord event in ChordsOnly phrase")
+        }
+      }
+    }
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+/// 低音：RootFifthBass 模式产出 4 个根/五度交替低音
+test "generate_v2: bass_checked_root_fifth" {
+  let key = @moonsic.key(@moonsic.c(4), @moonsic.Major)
+  let config = @moonsic.GenerationConfig::{
+    mode: @moonsic.BassOnly,
+    contour: @moonsic.StepwiseUp,
+    range_low: @moonsic.c(2),
+    range_high: @moonsic.c(4),
+    seed: None,
+    voice_leading: @moonsic.KeepInRange,
+    allow_rests: false,
+    max_leap: 12,
+  }
+  let prog_result = @moonsic.generate_chord_progression_checked(
+    key,
+    [1, 5, 6, 4],
+    @moonsic.Duration::Quarter,
+    config,
+  )
+  let progression = prog_result.unwrap()
+  let result = @moonsic.generate_bass_checked(
+    progression,
+    @moonsic.RootFifthBass,
+    config,
+  )
+  match result {
+    Ok(bass) => {
+      assert_eq(bass.event_count(), 8)
+      // RootFifthBass 应为 Note 事件
+      for evt in bass.events {
+        match evt {
+          @moonsic.Note(_) => ()
+          _ => abort("expected Note event in bass track")
+        }
+      }
+    }
+    Err(e) => abort(e.to_string())
+  }
+}
+
+// ============================================================
 // 节奏模板与动机测试 (rhythm.mbt)
 // ============================================================
 
