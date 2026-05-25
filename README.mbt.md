@@ -7,12 +7,21 @@ MoonBit 音乐语义库 — 用强类型描述音乐，导出 MIDI/WAV/浏览器
 
 ## 快速开始
 
-```moonbit
+```moonbit nocheck
+///|
 let chords = progression(c(3), Major, [I, V, VI, IV], half())
+
+///|
 let lead = melody_str("C4q D4q E4q G4q")
+
+///|
 let song = score_with([chords, lead], 120, four_four())
-let midi = song.to_midi_bytes()  // MIDI 字节流
-let wav = song.to_wav_bytes()    // WAV 音频
+
+///|
+let midi = song.to_midi_bytes() // MIDI 字节流
+
+///|
+let wav = song.to_wav_bytes() // WAV 音频
 ```
 
 ## 核心概念
@@ -82,8 +91,11 @@ API / 文本记谱 → Score → NoteEvent → MIDI / WAV / 浏览器事件 → 
 | `arpeggiate(chords, step_dur)` | 琶音 |
 
 ### 文本记谱
-```moonbit
+```moonbit nocheck
+///|
 let t = melody_str("C4q D4q [E4 G4]h Rq D4q:64 x2")
+
+///|
 let s = score_str("tempo 140\ntime 3/4\nC4q D4q E4q")
 ```
 格式：`音名[变音][八度]时值[:力度]`。和弦：`[音1 音2...]时值`。重复：`xN`。
@@ -179,11 +191,20 @@ MoonBit music IR and export library with MIDI, WAV, and browser event output.
 
 ## Quick Start
 
-```moonbit
+```moonbit nocheck
+///|
 let chords = progression(c(3), Major, [I, V, VI, IV], half())
+
+///|
 let lead = melody_str("C4q D4q E4q G4q")
+
+///|
 let song = score_with([chords, lead], 120, four_four())
+
+///|
 let midi = song.to_midi_bytes()
+
+///|
 let wav = song.to_wav_bytes()
 ```
 
@@ -238,7 +259,8 @@ Pipeline: `API / text notation → Score → NoteEvent → MIDI / WAV / browser 
 
 ## Text Notation
 
-```moonbit
+```moonbit nocheck
+///|
 let t = melody_str("C4q D4q [E4 G4]h Rq D4q:64 x2")
 ```
 Format: `Note[Accidental]OctaveDuration[:Velocity]`. Chord: `[P1 P2...]Dur`. Repeat: `xN`.

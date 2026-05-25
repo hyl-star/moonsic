@@ -210,6 +210,7 @@ pub fn score1(track : Track) -> Score {
 
 ///|
 /// 快捷乐谱构造：score_with([lead, harmony], 120, four_four())
+/// 注意：内部调用 tempo(bpm)，bpm 越界时 abort。考虑使用 score_with_tempo + tempo_checked 替代。
 pub fn score_with(
   tracks : Array[Track],
   bpm : Int,

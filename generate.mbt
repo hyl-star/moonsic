@@ -502,6 +502,7 @@ pub fn generate_game_loop_checked(
 // ==================== convenience API ====================
 
 ///|
+/// @deprecated Use generate_melody_checked instead. This convenience API silently returns empty track on error.
 /// Generate a melody with default config. Falls back to empty track on error.
 pub fn generate_melody(key : Key, rhythm : RhythmPattern) -> Track {
   match generate_melody_checked(key, rhythm, default_config()) {
@@ -511,6 +512,7 @@ pub fn generate_melody(key : Key, rhythm : RhythmPattern) -> Track {
 }
 
 ///|
+/// @deprecated Use generate_chord_progression_checked instead. This convenience API silently returns empty track on error.
 /// Generate a chord progression with default config. Falls back to empty track on error.
 pub fn generate_chord_progression(
   key : Key,
@@ -525,6 +527,7 @@ pub fn generate_chord_progression(
 }
 
 ///|
+/// @deprecated Use generate_game_loop_checked instead. This convenience API silently returns empty score on error.
 /// Generate a game loop with default config. Falls back to empty score on error.
 pub fn generate_game_loop(context : GenerationContext, bars : Int) -> Score {
   match generate_game_loop_checked(context, bars, default_config()) {

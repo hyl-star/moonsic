@@ -965,6 +965,7 @@ pub fn score_to_musicxml_string_checked(
 }
 
 ///|
+/// @deprecated Use score_to_musicxml_string_checked instead. This convenience API silently returns minimal empty MusicXML on error.
 /// 便捷导出 API：Score -> MusicXML String。
 /// 失败时 fallback 到最小空 score-partwise 文档。
 pub fn score_to_musicxml_string(score : Score) -> String {
