@@ -363,9 +363,38 @@ test "musicxml_v2: clef_struct_from_kind_all" {
 }
 
 ///|
-/// Note type 边界：32nd / 64th / 128th 序列化
-test "musicxml_v2: note_type_32nd_64th_128th_xml" {
-  let mk_opts() = @moonsic.MusicXmlExportOptions::{
+/// Note type 边界：32nd / 64th / 128th 序列化 — 各自独立构造验证
+test "musicxml_v2: note_type_32nd_xml" {
+  let note = @moonsic.MusicXmlNote::{
+    pitch: Some(@moonsic.MusicXmlPitch::{ step: "C", alter: 0, octave: 4 }),
+    duration: 60,
+    note_type: @moonsic.ThirtySecondT,
+    dots: 0,
+    is_rest: false,
+    is_chord_tone: false,
+    voice: 1,
+    staff: 1,
+    tie_start: false,
+    tie_stop: false,
+    notations: [],
+    lyric: None,
+  }
+  let m = @moonsic.MusicXmlMeasure::{
+    number: 1,
+    attributes: None,
+    notes: [note],
+    directions: [],
+    barlines: [],
+  }
+  let p = @moonsic.MusicXmlPart::{ id: "P1", name: "T", measures: [m] }
+  let doc = @moonsic.MusicXmlScore::{
+    title: "",
+    composer: "",
+    document_kind: @moonsic.Partwise,
+    parts: [p],
+    divisions: 480,
+  }
+  let opts = @moonsic.MusicXmlExportOptions::{
     divisions: 480,
     document_kind: @moonsic.Partwise,
     include_xml_header: false,
@@ -373,48 +402,102 @@ test "musicxml_v2: note_type_32nd_64th_128th_xml" {
     strict: false,
     part_name_fallback: "T",
   }
-  let check_type(nt : @moonsic.MusicXmlNoteType, expected : String) = {
-    let note = @moonsic.MusicXmlNote::{
-      pitch: Some(@moonsic.MusicXmlPitch::{ step: "C", alter: 0, octave: 4 }),
-      duration: 60,
-      note_type: nt,
-      dots: 0,
-      is_rest: false,
-      is_chord_tone: false,
-      voice: 1,
-      staff: 1,
-      tie_start: false,
-      tie_stop: false,
-      notations: [],
-      lyric: None,
-    }
-    let m = @moonsic.MusicXmlMeasure::{
-      number: 1,
-      attributes: None,
-      notes: [note],
-      directions: [],
-      barlines: [],
-    }
-    let p = @moonsic.MusicXmlPart::{
-      id: "P1",
-      name: "T",
-      measures: [m],
-    }
-    let doc = @moonsic.MusicXmlScore::{
-      title: "",
-      composer: "",
-      document_kind: @moonsic.Partwise,
-      parts: [p],
-      divisions: 480,
-    }
-    match @moonsic.musicxml_to_string_checked(doc, mk_opts()) {
-      Ok(xml) => assert_true(xml.contains("<type>\\{expected}</type>"))
-      Err(e) => abort(e.to_string())
-    }
+  match @moonsic.musicxml_to_string_checked(doc, opts) {
+    Ok(xml) => assert_true(xml.contains("<type>32nd</type>"))
+    Err(e) => abort(e.to_string())
   }
-  check_type(@moonsic.ThirtySecondT, "32nd")
-  check_type(@moonsic.SixtyFourthT, "64th")
-  check_type(@moonsic.OneTwentyEighthT, "128th")
+}
+
+///|
+/// Note type 边界：64th 序列化
+test "musicxml_v2: note_type_64th_xml" {
+  let note = @moonsic.MusicXmlNote::{
+    pitch: Some(@moonsic.MusicXmlPitch::{ step: "D", alter: 0, octave: 4 }),
+    duration: 30,
+    note_type: @moonsic.SixtyFourthT,
+    dots: 0,
+    is_rest: false,
+    is_chord_tone: false,
+    voice: 1,
+    staff: 1,
+    tie_start: false,
+    tie_stop: false,
+    notations: [],
+    lyric: None,
+  }
+  let m = @moonsic.MusicXmlMeasure::{
+    number: 1,
+    attributes: None,
+    notes: [note],
+    directions: [],
+    barlines: [],
+  }
+  let p = @moonsic.MusicXmlPart::{ id: "P1", name: "T", measures: [m] }
+  let doc = @moonsic.MusicXmlScore::{
+    title: "",
+    composer: "",
+    document_kind: @moonsic.Partwise,
+    parts: [p],
+    divisions: 480,
+  }
+  let opts = @moonsic.MusicXmlExportOptions::{
+    divisions: 480,
+    document_kind: @moonsic.Partwise,
+    include_xml_header: false,
+    include_doctype: false,
+    strict: false,
+    part_name_fallback: "T",
+  }
+  match @moonsic.musicxml_to_string_checked(doc, opts) {
+    Ok(xml) => assert_true(xml.contains("<type>64th</type>"))
+    Err(e) => abort(e.to_string())
+  }
+}
+
+///|
+/// Note type 边界：128th 序列化
+test "musicxml_v2: note_type_128th_xml" {
+  let note = @moonsic.MusicXmlNote::{
+    pitch: Some(@moonsic.MusicXmlPitch::{ step: "E", alter: 0, octave: 4 }),
+    duration: 15,
+    note_type: @moonsic.OneTwentyEighthT,
+    dots: 0,
+    is_rest: false,
+    is_chord_tone: false,
+    voice: 1,
+    staff: 1,
+    tie_start: false,
+    tie_stop: false,
+    notations: [],
+    lyric: None,
+  }
+  let m = @moonsic.MusicXmlMeasure::{
+    number: 1,
+    attributes: None,
+    notes: [note],
+    directions: [],
+    barlines: [],
+  }
+  let p = @moonsic.MusicXmlPart::{ id: "P1", name: "T", measures: [m] }
+  let doc = @moonsic.MusicXmlScore::{
+    title: "",
+    composer: "",
+    document_kind: @moonsic.Partwise,
+    parts: [p],
+    divisions: 480,
+  }
+  let opts = @moonsic.MusicXmlExportOptions::{
+    divisions: 480,
+    document_kind: @moonsic.Partwise,
+    include_xml_header: false,
+    include_doctype: false,
+    strict: false,
+    part_name_fallback: "T",
+  }
+  match @moonsic.musicxml_to_string_checked(doc, opts) {
+    Ok(xml) => assert_true(xml.contains("<type>128th</type>"))
+    Err(e) => abort(e.to_string())
+  }
 }
 
 ///|

@@ -373,32 +373,6 @@ pub fn musicxml_clef_from_kind(kind : MusicXmlClefKind) -> MusicXmlClef {
 }
 
 ///|
-/// MusicXmlClefKind -> MusicXML sign 属性（保留兼容）
-fn clef_to_sign(clef : MusicXmlClefKind) -> String {
-  match clef {
-    Treble => "G"
-    Bass => "F"
-    Alto => "C"
-    Tenor => "C"
-    Percussion => "percussion"
-    NoClef => "G"
-  }
-}
-
-///|
-/// MusicXmlClefKind -> MusicXML line 属性（保留兼容）
-fn clef_to_line(clef : MusicXmlClefKind) -> Int {
-  match clef {
-    Treble => 2
-    Bass => 4
-    Alto => 3
-    Tenor => 4
-    Percussion => 2
-    NoClef => 2
-  }
-}
-
-///|
 /// MusicXmlNotationKind -> MusicXML notation XML tag 名称
 fn notation_kind_to_tag(kind : MusicXmlNotationKind) -> String {
   match kind {
