@@ -388,6 +388,8 @@ pub fn midi_score_to_bytes(MidiScore) -> Bytes
 
 pub fn midi_score_to_bytes_checked(MidiScore) -> Result[Bytes, MidiError]
 
+pub fn midi_time_signature(Int, Int, Int) -> Result[MidiEvent, MidiError]
+
 pub fn midi_to_frequency(Int) -> Double
 
 pub fn midi_to_pitch(Int) -> Pitch
@@ -403,6 +405,8 @@ pub fn motif(Array[Int], RhythmPattern) -> Motif
 pub fn motif_checked(Array[Int], RhythmPattern) -> Result[Motif, MotifError]
 
 pub fn motif_to_track_checked(Motif, Key, Int, Duration) -> Result[Track, MotifError]
+
+pub fn musicxml_clef_from_kind(MusicXmlClefKind) -> MusicXmlClef
 
 pub fn musicxml_export_validation_options() -> ValidationOptions
 
@@ -649,6 +653,8 @@ pub fn validate_measure_report(Measure, TimeSignature, Int, ValidationOptions) -
 pub fn validate_measure_report_ctx(Measure, TimeSignature, ValidationContext, ValidationOptions) -> ValidationReport
 
 pub fn validate_midi_export_ready(ScoreLayout) -> ValidationReport
+
+pub fn validate_midi_file(MidiScore) -> Result[Unit, MidiError]
 
 pub fn validate_midi_note(Int) -> Bool
 
@@ -1284,11 +1290,21 @@ pub(all) enum MusicXmlAccidental {
 pub(all) struct MusicXmlAttributes {
   divisions : Int
   time_signature : TimeSignature
-  clef : MusicXmlClefKind
+  clef : MusicXmlClef?
 }
 
 pub(all) struct MusicXmlBackup {
   duration : Int
+}
+
+pub(all) struct MusicXmlBarline {
+  location : String
+  kind : String
+}
+
+pub(all) struct MusicXmlClef {
+  sign : String
+  line : Int
 }
 
 pub(all) enum MusicXmlClefKind {
@@ -1332,6 +1348,7 @@ pub(all) struct MusicXmlExportOptions {
   divisions : Int
   document_kind : MusicXmlDocumentKind
   include_xml_header : Bool
+  include_doctype : Bool
   strict : Bool
   part_name_fallback : String
 }
@@ -1340,11 +1357,18 @@ pub(all) struct MusicXmlForward {
   duration : Int
 }
 
+pub(all) struct MusicXmlLyric {
+  syllabic : String
+  text : String
+  verse : Int
+}
+
 pub(all) struct MusicXmlMeasure {
   number : Int
   attributes : MusicXmlAttributes?
   notes : Array[MusicXmlNote]
   directions : Array[MusicXmlDirection]
+  barlines : Array[MusicXmlBarline]
 }
 
 pub(all) struct MusicXmlNotation {
@@ -1372,7 +1396,10 @@ pub(all) struct MusicXmlNote {
   is_chord_tone : Bool
   voice : Int
   staff : Int
+  tie_start : Bool
+  tie_stop : Bool
   notations : Array[MusicXmlNotation]
+  lyric : MusicXmlLyric?
 }
 
 pub(all) enum MusicXmlNoteType {
@@ -1381,6 +1408,9 @@ pub(all) enum MusicXmlNoteType {
   QuarterT
   EighthT
   SixteenthT
+  ThirtySecondT
+  SixtyFourthT
+  OneTwentyEighthT
 }
 
 pub(all) struct MusicXmlPart {
@@ -1397,6 +1427,8 @@ pub(all) struct MusicXmlPitch {
 
 pub(all) struct MusicXmlScore {
   title : String
+  composer : String
+  document_kind : MusicXmlDocumentKind
   parts : Array[MusicXmlPart]
   divisions : Int
 }

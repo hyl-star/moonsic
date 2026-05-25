@@ -2,6 +2,7 @@
 // MusicXML 准备与导出适配模块
 // 把 Moonsic 内部 Score/ScoreLayout 转换为 MusicXML-friendly 的中间结构
 // 提供基础 MusicXML 导出字符串能力
+// v2 稳定化：补全 clef struct、tie/lyric/barline 支持、note type 扩展
 // ============================================================
 
 // ============================================================
@@ -55,7 +56,7 @@ pub(all) enum MusicXmlDocumentKind {
 }
 
 ///|
-/// MusicXML 谱号种类
+/// MusicXML 谱号种类（简化输入枚举）
 pub(all) enum MusicXmlClefKind {
   Treble
   Bass
@@ -67,13 +68,19 @@ pub(all) enum MusicXmlClefKind {
 }
 
 ///|
-/// MusicXML 音符类型（基本时值）
+/// MusicXML 音符类型（基本时值）— v2 稳定化扩展至 128 分音符
 pub(all) enum MusicXmlNoteType {
   WholeT
   HalfT
   QuarterT
   EighthT
   SixteenthT
+  /// 三十二分音符
+  ThirtySecondT
+  /// 六十四分音符
+  SixtyFourthT
+  /// 一百二十八分音符
+  OneTwentyEighthT
 }
 
 ///|
@@ -109,16 +116,45 @@ pub(all) enum MusicXmlNotationKind {
   BreathN
 }
 
-// Note:
-// ValidationSeverity, ValidationReport, ValidationIssue 等类型
-// 已在 validate.mbt 中定义，本模块直接复用。
+// ============================================================
+// MusicXML 输出级结构体
+// ============================================================
+
+///|
+/// MusicXML 谱号（输出级 sign + line）
+pub(all) struct MusicXmlClef {
+  /// sign 属性：G/F/C/percussion
+  sign : String
+  /// line 属性：五线谱行号 1-5
+  line : Int
+}
+
+///|
+/// MusicXML 小节线
+pub(all) struct MusicXmlBarline {
+  /// location = left/right
+  location : String
+  /// bar-style = regular/light-heavy/light-light/repeat 等
+  kind : String
+}
+
+///|
+/// MusicXML 歌词
+pub(all) struct MusicXmlLyric {
+  /// syllabic = single/begin/end/middle
+  syllabic : String
+  /// 歌词文本
+  text : String
+  /// 歌词段落编号
+  verse : Int
+}
 
 // ============================================================
 // MusicXML 中间结构 — 导出选项
 // ============================================================
 
 ///|
-/// MusicXML 导出选项
+/// MusicXML 导出选项 — v2 稳定化增加 include_doctype
 pub(all) struct MusicXmlExportOptions {
   /// 每四分音符的分度数（默认 480，即 PPQ）
   divisions : Int
@@ -126,6 +162,8 @@ pub(all) struct MusicXmlExportOptions {
   document_kind : MusicXmlDocumentKind
   /// 是否包含 XML 头部声明
   include_xml_header : Bool
+  /// 是否包含 DOCTYPE 声明（与 include_xml_header 共同控制）
+  include_doctype : Bool
   /// 严格模式：Error/Fatal 阻止导出
   strict : Bool
   /// 声部名称回退值
@@ -137,82 +175,124 @@ pub(all) struct MusicXmlExportOptions {
 // ============================================================
 
 ///|
-/// MusicXML 乐谱中间结构
+/// MusicXML 乐谱中间结构 — v2 稳定化增加 composer/document_kind
 pub(all) struct MusicXmlScore {
+  /// 作品标题
   title : String
+  /// 作曲家
+  composer : String
+  /// 文档类型
+  document_kind : MusicXmlDocumentKind
+  /// 声部列表
   parts : Array[MusicXmlPart]
+  /// 每四分音符的分度数
   divisions : Int
 }
 
 ///|
 /// MusicXML 声部
 pub(all) struct MusicXmlPart {
+  /// 声部标识
   id : String
+  /// 声部名称
   name : String
+  /// 小节列表
   measures : Array[MusicXmlMeasure]
 }
 
 ///|
-/// MusicXML 小节
+/// MusicXML 小节 — v2 稳定化增加 barlines
 pub(all) struct MusicXmlMeasure {
+  /// 小节编号
   number : Int
+  /// 小节属性（通常仅第一小节含 attributes）
   attributes : MusicXmlAttributes?
+  /// 音符列表
   notes : Array[MusicXmlNote]
+  /// 方向标记
   directions : Array[MusicXmlDirection]
+  /// 小节线
+  barlines : Array[MusicXmlBarline]
 }
 
 ///|
 /// MusicXML 小节属性（divisions、拍号、谱号）
 pub(all) struct MusicXmlAttributes {
+  /// 每四分音符的分度数
   divisions : Int
+  /// 拍号
   time_signature : TimeSignature
-  clef : MusicXmlClefKind
+  /// 谱号（None 表示不输出 clef 元素）
+  clef : MusicXmlClef?
 }
 
 ///|
-/// MusicXML 音符
+/// MusicXML 音符 — v2 稳定化增加 tie_start/tie_stop/lyric
 pub(all) struct MusicXmlNote {
+  /// 音高（休止符时为 None）
   pitch : MusicXmlPitch?
+  /// 时值（ticks）
   duration : Int
+  /// 音符类型
   note_type : MusicXmlNoteType
+  /// 附点数
   dots : Int
+  /// 是否为休止符
   is_rest : Bool
+  /// 是否为和弦附加音
   is_chord_tone : Bool
+  /// 声部编号
   voice : Int
+  /// 五线谱编号
   staff : Int
+  /// 连线起始（<tie type="start"/>）
+  tie_start : Bool
+  /// 连线结束（<tie type="stop"/>）
+  tie_stop : Bool
+  /// 演奏记号
   notations : Array[MusicXmlNotation]
+  /// 歌词
+  lyric : MusicXmlLyric?
 }
 
 ///|
 /// MusicXML 音高（step + alter + octave）
 pub(all) struct MusicXmlPitch {
+  /// 音名 A-G
   step : String
+  /// 变音 半音偏移量
   alter : Int
+  /// 八度编号
   octave : Int
 }
 
 ///|
 /// MusicXML 方向标记
 pub(all) struct MusicXmlDirection {
+  /// 方向种类
   kind : MusicXmlDirectionKind
+  /// 方向内容文本
   content : String
 }
 
 ///|
 /// MusicXML 演奏记号
 pub(all) struct MusicXmlNotation {
+  /// 演奏记号种类
   kind : MusicXmlNotationKind
 }
 
 ///|
 /// MusicXML 时间回退（多声部）
 pub(all) struct MusicXmlBackup {
+  /// 回退时值（ticks）
   duration : Int
 }
 
 ///|
 /// MusicXML 时间前移（多声部）
 pub(all) struct MusicXmlForward {
+  /// 前移时值（ticks）
   duration : Int
 }
 
@@ -265,7 +345,7 @@ fn count_dots(d : Duration) -> Int {
 }
 
 ///|
-/// MusicXmlNoteType -> MusicXML type 元素文本
+/// MusicXmlNoteType -> MusicXML type 元素文本 — v2 扩展至 128th
 fn note_type_to_xml_text(nt : MusicXmlNoteType) -> String {
   match nt {
     WholeT => "whole"
@@ -273,11 +353,27 @@ fn note_type_to_xml_text(nt : MusicXmlNoteType) -> String {
     QuarterT => "quarter"
     EighthT => "eighth"
     SixteenthT => "16th"
+    ThirtySecondT => "32nd"
+    SixtyFourthT => "64th"
+    OneTwentyEighthT => "128th"
   }
 }
 
 ///|
-/// MusicXmlClefKind -> MusicXML sign 属性
+/// MusicXmlClefKind -> MusicXmlClef（输出级转换）
+pub fn musicxml_clef_from_kind(kind : MusicXmlClefKind) -> MusicXmlClef {
+  match kind {
+    Treble => MusicXmlClef::{ sign: "G", line: 2 }
+    Bass => MusicXmlClef::{ sign: "F", line: 4 }
+    Alto => MusicXmlClef::{ sign: "C", line: 3 }
+    Tenor => MusicXmlClef::{ sign: "C", line: 4 }
+    Percussion => MusicXmlClef::{ sign: "percussion", line: 2 }
+    NoClef => MusicXmlClef::{ sign: "G", line: 2 }
+  }
+}
+
+///|
+/// MusicXmlClefKind -> MusicXML sign 属性（保留兼容）
 fn clef_to_sign(clef : MusicXmlClefKind) -> String {
   match clef {
     Treble => "G"
@@ -290,7 +386,7 @@ fn clef_to_sign(clef : MusicXmlClefKind) -> String {
 }
 
 ///|
-/// MusicXmlClefKind -> MusicXML line 属性
+/// MusicXmlClefKind -> MusicXML line 属性（保留兼容）
 fn clef_to_line(clef : MusicXmlClefKind) -> Int {
   match clef {
     Treble => 2
@@ -384,7 +480,10 @@ fn event_to_xml_notes(
           is_chord_tone: false,
           voice,
           staff: 1,
+          tie_start: false,
+          tie_stop: false,
           notations: [],
+          lyric: None,
         },
       ]
     }
@@ -402,7 +501,10 @@ fn event_to_xml_notes(
           is_chord_tone: false,
           voice,
           staff: 1,
+          tie_start: false,
+          tie_stop: false,
           notations: [],
+          lyric: None,
         },
       ]
     }
@@ -427,7 +529,10 @@ fn event_to_xml_notes(
           is_chord_tone: i > 0,
           voice,
           staff: 1,
+          tie_start: false,
+          tie_stop: false,
           notations: [],
+          lyric: None,
         })
       }
       notes
@@ -496,7 +601,7 @@ fn group_events_to_measures(
 }
 
 ///|
-/// 构造 MusicXmlMeasure，第一个小节包含 attributes
+/// 构造 MusicXmlMeasure，第一个小节包含 attributes（使用 MusicXmlClef 结构）
 fn make_xml_measure(
   number : Int,
   notes : Array[MusicXmlNote],
@@ -504,11 +609,21 @@ fn make_xml_measure(
   divisions : Int,
 ) -> MusicXmlMeasure {
   let attrs = if number == 1 {
-    Some(MusicXmlAttributes::{ divisions, time_signature: sig, clef: Treble })
+    Some(MusicXmlAttributes::{
+      divisions,
+      time_signature: sig,
+      clef: Some(musicxml_clef_from_kind(Treble)),
+    })
   } else {
     None
   }
-  MusicXmlMeasure::{ number, attributes: attrs, notes, directions: [] }
+  MusicXmlMeasure::{
+    number,
+    attributes: attrs,
+    notes,
+    directions: [],
+    barlines: [],
+  }
 }
 
 ///|
@@ -531,12 +646,13 @@ fn track_to_xml_part(
 
 ///|
 /// 返回默认导出配置：
-/// divisions=480, partwise, 含 XML header, 非严格模式
+/// divisions=480, partwise, 含 XML header + DOCTYPE, 非严格模式
 pub fn default_musicxml_export_options() -> MusicXmlExportOptions {
   MusicXmlExportOptions::{
     divisions: DEFAULT_PPQ,
     document_kind: Partwise,
     include_xml_header: true,
+    include_doctype: true,
     strict: false,
     part_name_fallback: "Instrument",
   }
@@ -575,7 +691,13 @@ pub fn score_to_musicxml_checked(
     parts.push(part)
   }
 
-  Ok(MusicXmlScore::{ title: "", parts, divisions: options.divisions })
+  Ok(MusicXmlScore::{
+    title: "",
+    composer: "",
+    document_kind: options.document_kind,
+    parts,
+    divisions: options.divisions,
+  })
 }
 
 ///|
@@ -595,6 +717,7 @@ pub fn score_layout_to_musicxml_checked(
 
 ///|
 /// 将 MusicXmlScore 中间对象序列化为 MusicXML XML 字符串
+/// v2 稳定化：支持 include_doctype / 多文档类型 / composer
 pub fn musicxml_to_string_checked(
   doc : MusicXmlScore,
   options : MusicXmlExportOptions,
@@ -610,14 +733,27 @@ pub fn musicxml_to_string_checked(
   // XML header
   if options.include_xml_header {
     xml = xml + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    xml = xml +
-      "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n"
+    if options.include_doctype {
+      xml = xml +
+        "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n"
+    }
   }
 
-  // root: score-partwise
-  // Use version string without DOCTYPE
-  // We'll use the version as plain text, not as DTD declaration
+  // root element: score-partwise
   xml = xml + "<score-partwise version=\"4.0\">\n"
+
+  // work (title / composer)
+  if doc.title != "" || doc.composer != "" {
+    xml = xml + "  <work>\n"
+    if doc.title != "" {
+      xml = xml + "    <work-title>\{xml_escape(doc.title)}</work-title>\n"
+    }
+    if doc.composer != "" {
+      xml = xml +
+        "    <creator type=\"composer\">\{xml_escape(doc.composer)}</creator>\n"
+    }
+    xml = xml + "  </work>\n"
+  }
 
   // part-list
   xml = xml + "  <part-list>\n"
@@ -645,6 +781,7 @@ pub fn musicxml_to_string_checked(
 
 ///|
 /// 序列化单个 MusicXmlMeasure 为 XML 字符串
+/// v2 稳定化：支持 barlines
 fn serialize_xml_measure(m : MusicXmlMeasure, indent : Int) -> String {
   let mut s = _indent(indent)
   s = s + "<measure number=\"\{m.number}\">\n"
@@ -665,11 +802,17 @@ fn serialize_xml_measure(m : MusicXmlMeasure, indent : Int) -> String {
     s = s + serialize_xml_note(m.notes[i], indent + 2)
   }
 
+  // barlines
+  for i = 0; i < m.barlines.length(); i = i + 1 {
+    s = s + serialize_xml_barline(m.barlines[i], indent + 2)
+  }
+
   s = s + _indent(indent) + "</measure>\n"
   s
 }
 
 ///|
+/// 序列化 MusicXmlAttributes — v2 稳定化使用 MusicXmlClef 结构
 fn serialize_xml_attributes(attrs : MusicXmlAttributes, indent : Int) -> String {
   let mut s = _indent(indent) + "<attributes>\n"
   let i2 = indent + 2
@@ -681,11 +824,11 @@ fn serialize_xml_attributes(attrs : MusicXmlAttributes, indent : Int) -> String 
     "<beat-type>\{attrs.time_signature.denominator}</beat-type>\n"
   s = s + _indent(i2) + "</time>\n"
   match attrs.clef {
-    NoClef => ()
-    _ => {
+    None => ()
+    Some(clef) => {
       s = s + _indent(i2) + "<clef>\n"
-      s = s + _indent(i2 + 2) + "<sign>\{clef_to_sign(attrs.clef)}</sign>\n"
-      s = s + _indent(i2 + 2) + "<line>\{clef_to_line(attrs.clef)}</line>\n"
+      s = s + _indent(i2 + 2) + "<sign>\{xml_escape(clef.sign)}</sign>\n"
+      s = s + _indent(i2 + 2) + "<line>\{clef.line}</line>\n"
       s = s + _indent(i2) + "</clef>\n"
     }
   }
@@ -694,6 +837,7 @@ fn serialize_xml_attributes(attrs : MusicXmlAttributes, indent : Int) -> String 
 }
 
 ///|
+/// 序列化 MusicXmlNote — v2 稳定化支持 tie/tied/lyric
 fn serialize_xml_note(n : MusicXmlNote, indent : Int) -> String {
   let mut s = _indent(indent) + "<note>\n"
   let i2 = indent + 2
@@ -736,9 +880,18 @@ fn serialize_xml_note(n : MusicXmlNote, indent : Int) -> String {
     s = s + _indent(i2) + "<staff>\{n.staff}</staff>\n"
   }
 
-  // notations
-  if n.notations.length() > 0 {
+  // notations (includes tie elements at note level)
+  let has_notations = n.notations.length() > 0 || n.tie_start || n.tie_stop
+  if has_notations {
     s = s + _indent(i2) + "<notations>\n"
+    // tie start/stop at note level (<tie> element)
+    if n.tie_start {
+      s = s + _indent(i2 + 2) + "<tie type=\"start\"/>\n"
+    }
+    if n.tie_stop {
+      s = s + _indent(i2 + 2) + "<tie type=\"stop\"/>\n"
+    }
+    // notation elements (<tied>, <slur>, <articulations>, etc.)
     for ni = 0; ni < n.notations.length(); ni = ni + 1 {
       let not = n.notations[ni]
       let tag = notation_kind_to_tag(not.kind)
@@ -759,11 +912,35 @@ fn serialize_xml_note(n : MusicXmlNote, indent : Int) -> String {
     s = s + _indent(i2) + "</notations>\n"
   }
 
+  // lyric
+  match n.lyric {
+    None => ()
+    Some(ly) => {
+      s = s + _indent(i2) + "<lyric number=\"\{ly.verse}\">\n"
+      s = s +
+        _indent(i2 + 2) +
+        "<syllabic>\{xml_escape(ly.syllabic)}</syllabic>\n"
+      s = s + _indent(i2 + 2) + "<text>\{xml_escape(ly.text)}</text>\n"
+      s = s + _indent(i2) + "</lyric>\n"
+    }
+  }
+
   s = s + _indent(indent) + "</note>\n"
   s
 }
 
 ///|
+/// 序列化 MusicXmlBarline
+fn serialize_xml_barline(b : MusicXmlBarline, indent : Int) -> String {
+  let mut s = _indent(indent) +
+    "<barline location=\"\{xml_escape(b.location)}\">\n"
+  s = s + _indent(indent + 2) + "<bar-style>\{xml_escape(b.kind)}</bar-style>\n"
+  s = s + _indent(indent) + "</barline>\n"
+  s
+}
+
+///|
+/// 序列化 MusicXmlDirection
 fn serialize_xml_direction(d : MusicXmlDirection, indent : Int) -> String {
   let mut s = _indent(indent) + "<direction>\n"
   let i2 = indent + 2

@@ -207,6 +207,25 @@ pub fn end_of_track(tick : Int) -> Result[MidiEvent, MidiError] {
 }
 
 ///|
+/// 构造 TimeSignatureMeta 事件。
+/// tick 必须 >= 0，numerator > 0，denominator 必须是合法拍号分母 (1/2/4/8/16/32/64)。
+pub fn midi_time_signature(
+  tick : Int,
+  numerator : Int,
+  denominator : Int,
+) -> Result[MidiEvent, MidiError] {
+  if !validate_tick(tick) {
+    return Err(InvalidMidiTick(tick))
+  }
+  if !is_valid_time_signature(numerator, denominator) {
+    return Err(
+      MidiExportError("invalid time signature: \{numerator}/\{denominator}"),
+    )
+  }
+  Ok({ tick, kind: TimeSignatureMeta(numerator~, denominator~) })
+}
+
+///|
 pub fn sort_midi_events(events : Array[MidiEvent]) -> Array[MidiEvent] {
   let n = events.length()
   for i = 1; i < n; i = i + 1 {
@@ -235,7 +254,7 @@ fn event_priority(kind : MidiEventKind) -> Int {
   match kind {
     TrackName(name=_) => 0
     TimeSignatureMeta(numerator=_, denominator=_) => 1
-    TempoChange(bpm=_) => 2
+    TempoChange(bpm=_) => 3
     ProgramChange(channel=_, program=_) => 4
     ControlChange(channel=_, controller=_, value=_) => 5
     NoteOff(channel=_, note=_, velocity=_) => 7
@@ -317,6 +336,44 @@ pub fn validate_midi_score(score : MidiScore) -> Result[Unit, MidiError] {
         Ok(_) => ()
         Err(e) => return Err(e)
       }
+    }
+  }
+  Ok(())
+}
+
+///|
+/// 深度校验 MidiScore：ppq > 0、每个轨道至少 1 个事件、每个轨道以 EndOfTrack 结尾。
+pub fn validate_midi_file(score : MidiScore) -> Result[Unit, MidiError] {
+  if !validate_ppq(score.ppq) {
+    return Err(InvalidMidiPPQ(score.ppq))
+  }
+  if score.tracks.length() == 0 {
+    return Err(MidiExportError("MIDI file has no tracks"))
+  }
+  for track in score.tracks {
+    if track.events.length() == 0 {
+      return Err(MidiExportError("track '\{track.name}' has no events"))
+    }
+    if track.program != -1 && !validate_program(track.program) {
+      return Err(InvalidMidiProgram(track.program))
+    }
+    if !validate_channel(track.channel) {
+      return Err(InvalidMidiChannel(track.channel))
+    }
+    for event in track.events {
+      match validate_midi_event(event) {
+        Ok(_) => ()
+        Err(e) => return Err(e)
+      }
+    }
+    // 每个轨道必须以 EndOfTrack 结尾
+    let last_event = track.events[track.events.length() - 1]
+    match last_event.kind {
+      EndOfTrack => ()
+      _ =>
+        return Err(
+          MidiExportError("track '\{track.name}' does not end with EndOfTrack"),
+        )
     }
   }
   Ok(())
