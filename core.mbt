@@ -282,6 +282,112 @@ pub fn midi_to_pitch(midi : Int) -> Pitch {
   { class, accidental, octave }
 }
 
+// --- 音高比较 ---
+
+///|
+/// 比较两个音高是否拼写完全相同（字母、变音记号、八度均相同）。
+/// C#4 与 Db4 虽然等音（MIDI 相同），但拼写不同，返回 false。
+pub fn pitch_equal(a : Pitch, b : Pitch) -> Bool {
+  let class_eq = match a.class {
+    C =>
+      match b.class {
+        C => true
+        _ => false
+      }
+    D =>
+      match b.class {
+        D => true
+        _ => false
+      }
+    E =>
+      match b.class {
+        E => true
+        _ => false
+      }
+    F =>
+      match b.class {
+        F => true
+        _ => false
+      }
+    G =>
+      match b.class {
+        G => true
+        _ => false
+      }
+    A =>
+      match b.class {
+        A => true
+        _ => false
+      }
+    B =>
+      match b.class {
+        B => true
+        _ => false
+      }
+  }
+  let acc_eq = match a.accidental {
+    DoubleFlat =>
+      match b.accidental {
+        DoubleFlat => true
+        _ => false
+      }
+    Flat =>
+      match b.accidental {
+        Flat => true
+        _ => false
+      }
+    Natural =>
+      match b.accidental {
+        Natural => true
+        _ => false
+      }
+    Sharp =>
+      match b.accidental {
+        Sharp => true
+        _ => false
+      }
+    DoubleSharp =>
+      match b.accidental {
+        DoubleSharp => true
+        _ => false
+      }
+  }
+  class_eq && acc_eq && a.octave == b.octave
+}
+
+///|
+/// 比较两个音高是否等音（MIDI 编号相同，忽略拼写差异）。
+/// 例如 C#4 和 Db4 等音，返回 true。
+pub fn enharmonic_equal(a : Pitch, b : Pitch) -> Bool {
+  a.to_midi() == b.to_midi()
+}
+
+///|
+/// 按 MIDI 编号比较音高，返回 -1（a<b）、0（相等）、1（a>b）。
+pub fn pitch_compare(a : Pitch, b : Pitch) -> Int {
+  let a_midi = a.to_midi()
+  let b_midi = b.to_midi()
+  if a_midi < b_midi {
+    -1
+  } else if a_midi > b_midi {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+/// 按数值比较 MIDI 编号，返回 -1、0 或 1。
+pub fn midi_note_compare(a : Int, b : Int) -> Int {
+  if a < b {
+    -1
+  } else if a > b {
+    1
+  } else {
+    0
+  }
+}
+
 // --- 时值 Duration ---
 
 ///|

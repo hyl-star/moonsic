@@ -11,6 +11,7 @@ pub(all) enum TheoryError {
   InvalidScale(String)
   InvalidChord(String)
   MidiOutOfRange(Int)
+  InvalidFrequency(Double)
   Unsupported(String)
 }
 
@@ -24,6 +25,7 @@ pub fn TheoryError::to_string(self : TheoryError) -> String {
     InvalidScale(msg) => "无效音阶：\{msg}"
     InvalidChord(msg) => "无效和弦：\{msg}"
     MidiOutOfRange(note) => "MIDI 越界：\{note}"
+    InvalidFrequency(hz) => "无效频率：\{hz}"
     Unsupported(msg) => "不支持：\{msg}"
   }
 }

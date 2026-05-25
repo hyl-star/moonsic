@@ -2678,3 +2678,220 @@ test "score_enhanced: ffi_score_structure_summary_json invalid ppq" {
   assert_true(result.length() > 20)
   assert_true(result != "")
 }
+
+// ============================================================
+// Pitch v2 稳定化 — 边界与等音测试
+// ============================================================
+
+///|
+/// MIDI 下界：C-1 -> MIDI 0
+test "pitch_v2: C-1 midi zero" {
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.Natural, -1)
+  assert_eq(p.to_midi(), 0)
+  assert_true(p.is_valid_midi())
+}
+
+///|
+/// MIDI 上界：G9 -> MIDI 127
+test "pitch_v2: G9 midi 127" {
+  let p = @moonsic.pitch(@moonsic.G, @moonsic.Natural, 9)
+  assert_eq(p.to_midi(), 127)
+  assert_true(p.is_valid_midi())
+}
+
+///|
+/// pitch_equal 相同拼写 -> true
+test "pitch_v2: pitch_equal same spelling" {
+  let a = @moonsic.pitch(@moonsic.C, @moonsic.Sharp, 4)
+  let b = @moonsic.pitch(@moonsic.C, @moonsic.Sharp, 4)
+  assert_true(@moonsic.pitch_equal(a, b))
+}
+
+///|
+/// pitch_equal 不同拼写 (C#4 vs Db4) -> false
+test "pitch_v2: pitch_equal different spelling" {
+  let a = @moonsic.pitch(@moonsic.C, @moonsic.Sharp, 4)
+  let b = @moonsic.pitch(@moonsic.D, @moonsic.Flat, 4)
+  assert_false(@moonsic.pitch_equal(a, b))
+}
+
+///|
+/// enharmonic_equal C#4 == Db4 (MIDI 相同) -> true
+test "pitch_v2: enharmonic_equal sharp flat" {
+  let a = @moonsic.pitch(@moonsic.C, @moonsic.Sharp, 4)
+  let b = @moonsic.pitch(@moonsic.D, @moonsic.Flat, 4)
+  assert_true(@moonsic.enharmonic_equal(a, b))
+}
+
+///|
+/// enharmonic_equal C4 != D4 -> false
+test "pitch_v2: enharmonic_equal different notes" {
+  let a = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  let b = @moonsic.pitch(@moonsic.D, @moonsic.Natural, 4)
+  assert_false(@moonsic.enharmonic_equal(a, b))
+}
+
+///|
+/// pitch_compare 升序
+test "pitch_v2: pitch_compare ascending" {
+  let c4 = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  let d4 = @moonsic.pitch(@moonsic.D, @moonsic.Natural, 4)
+  assert_eq(@moonsic.pitch_compare(c4, d4), -1)
+  assert_eq(@moonsic.pitch_compare(d4, c4), 1)
+  assert_eq(@moonsic.pitch_compare(c4, c4), 0)
+}
+
+///|
+/// transpose C4 + 12 -> C5 (八度移调)
+test "pitch_v2: transpose_up_octave" {
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  let r = @moonsic.transpose_pitch(p, 12)
+  assert_true(r is Ok(_))
+  let p2 = r.unwrap()
+  assert_eq(p2.to_midi(), 72)
+  assert_eq(p2.octave, 5)
+  assert_eq(p2.to_string(), "C5")
+}
+
+///|
+/// transpose C-1 - 1 -> Err(MidiOutOfRange)
+test "pitch_v2: transpose_out_of_range_low" {
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.Natural, -1)
+  let r = @moonsic.transpose_pitch(p, -1)
+  assert_true(r is Err(@moonsic.MidiOutOfRange(_)))
+}
+
+///|
+/// transpose G9 + 1 -> Err(MidiOutOfRange)
+test "pitch_v2: transpose_out_of_range_high" {
+  let p = @moonsic.pitch(@moonsic.G, @moonsic.Natural, 9)
+  let r = @moonsic.transpose_pitch(p, 1)
+  assert_true(r is Err(@moonsic.MidiOutOfRange(_)))
+}
+
+///|
+/// DoubleSharp: C##4 -> MIDI 62 (等音于 D4)
+test "pitch_v2: double_sharp_midi" {
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.DoubleSharp, 4)
+  assert_eq(p.to_midi(), 62)
+  // 与 D4 等音，但拼写不同
+  let d4 = @moonsic.pitch(@moonsic.D, @moonsic.Natural, 4)
+  assert_true(@moonsic.enharmonic_equal(p, d4))
+  assert_false(@moonsic.pitch_equal(p, d4))
+}
+
+///|
+/// DoubleFlat: Dbb4 -> MIDI 60 (等音于 C4)
+test "pitch_v2: double_flat_midi" {
+  let p = @moonsic.pitch(@moonsic.D, @moonsic.DoubleFlat, 4)
+  assert_eq(p.to_midi(), 60)
+  // 与 C4 等音，但拼写不同
+  let c4 = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  assert_true(@moonsic.enharmonic_equal(p, c4))
+  assert_false(@moonsic.pitch_equal(p, c4))
+}
+
+///|
+/// midi_note_compare 排序
+test "pitch_v2: midi_note_compare" {
+  assert_eq(@moonsic.midi_note_compare(0, 127), -1)
+  assert_eq(@moonsic.midi_note_compare(127, 0), 1)
+  assert_eq(@moonsic.midi_note_compare(60, 60), 0)
+}
+
+///|
+/// C#4 与 Db4 的完整对比：MIDI 相同、等音 true、拼写不同
+test "pitch_v2: enharmonic_sharp_flat_roundtrip" {
+  let cs4 = @moonsic.pitch(@moonsic.C, @moonsic.Sharp, 4)
+  let db4 = @moonsic.pitch(@moonsic.D, @moonsic.Flat, 4)
+  assert_eq(cs4.to_midi(), 61)
+  assert_eq(db4.to_midi(), 61)
+  assert_eq(cs4.to_midi(), db4.to_midi())
+  assert_true(@moonsic.enharmonic_equal(cs4, db4))
+  assert_false(@moonsic.pitch_equal(cs4, db4))
+  assert_eq(@moonsic.pitch_compare(cs4, db4), 0)
+}
+
+///|
+/// 变音记号偏移量验证：全部五种
+test "pitch_v2: accidental_offsets_all" {
+  assert_eq(@moonsic.DoubleFlat.semitone_offset(), -2)
+  assert_eq(@moonsic.Flat.semitone_offset(), -1)
+  assert_eq(@moonsic.Natural.semitone_offset(), 0)
+  assert_eq(@moonsic.Sharp.semitone_offset(), 1)
+  assert_eq(@moonsic.DoubleSharp.semitone_offset(), 2)
+}
+
+///|
+/// DoubleSharp to_string 为 "x"（v1 兼容行为）
+test "pitch_v2: double_sharp_to_string_is_x" {
+  assert_eq(@moonsic.DoubleSharp.to_string(), "x")
+}
+
+///|
+/// pitch_to_frequency_checked A4 = 440.0 Hz
+test "pitch_v2: frequency_A4_equals_440" {
+  let p = @moonsic.pitch(@moonsic.A, @moonsic.Natural, 4)
+  let r = @moonsic.pitch_to_frequency_checked(p)
+  assert_true(r is Ok(_))
+  let hz = r.unwrap()
+  assert_true((hz - 440.0).abs() < 0.01)
+}
+
+///|
+/// frequency_to_nearest_midi_checked 440.0 Hz -> 69 (A4)
+test "pitch_v2: frequency_440_to_midi_69" {
+  let r = @moonsic.frequency_to_nearest_midi_checked(440.0)
+  assert_true(r is Ok(_))
+  assert_eq(r.unwrap(), 69)
+}
+
+///|
+/// frequency_to_nearest_midi_checked 0.0 -> Err(InvalidFrequency)
+test "pitch_v2: frequency_zero_error" {
+  let r = @moonsic.frequency_to_nearest_midi_checked(0.0)
+  assert_true(r is Err(@moonsic.InvalidFrequency(_)))
+}
+
+///|
+/// frequency_to_nearest_midi_checked 负数 -> Err(InvalidFrequency)
+test "pitch_v2: frequency_negative_error" {
+  let r = @moonsic.frequency_to_nearest_midi_checked(-100.0)
+  assert_true(r is Err(@moonsic.InvalidFrequency(_)))
+}
+
+///|
+/// C5 (MIDI 72) 是 C4 (MIDI 60) 的 2 倍频率（一个八度）
+test "pitch_v2: frequency_octave_doubling" {
+  let c4 = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 4)
+  let c5 = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 5)
+  let f4 = @moonsic.pitch_to_frequency_checked(c4).unwrap()
+  let f5 = @moonsic.pitch_to_frequency_checked(c5).unwrap()
+  // 八度关系：f5 ≈ 2 * f4
+  assert_true((f5 / f4 - 2.0).abs() < 0.001)
+}
+
+///|
+/// pitch_to_midi Result 路径：合法音高返回 Ok
+test "pitch_v2: pitch_to_midi_result_ok" {
+  let p = @moonsic.pitch(@moonsic.G, @moonsic.Natural, 9)
+  let r = @moonsic.pitch_to_midi(p)
+  assert_true(r is Ok(_))
+  assert_eq(r.unwrap(), 127)
+}
+
+///|
+/// pitch_to_midi Result 路径：非法音高返回 Err
+test "pitch_v2: pitch_to_midi_result_out_of_range" {
+  // C10 -> MIDI 132, 超出范围
+  let p = @moonsic.pitch(@moonsic.C, @moonsic.Natural, 10)
+  let r = @moonsic.pitch_to_midi(p)
+  assert_true(r is Err(@moonsic.MidiOutOfRange(_)))
+}
+
+///|
+/// InvalidFrequency to_string 包含消息
+test "pitch_v2: invalid_frequency_error_to_string" {
+  let e = @moonsic.InvalidFrequency(-1.0)
+  assert_true(e.to_string().contains("无效频率"))
+}

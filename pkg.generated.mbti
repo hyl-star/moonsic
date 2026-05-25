@@ -204,6 +204,8 @@ pub fn enhanced_voice(String, Array[EnhancedMeasure]) -> EnhancedVoice
 
 pub fn enhanced_voice_checked(String, Array[EnhancedMeasure]) -> Result[EnhancedVoice, ScoreStructureError]
 
+pub fn enharmonic_equal(Pitch, Pitch) -> Bool
+
 pub fn export_validation_options() -> ValidationOptions
 
 pub fn f(Int) -> Pitch
@@ -251,6 +253,8 @@ pub fn ffi_validate_score_layout_json(String) -> String
 pub fn fit_pattern_to_bars_checked(PhrasePattern, TimeSignature, Int, PatternFillMode) -> Result[PhrasePattern, MotifError]
 
 pub fn four_four() -> TimeSignature
+
+pub fn frequency_to_nearest_midi_checked(Double) -> Result[Int, TheoryError]
 
 pub fn fs(Int) -> Pitch
 
@@ -368,6 +372,8 @@ pub fn melody_str(String) -> Track
 
 pub fn melody_with_channel(Array[MusicEvent], Int) -> Track
 
+pub fn midi_note_compare(Int, Int) -> Int
+
 pub fn midi_score_to_bytes(MidiScore) -> Bytes
 
 pub fn midi_score_to_bytes_checked(MidiScore) -> Result[Bytes, MidiError]
@@ -443,6 +449,12 @@ pub fn parse_to_json(String, String) -> String
 pub fn part_add_staff(Part, Staff) -> Result[Part, ScoreError]
 
 pub fn pitch(PitchClass, Accidental, Int) -> Pitch
+
+pub fn pitch_compare(Pitch, Pitch) -> Int
+
+pub fn pitch_equal(Pitch, Pitch) -> Bool
+
+pub fn pitch_to_frequency_checked(Pitch) -> Result[Double, TheoryError]
 
 pub fn pitch_to_json_string(Pitch) -> String
 
@@ -1727,6 +1739,7 @@ pub(all) enum TheoryError {
   InvalidScale(String)
   InvalidChord(String)
   MidiOutOfRange(Int)
+  InvalidFrequency(Double)
   Unsupported(String)
 }
 pub fn TheoryError::to_string(Self) -> String
