@@ -5984,3 +5984,197 @@ test "midi_stable: rest_does_not_produce_midi_note" {
 // ============================================================
 // MIDI 稳定化测试结束
 // ============================================================
+
+// ============================================================
+// WAV / PlaybackTimeline 稳定化边界测试 (v2)
+// ============================================================
+
+///|
+/// WAV header: 验证 PCM 格式 = 1, 位深 = 16, 单声道, block_align = 2
+test "wav_stable: pcm_format_bit_depth_block_align" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let wav = s.to_wav_bytes()
+  // Audio format (u16le at offset 20): PCM = 1
+  assert_eq(wav[20], (1).to_byte())
+  assert_eq(wav[21], (0).to_byte())
+  // Channels (u16le at offset 22): mono = 1
+  assert_eq(wav[22], (1).to_byte())
+  assert_eq(wav[23], (0).to_byte())
+  // Bits per sample (u16le at offset 34): 16
+  assert_eq(wav[34], (16).to_byte())
+  assert_eq(wav[35], (0).to_byte())
+  // Block align (u16le at offset 32): channels * bits/8 = 2
+  assert_eq(wav[32], (2).to_byte())
+  assert_eq(wav[33], (0).to_byte())
+}
+
+///|
+/// WAV header: 验证采样率 = 44100, 字节率 = 88200
+test "wav_stable: sample_rate_and_byte_rate" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let wav = s.to_wav_bytes()
+  // sample_rate (u32le at offset 24): 44100 = 0xAC44
+  assert_eq(wav[24], (68).to_byte())
+  assert_eq(wav[25], (172).to_byte())
+  assert_eq(wav[26], (0).to_byte())
+  assert_eq(wav[27], (0).to_byte())
+  // byte_rate (u32le at offset 28): 44100 * 2 = 88200
+  assert_eq(wav[28], (136).to_byte())
+  assert_eq(wav[29], (88).to_byte())
+  assert_eq(wav[30], (1).to_byte())
+  assert_eq(wav[31], (0).to_byte())
+}
+
+///|
+/// WAV header: 验证 fmt subchunk size = 16
+test "wav_stable: fmt_chunk_size" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let wav = s.to_wav_bytes()
+  // fmt subchunk size (u32le at offset 16): 16
+  assert_eq(wav[16], (16).to_byte())
+  assert_eq(wav[17], (0).to_byte())
+  assert_eq(wav[18], (0).to_byte())
+  assert_eq(wav[19], (0).to_byte())
+}
+
+///|
+/// WAV header: 验证 RIFF 文件大小和数据 chunk 大小一致性
+test "wav_stable: file_size_consistency" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let s = @moonsic.score1(t)
+  let wav = s.to_wav_bytes()
+  let total = wav.length()
+  // RIFF chunk size (u32le at offset 4): should equal total - 8
+  let riff_size = wav[4].to_int() |
+    (wav[5].to_int() << 8) |
+    (wav[6].to_int() << 16) |
+    (wav[7].to_int() << 24)
+  assert_eq(riff_size, total - 8)
+  // data chunk size (u32le at offset 40): should equal total - 44
+  let data_size = wav[40].to_int() |
+    (wav[41].to_int() << 8) |
+    (wav[42].to_int() << 16) |
+    (wav[43].to_int() << 24)
+  assert_eq(data_size, total - 44)
+}
+
+///|
+/// WAV normalize 边界: 空乐谱产生有效 WAV（纯静默 + tail），header 完整
+test "wav_stable: empty_score_silence_wav" {
+  let s = @moonsic.score([])
+  let wav = s.to_wav_bytes()
+  // RIFF + WAVE magic
+  assert_eq(wav[0], b'R')
+  assert_eq(wav[1], b'I')
+  assert_eq(wav[2], b'F')
+  assert_eq(wav[3], b'F')
+  assert_eq(wav[8], b'W')
+  assert_eq(wav[9], b'A')
+  assert_eq(wav[10], b'V')
+  assert_eq(wav[11], b'E')
+  // fmt chunk present
+  assert_eq(wav[12], b'f')
+  // data chunk present (offset 36)
+  assert_eq(wav[36], b'd')
+  assert_eq(wav[39], b'a')
+  // Data section exists (tail_seconds=0.1 of silence: 4410 samples * 2 = 8820 bytes)
+  assert_true(wav.length() > 44)
+  // data chunk size = total - 44
+  let total = wav.length()
+  let data_size = wav[40].to_int() |
+    (wav[41].to_int() << 8) |
+    (wav[42].to_int() << 16) |
+    (wav[43].to_int() << 24)
+  assert_eq(data_size, total - 44)
+}
+
+///|
+/// WAV normalize 边界: 多和弦 score 结构完整，文件大小一致
+test "wav_stable: loud_chord_structure_intact" {
+  let t = @moonsic.melody([
+    @moonsic.major(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.major(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.major(@moonsic.e(4), @moonsic.quarter()),
+  ])
+  let s = @moonsic.score1(t)
+  let wav = s.to_wav_bytes()
+  // Must have valid WAV header
+  assert_eq(wav[0], b'R')
+  assert_eq(wav[8], b'W')
+  // File size consistency: RIFF size = total - 8
+  let total = wav.length()
+  let riff_size = wav[4].to_int() |
+    (wav[5].to_int() << 8) |
+    (wav[6].to_int() << 16) |
+    (wav[7].to_int() << 24)
+  assert_eq(riff_size, total - 8)
+  // PCM format remains correct even after rendering many samples
+  assert_eq(wav[20], (1).to_byte())
+  assert_eq(wav[34], (16).to_byte())
+}
+
+///|
+/// PlaybackTimeline: 负时间 at_second 查询返回空数组
+test "playback_stable: negative_time_query" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // Negative time: no event starts at negative time
+  let at_neg1 = tl.at_second(-1.0)
+  assert_eq(at_neg1.length(), 0)
+  let at_neg_small = tl.at_second(-0.001)
+  assert_eq(at_neg_small.length(), 0)
+}
+
+///|
+/// PlaybackTimeline: 零宽度窗口在无事件时刻返回空，在有事件时刻返回活跃事件
+test "playback_stable: events_between_zero_width" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // Zero-width window BEFORE first event: should return empty
+  let before = tl.events_between(-0.5, -0.5)
+  assert_eq(before.length(), 0)
+  // Zero-width window AFTER last event: should return empty
+  let after = tl.events_between(tl.duration() + 1.0, tl.duration() + 1.0)
+  assert_eq(after.length(), 0)
+  // Zero-width window WITHIN active event: should return the event
+  // C4 is at [0.0, 0.5), so t=0.25 captures C4
+  let active = tl.events_between(0.25, 0.25)
+  assert_eq(active.length(), 1)
+}
+
+///|
+/// PlaybackTimeline: events_between 全范围覆盖所有事件
+test "playback_stable: events_between_full_range" {
+  let t = @moonsic.melody([
+    @moonsic.n(@moonsic.c(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.d(4), @moonsic.quarter()),
+    @moonsic.n(@moonsic.e(4), @moonsic.quarter()),
+  ])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // Full range [0, duration] should capture all events
+  let all = tl.events_between(0.0, tl.duration())
+  assert_eq(all.length(), tl.event_count())
+}
+
+///|
+/// PlaybackTimeline: 时间线结束后查询返回空
+test "playback_stable: past_timeline_end" {
+  let t = @moonsic.melody([@moonsic.n(@moonsic.c(4), @moonsic.quarter())])
+  let score = @moonsic.score1(t)
+  let tl = @moonsic.timeline_from_score(score)
+  // Query well past the end of the timeline
+  let later = tl.at_second(tl.duration() + 10.0)
+  assert_eq(later.length(), 0)
+  // events_between entirely after the timeline
+  let between = tl.events_between(tl.duration() + 1.0, tl.duration() + 2.0)
+  assert_eq(between.length(), 0)
+}
