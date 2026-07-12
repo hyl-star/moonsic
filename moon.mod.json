@@ -1,0 +1,10 @@
+{
+  "name": "hyl-star/moonsic",
+  "version": "0.1.0",
+  "readme": "README.md",
+  "repository": "https://github.com/hyl-star/moonsic",
+  "license": "Apache-2.0",
+  "keywords": ["music", "midi", "wav", "webaudio", "score"],
+  "description": "MoonBit 音乐语义库 — 用强类型描述音乐，导出 MIDI/WAV/浏览器事件",
+  "homepage": "https://github.com/hyl-star/moonsic#readme"
+}
