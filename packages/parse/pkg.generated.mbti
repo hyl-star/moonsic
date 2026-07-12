@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/parse"
+package "hyl-star/moonsic/packages/parse"
 
 // Values
 pub fn bench_parse_to_json(Int) -> String

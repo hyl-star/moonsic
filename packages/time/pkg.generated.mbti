@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/time"
+package "hyl-star/moonsic/packages/time"
 
 // Values
 pub fn add_sig_change(TimeMap, TimeSigChange) -> TimeMap

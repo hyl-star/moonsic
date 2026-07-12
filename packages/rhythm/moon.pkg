@@ -1,3 +1,3 @@
 import {
-  "username/moonsic/packages/time" @time,
+  "hyl-star/moonsic/packages/time",
 }

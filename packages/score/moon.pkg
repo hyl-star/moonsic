@@ -1,4 +1,4 @@
 import {
-  "username/moonsic/packages/pitch" @pitch,
-  "username/moonsic/packages/time" @time,
+  "hyl-star/moonsic/packages/pitch",
+  "hyl-star/moonsic/packages/time",
 }

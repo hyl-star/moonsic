@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/web"
+package "hyl-star/moonsic/packages/web"
 
 import {
-  "username/moonsic/packages/score",
-  "username/moonsic/packages/timeline",
+  "hyl-star/moonsic/packages/score",
+  "hyl-star/moonsic/packages/timeline",
 }
 
 // Values

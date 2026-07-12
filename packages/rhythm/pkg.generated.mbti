@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/rhythm"
+package "hyl-star/moonsic/packages/rhythm"
 
 import {
-  "username/moonsic/packages/time",
+  "hyl-star/moonsic/packages/time",
 }
 
 // Values

@@ -1,0 +1,7 @@
+import {
+  "hyl-star/moonsic/packages/demo",
+}
+
+options(
+  "is-main": true,
+)

@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/harmony"
+package "hyl-star/moonsic/packages/harmony"
 
 import {
-  "username/moonsic/packages/chord",
-  "username/moonsic/packages/pitch",
-  "username/moonsic/packages/scale",
+  "hyl-star/moonsic/packages/chord",
+  "hyl-star/moonsic/packages/pitch",
+  "hyl-star/moonsic/packages/scale",
 }
 
 // Values

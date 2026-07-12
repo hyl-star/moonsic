@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/game"
+package "hyl-star/moonsic/packages/game"
 
 import {
-  "username/moonsic/packages/time",
-  "username/moonsic/packages/timeline",
+  "hyl-star/moonsic/packages/time",
+  "hyl-star/moonsic/packages/timeline",
 }
 
 // Values

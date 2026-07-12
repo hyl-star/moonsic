@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/interval"
+package "hyl-star/moonsic/packages/interval"
 
 import {
-  "username/moonsic/packages/pitch",
+  "hyl-star/moonsic/packages/pitch",
 }
 
 // Values

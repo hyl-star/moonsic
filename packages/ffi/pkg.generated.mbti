@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/ffi"
+package "hyl-star/moonsic/packages/ffi"
 
 // Values
 pub fn bench_ffi_generate(Int) -> String

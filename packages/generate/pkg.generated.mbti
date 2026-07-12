@@ -1,12 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/generate"
+package "hyl-star/moonsic/packages/generate"
 
 import {
-  "username/moonsic/packages/pitch",
-  "username/moonsic/packages/rhythm",
-  "username/moonsic/packages/scale",
-  "username/moonsic/packages/score",
-  "username/moonsic/packages/time",
+  "hyl-star/moonsic/packages/pitch",
+  "hyl-star/moonsic/packages/rhythm",
+  "hyl-star/moonsic/packages/scale",
+  "hyl-star/moonsic/packages/score",
+  "hyl-star/moonsic/packages/time",
 }
 
 // Values

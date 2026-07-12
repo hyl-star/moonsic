@@ -1,5 +1,5 @@
 import {
-  "username/moonsic/packages/timeline" @timeline,
-  "username/moonsic/packages/score" @score,
-  "username/moonsic/packages/json" @json,
+  "hyl-star/moonsic/packages/timeline",
+  "hyl-star/moonsic/packages/score",
+  "hyl-star/moonsic/packages/json",
 }

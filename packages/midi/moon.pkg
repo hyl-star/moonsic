@@ -1,6 +1,6 @@
 import {
-  "username/moonsic/packages/score" @score,
-  "username/moonsic/packages/time" @time,
-  "username/moonsic/packages/pitch" @pitch,
+  "hyl-star/moonsic/packages/score",
+  "hyl-star/moonsic/packages/time",
+  "hyl-star/moonsic/packages/pitch",
   "CAIMEOX/midi" @midilib,
 }

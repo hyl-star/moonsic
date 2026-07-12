@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/moonsic/packages/pitch"
+package "hyl-star/moonsic/packages/pitch"
 
 // Values
 pub const A4_FREQ : Double = 440.0

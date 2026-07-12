@@ -1,5 +1,5 @@
 import {
-  "moonbitlang/core/math" @math,
-  "username/moonsic/packages/pitch" @pitch,
-  "username/moonsic/packages/timeline" @timeline,
+  "moonbitlang/core/math",
+  "hyl-star/moonsic/packages/pitch",
+  "hyl-star/moonsic/packages/timeline",
 }

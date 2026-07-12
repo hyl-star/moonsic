@@ -234,11 +234,23 @@ cmd/main/             CLI 入口
 web/                  浏览器编辑器 + 播放器
 ```
 
+## 可运行 CLI demo
+
+默认 demo 会通过 `packages/demo` 的端到端管线生成乐谱、MIDI、MusicXML、WAV、浏览器事件和游戏 IR，并输出不含二进制内容的 JSON 摘要：
+
+```bash
+moon update
+moon run cmd/main
+```
+
+预期输出包含 `"has_midi":true`、`"has_musicxml":true` 和 `"has_wav":true`。
+
 ## 命令
 
 ```bash
-moon test          # 386+ tests
-moon run cmd/main  # CLI demo
+moon check         # 静态检查
+moon test          # 运行测试套件
+moon run cmd/main  # 运行端到端 CLI demo
 moon fmt           # 格式化
 moon info          # 更新接口
 ```
@@ -426,11 +438,23 @@ cmd/main/              CLI entrypoint
 web/                   browser editor + player
 ```
 
+## Runnable CLI demo
+
+The default demo runs the `packages/demo` end-to-end pipeline, producing score, MIDI, MusicXML, WAV, browser-event, and game-IR assets. It prints a JSON summary without binary payloads:
+
+```bash
+moon update
+moon run cmd/main
+```
+
+The output includes `"has_midi":true`, `"has_musicxml":true`, and `"has_wav":true`.
+
 ## Commands
 
 ```bash
-moon test          # 386+ tests
-moon run cmd/main  # CLI demo
+moon check         # static check
+moon test          # run the test suite
+moon run cmd/main  # run the end-to-end CLI demo
 moon fmt
 moon info
 ```
