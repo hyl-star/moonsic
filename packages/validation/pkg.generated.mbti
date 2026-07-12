@@ -1,0 +1,120 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/validation"
+
+import {
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn code_label(ValidationCode) -> String
+
+pub fn default_severity(ValidationCode) -> ValidationSeverity
+
+pub fn editing_validation_options() -> ValidationOptions
+
+pub fn empty_validation_report() -> ValidationReport
+
+pub fn export_ready_validation_options() -> ValidationOptions
+
+pub fn options_for_profile(ValidationProfile) -> ValidationOptions
+
+pub fn report_add_issue(ValidationReport, ValidationIssue) -> ValidationReport
+
+pub fn report_has_errors(ValidationReport) -> Bool
+
+pub fn report_issue_count(ValidationReport) -> Int
+
+pub fn severity_label(ValidationSeverity) -> String
+
+pub fn strict_validation_options() -> ValidationOptions
+
+pub fn validate_measure(@score.Measure, @time.TimeSignature, ValidationOptions) -> ValidationReport
+
+pub fn validate_part(@score.Part, @time.TimeSignature, ValidationOptions) -> ValidationReport
+
+pub fn validate_score_layout(@score.ScoreLayout, ValidationOptions) -> ValidationReport
+
+pub fn validate_staff(@score.Staff, @time.TimeSignature, ValidationOptions) -> ValidationReport
+
+pub fn validate_voice(@score.Voice, @time.TimeSignature, ValidationOptions) -> ValidationReport
+
+pub fn validation_report_to_json(ValidationReport) -> String
+
+pub fn validation_report_to_summary(ValidationReport) -> String
+
+pub fn validation_report_to_text(ValidationReport) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum ValidationCode {
+  EmptyScore
+  EmptyPart
+  EmptyStaff
+  EmptyVoice
+  MeasureOverflow
+  MeasureUnderfilled
+  VoiceAlignmentMismatch
+  MeasureIndexOutOfOrder
+  InvalidPPQ
+  InvalidTempo
+  InvalidChannel
+  InvalidProgram
+  InvalidSectionRange
+  InvalidRepeatCount
+  InvalidEndingNumber
+  InvalidVelocity
+  EmptyChordPitches
+}
+
+pub(all) enum ValidationError {
+  InvalidProfile(String)
+  InvalidOptions(String)
+  InvalidReport(String)
+  JsonEncodeError(String)
+}
+pub fn ValidationError::to_string(Self) -> String
+
+pub(all) struct ValidationIssue {
+  severity : ValidationSeverity
+  code : ValidationCode
+  path : String
+  message : String
+}
+
+pub(all) struct ValidationOptions {
+  strict_measure_capacity : Bool
+  empty_voice_is_error : Bool
+  empty_staff_is_error : Bool
+  empty_part_is_error : Bool
+  check_voice_alignment : Bool
+}
+
+pub(all) enum ValidationProfile {
+  EditingProfile
+  StrictProfile
+  ExportReadyProfile
+  GoldenTestProfile
+}
+
+pub(all) struct ValidationReport {
+  issues : Array[ValidationIssue]
+  info_count : Int
+  warning_count : Int
+  error_count : Int
+  fatal_count : Int
+}
+pub fn ValidationReport::issue_count(Self) -> Int
+
+pub(all) enum ValidationSeverity {
+  Info
+  Warning
+  Error
+  Fatal
+}
+
+// Type aliases
+
+// Traits
+

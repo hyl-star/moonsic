@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/interval"
+
+import {
+  "username/moonsic/packages/pitch",
+}
+
+// Values
+pub fn bench_interval_between(Int) -> String
+
+pub fn interval_between(@pitch.Pitch, @pitch.Pitch) -> Interval
+
+pub fn invert_interval(Interval) -> Interval
+
+pub fn parse_interval(String) -> Result[Interval, IntervalError]
+
+// Errors
+
+// Types and methods
+pub(all) struct Interval {
+  quality : IntervalQuality
+  number : Int
+  semitones : Int
+}
+
+pub(all) enum IntervalError {
+  InvalidInterval(String)
+}
+pub fn IntervalError::to_string(Self) -> String
+
+pub(all) enum IntervalQuality {
+  Perfect
+  Major
+  Minor
+  Augmented
+  Diminished
+}
+pub fn IntervalQuality::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

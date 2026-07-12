@@ -1,0 +1,115 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/musicxml"
+
+import {
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn default_musicxml_export_options() -> MusicXmlExportOptions
+
+pub fn musicxml_import_report_to_json(MusicXmlImportReport) -> String
+
+pub fn musicxml_score_to_layout_checked(MusicXmlScore) -> Result[@score.ScoreLayout, MusicXmlError]
+
+pub fn musicxml_score_to_string(MusicXmlScore, MusicXmlExportOptions) -> String
+
+pub fn musicxml_string_to_import_result_checked(String) -> Result[MusicXmlImportResult, MusicXmlError]
+
+pub fn musicxml_string_to_layout_checked(String) -> Result[@score.ScoreLayout, MusicXmlError]
+
+pub fn parse_musicxml_xml_checked(String) -> Result[MusicXmlScore, MusicXmlError]
+
+pub fn simple_score_to_musicxml_checked(@score.SimpleScore, MusicXmlExportOptions) -> Result[MusicXmlScore, MusicXmlError]
+
+pub fn simple_score_to_musicxml_string_checked(@score.SimpleScore, MusicXmlExportOptions) -> Result[String, MusicXmlError]
+
+// Errors
+
+// Types and methods
+pub(all) struct MusicXmlAttributes {
+  divisions : Int
+  time_signature : @time.TimeSignature
+}
+
+pub(all) enum MusicXmlError {
+  InvalidMusicXmlOptions(String)
+  MusicXmlUnsupported(String)
+  MusicXmlDurationError(String)
+  MusicXmlPitchError(String)
+  MusicXmlMeasureError(String)
+  MusicXmlSerializationError(String)
+  MusicXmlImportError(String)
+}
+pub fn MusicXmlError::to_string(Self) -> String
+
+pub(all) struct MusicXmlExportOptions {
+  divisions : Int
+  include_xml_header : Bool
+  include_doctype : Bool
+  part_name_fallback : String
+}
+
+pub(all) struct MusicXmlImportReport {
+  warnings : Array[String]
+  unsupported_elements : Array[String]
+  part_count : Int
+  measure_count : Int
+}
+
+pub(all) struct MusicXmlImportResult {
+  layout : @score.ScoreLayout
+  report : MusicXmlImportReport
+}
+
+pub(all) struct MusicXmlMeasure {
+  number : Int
+  attributes : MusicXmlAttributes?
+  notes : Array[MusicXmlNote]
+}
+
+pub(all) struct MusicXmlNote {
+  pitch : MusicXmlPitch?
+  duration : Int
+  note_type : MusicXmlNoteType
+  dots : Int
+  is_rest : Bool
+  is_chord_tone : Bool
+  voice : Int
+  staff : Int
+}
+
+pub(all) enum MusicXmlNoteType {
+  WholeT
+  HalfT
+  QuarterT
+  EighthT
+  SixteenthT
+  ThirtySecondT
+  SixtyFourthT
+  OneTwentyEighthT
+}
+
+pub(all) struct MusicXmlPart {
+  id : String
+  name : String
+  measures : Array[MusicXmlMeasure]
+}
+
+pub(all) struct MusicXmlPitch {
+  step : String
+  alter : Int
+  octave : Int
+}
+
+pub(all) struct MusicXmlScore {
+  title : String
+  parts : Array[MusicXmlPart]
+  divisions : Int
+}
+
+// Type aliases
+
+// Traits
+

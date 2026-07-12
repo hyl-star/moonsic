@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/drums"
+
+import {
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub const CLAP : Int = 39
+
+pub const CLOSED_HAT : Int = 42
+
+pub const DRUM_CHANNEL : Int = 9
+
+pub const KICK : Int = 36
+
+pub const OPEN_HAT : Int = 46
+
+pub const SNARE : Int = 38
+
+pub fn basic_beat_checked(Int) -> Result[@score.SimpleScore, DrumError]
+
+pub fn bench_basic_beat(Int) -> String
+
+pub fn clap_checked(@time.RhythmDuration) -> Result[@score.SimpleEvent, DrumError]
+
+pub fn closed_hat_checked(@time.RhythmDuration) -> Result[@score.SimpleEvent, DrumError]
+
+pub fn drum_note_checked(Int, @time.RhythmDuration, Int) -> Result[@score.SimpleEvent, DrumError]
+
+pub fn kick_checked(@time.RhythmDuration) -> Result[@score.SimpleEvent, DrumError]
+
+pub fn snare_checked(@time.RhythmDuration) -> Result[@score.SimpleEvent, DrumError]
+
+// Errors
+
+// Types and methods
+pub(all) enum DrumError {
+  InvalidDrumNote(Int)
+  InvalidDrumVelocity(Int)
+  InvalidDrumBars(Int)
+  DrumScoreError(String)
+}
+pub fn DrumError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

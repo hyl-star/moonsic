@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/transform"
+
+import {
+  "username/moonsic/packages/score",
+}
+
+// Values
+pub fn bench_transform_reverse(Int) -> String
+
+pub fn simple_track_concat(@score.SimpleTrack, @score.SimpleTrack) -> @score.SimpleTrack
+
+pub fn simple_track_down_octave_checked(@score.SimpleTrack) -> Result[@score.SimpleTrack, TransformError]
+
+pub fn simple_track_map_velocity_checked(@score.SimpleTrack, (Int) -> Int) -> Result[@score.SimpleTrack, TransformError]
+
+pub fn simple_track_reverse(@score.SimpleTrack) -> @score.SimpleTrack
+
+pub fn simple_track_stretch_checked(@score.SimpleTrack, Double) -> Result[@score.SimpleTrack, TransformError]
+
+pub fn simple_track_transpose_checked(@score.SimpleTrack, Int) -> Result[@score.SimpleTrack, TransformError]
+
+pub fn simple_track_up_octave_checked(@score.SimpleTrack) -> Result[@score.SimpleTrack, TransformError]
+
+// Errors
+
+// Types and methods
+pub(all) enum TransformError {
+  InvalidStretchFactor(Double)
+  InvalidTranspose(String)
+  InvalidVelocity(Int)
+  TransformScoreError(String)
+  TransformTimeError(String)
+}
+pub fn TransformError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

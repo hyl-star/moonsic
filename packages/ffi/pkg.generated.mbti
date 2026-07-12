@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/ffi"
+
+// Values
+pub fn bench_ffi_generate(Int) -> String
+
+pub fn ffi_generate_game_loop_json(String) -> String
+
+pub fn ffi_generate_melody_json(String) -> String
+
+pub fn ffi_parse_to_json(String, String) -> String
+
+pub fn ffi_simple_score_to_midi_json(String) -> String
+
+pub fn ffi_simple_score_to_musicxml_json(String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum FfiError {
+  InvalidFfiJson(String)
+  MissingFfiField(String)
+  InvalidFfiField(String)
+  FfiGenerateError(String)
+  FfiExportError(String)
+}
+pub fn FfiError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

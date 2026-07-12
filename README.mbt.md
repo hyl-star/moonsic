@@ -5,7 +5,77 @@
 
 MoonBit 音乐语义库 — 用强类型描述音乐，导出 MIDI/WAV/浏览器事件。
 
-## 快速开始
+> **v2 多包架构已发布。** v1 根包 API 已弃用，请参考 [MIGRATION.md](./MIGRATION.md) 迁移。
+
+## v2 多包架构 (25 packages)
+
+```
+packages/
+  pitch/      音高 + 快捷构造 + MIDI/频率 + 解析
+  interval/   音程计算 + 转位 + 解析
+  time/       节奏时间 + RhythmDuration + TimeSignature
+  scale/      音阶 + 调性 + Key
+  chord/      和弦品质 + 解析 + 展开
+  harmony/    罗马数字 + 声部引导
+  rhythm/     节奏模板 + 模式 + Phrase
+  motif/      音级动机 + 变换
+  score/      SimpleScore + ScoreLayout + 构造器
+  validation/ 校验报告 + profile
+  json/       零依赖 JSON 解析/序列化
+  parse/      统一解析 facade
+  midi/       MIDI 事件 + 排序 + 字节导出 + GM 乐器
+  musicxml/   MusicXML 模型 + 转换 + 字符串写入
+  timeline/   NoteEvent 时间线 + 浏览器事件导出
+  wav/        WAV 渲染
+  game/       游戏音乐 IR
+  generate/   旋律/和弦/bass/伴奏生成
+  adapter/    外部生成器协议
+  drums/      GM 鼓组 + 基本节拍
+  transform/  SimpleTrack 纯变换
+  structure/  歌曲段落 + arrange
+  ffi/        string-in/string-out facade
+  demo/       端到端作曲流水线
+```
+
+## 快速开始 (v2)
+
+```moonbit nocheck
+///| 导入所需包（moon.pkg 中配置）
+
+///| import: pitch, time, score, midi
+
+///|
+let p = @pitch.c(4) // C4
+
+///|
+let dur = @time.rhythm_duration(@time.DurQuarter, 0, None)
+
+///|
+let vel = @score.velocity_checked(100).unwrap()
+
+///|
+let n = @score.simple_note_checked(p, dur, Some(vel)).unwrap()
+
+///|
+let track = @score.simple_track_checked([n], None, None).unwrap()
+
+///|
+let tempo = @score.tempo_checked(120).unwrap()
+
+///|
+let sig = @time.time_signature(4, 4)
+
+///|
+let score = @score.simple_score_checked([track], tempo, sig).unwrap()
+
+///|
+let midi = @midi.simple_score_to_midi_bytes_checked(score, 480).unwrap()
+```
+
+## v1 快速开始（已弃用）
+
+<details>
+<summary>点击展开 v1 API 示例</summary>
 
 ```moonbit nocheck
 ///|
@@ -24,19 +94,21 @@ let midi = song.to_midi_bytes() // MIDI 字节流
 let wav = song.to_wav_bytes() // WAV 音频
 ```
 
+</details>
+
 ## 核心概念
 
-- **Pitch** — 音高 = 音名 + 变音记号 + 八度，`c(4)` = C4 (MIDI 60)
-- **Duration** — 时值：`whole()` `half()` `quarter()` `eighth()` `sixteenth()` `dotted()`
-- **MusicEvent** — 轨道事件：`Note` | `Rest` | `Chord`
-- **Track** — 有序事件序列，带通道/乐器/音量/声像/静音
-- **Score** — 速度 + 拍号 + 多轨道
-- **NoteEvent** — 运行时事件：start/duration/midi/velocity/channel
+- **Pitch** — 音高 = 音名 + 变音记号 + 八度，`@pitch.c(4)` = C4 (MIDI 60)
+- **RhythmDuration** — 时值：`@time.rhythm_duration(unit, dots, tuplet)`
+- **SimpleEvent** — 轨道事件：`Note` | `Rest` | `Chord` (在 `@score` 包)
+- **SimpleTrack** — 有序事件序列，带 channel/program/volume/pan/mute
+- **SimpleScore** — 速度 + 拍号 + 多轨道
+- **NoteEvent** — 运行时事件：start/duration/midi/velocity/channel (在 `@timeline` 包)
 
-数据流：
+数据流 (v2)：
 
 ```text
-API / 文本记谱 → Score → NoteEvent → MIDI / WAV / 浏览器事件 → 声音
+@score.SimpleScore → @midi / @musicxml / @timeline → @wav / Browser / Bytes
 ```
 
 ## API 速览
@@ -128,46 +200,44 @@ let s = score_str("tempo 140\ntime 3/4\nC4q D4q E4q")
 | `adapter.mbt` | 外部生成器协议 (GenerationRequest/Response) |
 | `game_music.mbt` | 游戏音频 IR (Cue/Loop/Stinger/Transition) |
 
-## 项目结构
+## 项目结构 (v2)
 
 ```
-core.mbt        核心音乐模型
-runtime.mbt     事件运行时 + 浏览器导出
-midi.mbt        MIDI 导出
-wav.mbt         WAV 渲染
-helpers.mbt     快捷 API + 文本解析器
-theory.mbt      乐理：音程/音阶/和弦
-patterns.mbt    轨道变换
-instruments.mbt GM 乐器
-arpeggio.mbt    琶音生成
-bass.mbt        低音生成
-drums.mbt       鼓组
-harmony.mbt     罗马数字 + 声部引导
-key.mbt         调号拼写
-structure.mbt   Section/arrange
-time.mbt        节奏时间：Rational/Tuplet/TimeMap
-interval.mbt    音程计算
-scale_struct.mbt Scale 结构
-theory_error.mbt TheoryError
-serialize.mbt   JSON 编解码
-score_layout.mbt 曲谱布局
-score_midi.mbt  MIDI 语义适配
-score_enhanced.mbt 专业曲谱结构
-validate.mbt    校验报告
-musicxml.mbt    MusicXML 导出
-playback.mbt    播放时间线
-generate.mbt    音乐生成
-rhythm.mbt      节奏/动机
-adapter.mbt     外部生成器协议
-game_music.mbt  游戏音频 IR
-benchmark.mbt   性能基准
-web/            浏览器编辑器 + 播放器
+moon.pkg               根包（空）
+moon.mod.json          模块元数据
+packages/              24 个子包
+  pitch/              音高 + 快捷构造 + MIDI/频率 + 解析
+  interval/           音程计算 + 转位 + 解析
+  time/               节奏时间 + RhythmDuration + TimeSignature
+  scale/              音阶 + 调性 + Key
+  chord/              和弦品质 + 解析 + 展开
+  harmony/            罗马数字 + 声部引导
+  rhythm/             节奏模板 + 模式 + Phrase
+  motif/              音级动机 + 变换
+  score/              SimpleScore + ScoreLayout + 构造器
+  validation/         校验报告 + profile
+  json/               零依赖 JSON 解析/序列化
+  parse/              统一解析 facade
+  midi/               MIDI 事件 + 排序 + 字节导出 + GM 乐器
+  musicxml/           MusicXML 模型 + 转换 + 字符串写入
+  timeline/           NoteEvent 时间线 + 浏览器事件导出
+  wav/                WAV 渲染
+  game/               游戏音乐 IR + 校验 + JSON 导出
+  generate/           旋律/和弦/bass/伴奏/loop 生成
+  adapter/            外部生成器请求/响应/补丁
+  drums/              GM 鼓组 + 基本节拍
+  transform/          SimpleTrack 纯变换
+  structure/          歌曲段落 + arrange
+  ffi/                string-in/string-out facade
+  demo/               端到端作曲流水线
+cmd/main/             CLI 入口
+web/                  浏览器编辑器 + 播放器
 ```
 
 ## 命令
 
 ```bash
-moon test          # 849 tests
+moon test          # 386+ tests
 moon run cmd/main  # CLI demo
 moon fmt           # 格式化
 moon info          # 更新接口
@@ -189,7 +259,77 @@ moon info          # 更新接口
 
 MoonBit music IR and export library with MIDI, WAV, and browser event output.
 
-## Quick Start
+> **v2 multi-package architecture released.** See [MIGRATION.md](./MIGRATION.md) for v1 to v2 migration.
+
+## v2 Multi-Package Architecture (25 packages)
+
+```
+packages/
+  pitch/      pitch classes, shortcuts, MIDI/frequency, parsing
+  interval/   interval quality, calculation, inversion, parsing
+  time/       rational time, RhytDuration, TimeSignature
+  scale/      scales, keys
+  chord/      chord qualities, parsing, pitch expansion
+  harmony/    roman numerals, voice leading
+  rhythm/     rhythm cells, patterns, phrase fitting
+  motif/      degree motifs, transforms, track conversion
+  score/      SimpleScore, ScoreLayout, constructors
+  validation/ validation reports, profiles
+  json/       zero-dependency JSON parse/stringify
+  parse/      unified parse-to-JSON facade
+  midi/       MIDI events, sorting, bytes export, GM instruments
+  musicxml/   MusicXML model, conversion, string writer
+  timeline/   NoteEvent timeline, browser event export
+  wav/        WAV rendering
+  game/       game music IR, validation, JSON export
+  generate/   melody, chords, bass, accompaniment generation
+  adapter/    external generator request/response/patch
+  drums/      GM drum helpers, basic beat generation
+  transform/  pure SimpleTrack transforms
+  structure/  song sections, arrangement
+  ffi/        string-in/string-out facade
+  demo/       end-to-end composition pipeline
+```
+
+## Quick Start (v2)
+
+```moonbit nocheck
+///| Import required packages in moon.pkg
+
+///| import: pitch, time, score, midi
+
+///|
+let p = @pitch.c(4)
+
+///|
+let dur = @time.rhythm_duration(@time.DurQuarter, 0, None)
+
+///|
+let vel = @score.velocity_checked(100).unwrap()
+
+///|
+let n = @score.simple_note_checked(p, dur, Some(vel)).unwrap()
+
+///|
+let track = @score.simple_track_checked([n], None, None).unwrap()
+
+///|
+let tempo = @score.tempo_checked(120).unwrap()
+
+///|
+let sig = @time.time_signature(4, 4)
+
+///|
+let score = @score.simple_score_checked([track], tempo, sig).unwrap()
+
+///|
+let midi = @midi.simple_score_to_midi_bytes_checked(score, 480).unwrap()
+```
+
+## v1 Quick Start (deprecated)
+
+<details>
+<summary>Click to expand v1 API examples</summary>
 
 ```moonbit nocheck
 ///|
@@ -208,16 +348,18 @@ let midi = song.to_midi_bytes()
 let wav = song.to_wav_bytes()
 ```
 
+</details>
+
 ## Core Concepts
 
-- **Pitch** — class + accidental + octave, `c(4)` = C4 (MIDI 60)
-- **Duration** — `whole()` `half()` `quarter()` `eighth()` `sixteenth()` `dotted()`
-- **MusicEvent** — `Note` | `Rest` | `Chord`
-- **Track** — ordered events with channel/instrument/volume/pan/mute
-- **Score** — tempo + time signature + tracks
-- **NoteEvent** — runtime event: start/duration/midi/velocity/channel
+- **Pitch** — class + accidental + octave, `@pitch.c(4)` = C4 (MIDI 60)
+- **RhythmDuration** — `@time.rhythm_duration(unit, dots, tuplet)`
+- **SimpleEvent** — `Note` | `Rest` | `Chord` (in `@score` package)
+- **SimpleTrack** — ordered events with channel/program/volume/pan/mute
+- **SimpleScore** — tempo + time signature + tracks
+- **NoteEvent** — runtime event: start/duration/midi/velocity/channel (in `@timeline` package)
 
-Pipeline: `API / text notation → Score → NoteEvent → MIDI / WAV / browser events → sound`
+Pipeline (v2): `@score.SimpleScore → @midi / @musicxml / @timeline → @wav / Browser / Bytes`
 
 ## Pitch Shortcuts
 
@@ -274,22 +416,20 @@ Format: `Note[Accidental]OctaveDuration[:Velocity]`. Chord: `[P1 P2...]Dur`. Rep
 | `score_to_json(song)` | JSON string |
 | `score_to_musicxml_string_checked(s, opts)` | MusicXML string |
 
-## Project Structure
+## Project Structure (v2)
 
 ```
-core.mbt · runtime.mbt · midi.mbt · wav.mbt · helpers.mbt · theory.mbt
-patterns.mbt · instruments.mbt · arpeggio.mbt · bass.mbt · drums.mbt
-harmony.mbt · key.mbt · structure.mbt · time.mbt · interval.mbt
-scale_struct.mbt · theory_error.mbt · serialize.mbt · score_layout.mbt
-score_midi.mbt · score_enhanced.mbt · validate.mbt · musicxml.mbt
-playback.mbt · generate.mbt · rhythm.mbt · adapter.mbt · game_music.mbt
-benchmark.mbt · web/
+moon.pkg               root package (empty)
+moon.mod.json          module metadata
+packages/              24 sub-packages (see v2 section above)
+cmd/main/              CLI entrypoint
+web/                   browser editor + player
 ```
 
 ## Commands
 
 ```bash
-moon test          # 849 tests
+moon test          # 386+ tests
 moon run cmd/main  # CLI demo
 moon fmt
 moon info

@@ -1,0 +1,95 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/rhythm"
+
+import {
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn fit_pattern_to_bars_checked(PhrasePattern, @time.TimeSignature, Int, PatternFillMode) -> Result[PhrasePattern, RhythmError]
+
+pub fn join_patterns_checked(Array[PhrasePattern], PatternJoinMode) -> Result[PhrasePattern, RhythmError]
+
+pub fn repeat_pattern_checked(RhythmPattern, Int) -> Result[PhrasePattern, RhythmError]
+
+pub fn rhythm_cell(@time.RhythmDuration, Bool, AccentStrength, Bool) -> RhythmCell
+
+pub fn rhythm_pattern(Array[RhythmCell]) -> RhythmPattern
+
+pub fn rhythm_pattern_checked(Array[RhythmCell]) -> Result[RhythmPattern, RhythmError]
+
+pub fn rhythm_template(RhythmTemplateKind) -> RhythmPattern
+
+// Errors
+
+// Types and methods
+pub(all) enum AccentStrength {
+  NoAccent
+  Weak
+  Medium
+  Strong
+  Marcato
+}
+pub fn AccentStrength::velocity_multiplier(Self) -> Double
+
+pub(all) enum PatternFillMode {
+  Strict
+  PadRest
+  Truncate
+  RepeatToFit
+  StretchLast
+}
+
+pub(all) enum PatternJoinMode {
+  Sequential
+  Overlay
+  CallResponse
+  Loop
+  Interleave
+}
+
+pub(all) struct PhrasePattern {
+  cells : Array[RhythmCell]
+  total_beats : Double
+}
+
+pub(all) struct RhythmCell {
+  duration : @time.RhythmDuration
+  is_rest : Bool
+  accent : AccentStrength
+  tie_to_next : Bool
+}
+
+pub(all) enum RhythmError {
+  EmptyRhythmPattern(String)
+  InvalidRhythmCell(String)
+  InvalidPatternLength(String)
+  InvalidRepeatCount(String)
+  PatternDoesNotFit(String)
+  RhythmParseError(String)
+  RhythmUnsupported(String)
+}
+pub fn RhythmError::to_string(Self) -> String
+
+pub(all) struct RhythmPattern {
+  cells : Array[RhythmCell]
+  total_beats : Double
+}
+
+pub(all) enum RhythmTemplateKind {
+  FourQuarters
+  TwoHalves
+  WholePad
+  EighthFlow
+  Syncopated
+  LongShort
+  ShortShortLong
+  Waltz
+  Tresillo
+  RestLead
+}
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,7 @@
+import {
+  "username/moonsic/packages/pitch" @pitch,
+  "username/moonsic/packages/rhythm" @rhythm,
+  "username/moonsic/packages/scale" @scale,
+  "username/moonsic/packages/score" @score,
+  "username/moonsic/packages/time" @time,
+}

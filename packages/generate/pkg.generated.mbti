@@ -1,0 +1,112 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/generate"
+
+import {
+  "username/moonsic/packages/pitch",
+  "username/moonsic/packages/rhythm",
+  "username/moonsic/packages/scale",
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn bench_generate_melody(Int) -> String
+
+pub fn default_generation_config() -> GenerationConfig
+
+pub fn generate_accompaniment_checked(GenerationContext, AccompanimentPattern, GenerationConfig) -> Result[@score.SimpleTrack, GenerateError]
+
+pub fn generate_bass_checked(GenerationContext, AccompanimentPattern, GenerationConfig) -> Result[@score.SimpleTrack, GenerateError]
+
+pub fn generate_chord_progression_checked(@scale.Key, Array[Int], @time.RhythmDuration, GenerationConfig) -> Result[@score.SimpleTrack, GenerateError]
+
+pub fn generate_game_loop_checked(GenerationContext, Int, GenerationConfig) -> Result[@score.SimpleScore, GenerateError]
+
+pub fn generate_melody_checked(@scale.Key, @rhythm.RhythmPattern, GenerationConfig) -> Result[@score.SimpleTrack, GenerateError]
+
+pub fn generate_phrase_checked(GenerationContext, GenerationConfig) -> Result[GeneratedPhrase, GenerateError]
+
+pub fn generated_phrase_to_score_checked(GeneratedPhrase, @score.Tempo, @time.TimeSignature) -> Result[@score.SimpleScore, GenerateError]
+
+// Errors
+
+// Types and methods
+pub(all) enum AccompanimentPattern {
+  BlockChord
+  ArpeggioUp
+  ArpeggioDown
+  ArpeggioUpDown
+  Alberti
+  Pad
+  RootBass
+  RootFifthBass
+  WalkingBass
+}
+
+pub(all) enum GenerateError {
+  InvalidGenerationConfig(String)
+  EmptyRhythmPattern(String)
+  EmptyProgression(String)
+  UnsupportedGenerateMode(String)
+  InvalidDegree(String)
+  RangeTooSmall(String)
+  GenerationFailed(String)
+}
+pub fn GenerateError::to_string(Self) -> String
+
+pub(all) enum GenerateMode {
+  MelodyOnly
+  ChordsOnly
+  BassOnly
+  AccompanimentMode
+  GameLoopMode
+}
+
+pub(all) struct GeneratedPhrase {
+  track : @score.SimpleTrack
+  start_degree : Int
+  end_degree : Int
+  total_beats : Double
+}
+
+pub(all) struct GenerationConfig {
+  mode : GenerateMode
+  contour : MelodyContour
+  range_low : @pitch.Pitch
+  range_high : @pitch.Pitch
+  seed : Int?
+  voice_leading : VoiceLeadingStrategy
+  allow_rests : Bool
+  max_leap : Int
+}
+
+pub(all) struct GenerationContext {
+  key : @scale.Key
+  progression : Array[Int]
+  time_signature : @time.TimeSignature
+  tempo : @score.Tempo
+  bars : Int
+}
+
+pub(all) enum MelodyContour {
+  StepwiseUp
+  StepwiseDown
+  Arch
+  InvertedArch
+  Wave
+  Static
+  ChordTone
+}
+
+pub(all) enum VoiceLeadingStrategy {
+  NoVoiceLeading
+  Nearest
+  KeepInRange
+  Smooth
+  ChordToneAnchor
+}
+
+// Type aliases
+
+// Traits
+

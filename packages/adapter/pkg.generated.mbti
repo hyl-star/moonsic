@@ -1,0 +1,221 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/adapter"
+
+import {
+  "username/moonsic/packages/json",
+  "username/moonsic/packages/scale",
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn apply_generation_patch_checked(@score.SimpleScore, GenerationPatch) -> Result[@score.SimpleScore, AdapterError]
+
+pub fn bench_adapter_mock(Int) -> String
+
+pub fn deterministic_mock_generate(GenerationRequest) -> Result[GenerationResponse, AdapterError]
+
+pub fn ffi_external_generate_mock_json(String) -> String
+
+pub fn ffi_validate_generation_patch_json(String) -> String
+
+pub fn generation_patch_checked(Array[GenerationPatchOperation]) -> Result[GenerationPatch, AdapterError]
+
+pub fn generation_patch_from_json_value(@json.JsonValue) -> Result[GenerationPatch, AdapterError]
+
+pub fn generation_patch_to_json_value(GenerationPatch) -> @json.JsonValue
+
+pub fn generation_provider_info(String, ExternalGeneratorKind, Array[GenerationCapability]) -> GenerationProviderInfo
+
+pub fn generation_request_checked(String, GenerationTaskKind, ScoreContext, Array[GenerationStyleTag], Array[GenerationConstraint], GenerationDeterminism, Int?) -> Result[GenerationRequest, AdapterError]
+
+pub fn generation_request_default_checked(GenerationTaskKind, ScoreContext, Array[GenerationConstraint]) -> Result[GenerationRequest, AdapterError]
+
+pub fn generation_request_from_json(String) -> Result[GenerationRequest, AdapterError]
+
+pub fn generation_request_from_json_value(@json.JsonValue) -> Result[GenerationRequest, AdapterError]
+
+pub fn generation_request_to_json(GenerationRequest) -> String
+
+pub fn generation_request_to_json_value(GenerationRequest) -> @json.JsonValue
+
+pub fn generation_response_from_json(String) -> Result[GenerationResponse, AdapterError]
+
+pub fn generation_response_from_json_value(@json.JsonValue) -> Result[GenerationResponse, AdapterError]
+
+pub fn generation_response_to_json(GenerationResponse) -> String
+
+pub fn generation_response_to_json_value(GenerationResponse) -> @json.JsonValue
+
+pub fn score_context_from_simple_score_checked(@score.SimpleScore, Int) -> Result[ScoreContext, AdapterError]
+
+pub fn simple_score_from_json_checked(String) -> Result[@score.SimpleScore, AdapterError]
+
+pub fn simple_score_to_json_checked(@score.SimpleScore) -> Result[String, AdapterError]
+
+pub fn task_to_required_capability(GenerationTaskKind) -> GenerationCapability
+
+pub fn validate_generation_patch(GenerationPatch, ScoreContext) -> Result[Unit, AdapterError]
+
+pub fn validate_generation_request(GenerationRequest, GenerationProviderInfo) -> Result[Unit, AdapterError]
+
+// Errors
+
+// Types and methods
+pub(all) enum AdapterError {
+  InvalidGenerationRequest(String)
+  InvalidGenerationConstraint(String)
+  ProviderCapabilityMismatch(String)
+  InvalidGenerationPatch(String)
+  PatchTargetNotFound(String)
+  PatchConflict(String)
+  AdapterJsonError(String)
+  AdapterScoreError(String)
+  AdapterUnsupported(String)
+}
+pub fn AdapterError::to_string(Self) -> String
+
+pub(all) enum ExternalGeneratorKind {
+  LocalRuleProvider
+  LocalModelProvider
+  RemoteModelProvider
+  HumanPluginProvider
+  MockProvider
+}
+
+pub(all) struct GenerationCandidate {
+  fragment : ScoreFragment
+  confidence : Double
+  description : String
+}
+
+pub(all) enum GenerationCapability {
+  CanGenerateMelody
+  CanGenerateHarmony
+  CanGenerateBass
+  CanGenerateAccompaniment
+  CanGenerateRhythm
+  CanGenerateGameLoop
+  CanGenerateVariation
+  CanGenerateArrangement
+}
+
+pub(all) enum GenerationConstraint {
+  MinBars(Int)
+  MaxBars(Int)
+  AllowedScaleDegrees(Array[Int])
+  AllowedPitchRange(Int, Int)
+  RequiredStyle(GenerationStyleTag)
+  MaxLeap(Int)
+  TargetDensity(Double)
+  MustFitTimeSignature
+  MustLoop
+}
+
+pub(all) enum GenerationDeterminism {
+  Deterministic
+  Seeded
+  NonDeterministic
+}
+
+pub(all) struct GenerationPatch {
+  operations : Array[GenerationPatchOperation]
+  source : String
+}
+
+pub(all) struct GenerationPatchOperation {
+  kind : PatchOperationKind
+  target : PatchTargetKind
+  path : String
+  payload_json : String
+}
+
+pub(all) struct GenerationProviderInfo {
+  name : String
+  kind : ExternalGeneratorKind
+  capabilities : Array[GenerationCapability]
+  determinism : GenerationDeterminism
+}
+
+pub(all) struct GenerationRequest {
+  id : String
+  task : GenerationTaskKind
+  context : ScoreContext
+  style_tags : Array[GenerationStyleTag]
+  constraints : Array[GenerationConstraint]
+  deterministic : GenerationDeterminism
+  seed : Int?
+}
+
+pub(all) struct GenerationResponse {
+  request_id : String
+  candidates : Array[GenerationCandidate]
+  patch : GenerationPatch?
+  message : String
+}
+
+pub(all) enum GenerationStyleTag {
+  Pop
+  Jazz
+  Lofi
+  Cinematic
+  Ambient
+  Chiptune
+  GameCombat
+  GameExploration
+}
+
+pub(all) enum GenerationTaskKind {
+  MelodyContinuation
+  ChordProgression
+  BassLine
+  AccompanimentTask
+  RhythmPatternGen
+  GameLoopTask
+  Variation
+  Orchestration
+}
+
+pub(all) enum PatchOperationKind {
+  AppendTrack
+  InsertTrack
+  ReplaceTrack
+  RemoveTrack
+  AppendMeasure
+  ReplaceMeasure
+  InsertSection
+  AddNotation
+  SetTempo
+}
+
+pub(all) enum PatchTargetKind {
+  ScoreTarget
+  TrackTarget
+  PartTarget
+  StaffTarget
+  VoiceTarget
+  MeasureTarget
+  EventTarget
+  SectionTarget
+}
+
+pub(all) struct ScoreContext {
+  score_summary : String
+  key_hint : @scale.Key?
+  time_signature : @time.TimeSignature
+  tempo : @score.Tempo
+  bars : Int
+  track_count : Int
+  ppq : Int
+}
+
+pub(all) struct ScoreFragment {
+  tracks : Array[@score.SimpleTrack]
+  start_bar : Int
+  length_bars : Int
+}
+
+// Type aliases
+
+// Traits
+

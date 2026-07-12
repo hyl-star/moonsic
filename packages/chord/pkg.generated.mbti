@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/chord"
+
+import {
+  "username/moonsic/packages/pitch",
+}
+
+// Values
+pub fn chord_invert(Array[@pitch.Pitch], Int) -> Result[Array[@pitch.Pitch], ChordError]
+
+pub fn chord_pitch_classes(@pitch.Pitch, ChordQuality) -> Array[@pitch.PitchClass]
+
+pub fn chord_pitches(@pitch.Pitch, ChordQuality) -> Array[@pitch.Pitch]
+
+pub fn chord_quality_letter_steps(ChordQuality) -> Array[Int]
+
+pub fn parse_chord(String) -> Result[Array[@pitch.Pitch], ChordError]
+
+pub fn parse_chord_quality_checked(String) -> Result[ChordQuality, ChordError]
+
+// Errors
+
+// Types and methods
+pub(all) enum ChordError {
+  InvalidChord(String)
+  InvalidChordQuality(String)
+  InvalidInversion(String)
+  EmptyChord(String)
+}
+pub fn ChordError::to_string(Self) -> String
+
+pub(all) enum ChordQuality {
+  MajorTriad
+  MinorTriad
+  DiminishedTriad
+  AugmentedTriad
+  DominantSeventh
+  MajorSeventh
+  MinorSeventh
+  HalfDiminished7
+  Diminished7
+  Suspended2
+  Suspended4
+}
+pub fn ChordQuality::intervals(Self) -> Array[Int]
+
+// Type aliases
+
+// Traits
+

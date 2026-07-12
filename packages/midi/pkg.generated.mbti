@@ -1,0 +1,87 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/midi"
+
+import {
+  "username/moonsic/packages/score",
+}
+
+// Values
+pub fn control_change(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn end_of_track(Int) -> Result[MidiEvent, MidiError]
+
+pub fn midi_bytes_to_events(Bytes) -> Result[Array[MidiEvent], MidiError]
+
+pub fn midi_bytes_to_score(Bytes) -> Result[@score.SimpleScore, MidiError]
+
+pub fn midi_events_to_score(Array[MidiEvent], Int) -> Result[@score.SimpleScore, MidiError]
+
+pub fn midi_score_to_bytes(MidiScore) -> Result[Bytes, MidiError]
+
+pub fn midi_time_signature(Int, Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn note_off(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn note_on(Int, Int, Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn program_change(Int, Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn simple_score_to_midi_bytes_checked(@score.SimpleScore, Int) -> Result[Bytes, MidiError]
+
+pub fn simple_score_to_midi_score(@score.SimpleScore, Int) -> MidiScore
+
+pub fn sort_midi_events(Array[MidiEvent]) -> Array[MidiEvent]
+
+pub fn tempo_change(Int, Int) -> Result[MidiEvent, MidiError]
+
+pub fn track_name(Int, String) -> Result[MidiEvent, MidiError]
+
+// Errors
+
+// Types and methods
+pub(all) enum MidiError {
+  InvalidMidiTick(Int)
+  InvalidMidiChannel(Int)
+  InvalidMidiNote(Int)
+  InvalidMidiVelocity(Int)
+  InvalidMidiProgram(Int)
+  InvalidMidiController(Int)
+  InvalidMidiTempo(Int)
+  InvalidMidiPPQ(Int)
+  MidiExportError(String)
+  MidiImportError(String)
+}
+pub fn MidiError::to_string(Self) -> String
+
+pub(all) struct MidiEvent {
+  tick : Int
+  kind : MidiEventKind
+}
+
+pub(all) enum MidiEventKind {
+  NoteOn(channel~ : Int, note~ : Int, velocity~ : Int)
+  NoteOff(channel~ : Int, note~ : Int, velocity~ : Int)
+  ProgramChange(channel~ : Int, program~ : Int)
+  ControlChange(channel~ : Int, controller~ : Int, value~ : Int)
+  TempoChange(bpm~ : Int)
+  TimeSignatureMeta(numerator~ : Int, denominator~ : Int)
+  TrackName(name~ : String)
+  EndOfTrack
+}
+
+pub(all) struct MidiScore {
+  ppq : Int
+  tracks : Array[MidiTrack]
+}
+
+pub(all) struct MidiTrack {
+  name : String
+  program : Int
+  channel : Int
+  events : Array[MidiEvent]
+}
+
+// Type aliases
+
+// Traits
+

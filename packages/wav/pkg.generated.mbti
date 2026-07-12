@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/wav"
+
+import {
+  "username/moonsic/packages/timeline",
+}
+
+// Values
+pub fn bench_wav_render(Int) -> String
+
+pub fn default_wav_render_config() -> WavRenderConfig
+
+pub fn note_events_to_wav_bytes_checked(Array[@timeline.NoteEvent], WavRenderConfig) -> Result[Bytes, WavError]
+
+pub fn playback_timeline_to_wav_bytes_checked(@timeline.PlaybackTimeline, WavRenderConfig) -> Result[Bytes, WavError]
+
+pub fn wav_render_config_checked(Int, Double, Double) -> Result[WavRenderConfig, WavError]
+
+// Errors
+
+// Types and methods
+pub(all) enum WavError {
+  InvalidSampleRate(Int)
+  InvalidGain(Double)
+  InvalidDuration(Double)
+}
+pub fn WavError::to_string(Self) -> String
+
+pub(all) struct WavRenderConfig {
+  sample_rate : Int
+  master_gain : Double
+  tail_seconds : Double
+}
+
+// Type aliases
+
+// Traits
+

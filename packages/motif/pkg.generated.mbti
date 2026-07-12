@@ -1,0 +1,75 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/motif"
+
+import {
+  "username/moonsic/packages/pitch",
+  "username/moonsic/packages/rhythm",
+  "username/moonsic/packages/scale",
+  "username/moonsic/packages/score",
+}
+
+// Values
+pub fn bench_motif_transpose(Int) -> String
+
+pub fn motif(Array[Int], @rhythm.RhythmPattern) -> Motif
+
+pub fn motif_checked(Array[Int], @rhythm.RhythmPattern) -> Result[Motif, MotifError]
+
+pub fn motif_to_track_checked(Motif, @scale.Key, Int) -> Result[@score.SimpleTrack, MotifError]
+
+pub fn motif_to_track_with_tonic_checked(Motif, @pitch.Pitch, @scale.ScaleKind, Int) -> Result[@score.SimpleTrack, MotifError]
+
+pub fn transform_motif_checked(Motif, MotifTransform) -> Result[Motif, MotifError]
+
+pub fn vary_motif_checked(Motif, MotifVariationStrategy) -> Result[Motif, MotifError]
+
+// Errors
+
+// Types and methods
+pub(all) struct Motif {
+  events : Array[MotifEvent]
+  total_beats : Double
+}
+
+pub(all) enum MotifError {
+  EmptyMotif(String)
+  InvalidMotif(String)
+  InvalidTransform(String)
+  InvalidRepeatCount(String)
+  MotifScoreError(String)
+  MotifTimeError(String)
+}
+pub fn MotifError::to_string(Self) -> String
+
+pub(all) struct MotifEvent {
+  degree : Int
+  cell : @rhythm.RhythmCell
+}
+
+pub(all) enum MotifTransform {
+  TransposeDegrees(Int)
+  InvertAround(Int)
+  Retrograde
+  Augment
+  Diminish
+  Rotate(Int)
+  Repeat(Int)
+  KeepRhythmChangeDegrees(Array[Int])
+  KeepDegreesChangeRhythm(@rhythm.RhythmPattern)
+}
+
+pub(all) enum MotifVariationStrategy {
+  ExactRepeat
+  SequenceUp
+  SequenceDown
+  Inversion
+  RetrogradeVariation
+  RhythmicAugmentation
+  RhythmicDiminution
+  CallResponse
+}
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,460 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/score"
+
+import {
+  "username/moonsic/packages/pitch",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn chord_event_checked(EventId, Array[@pitch.Pitch], @time.RhythmDuration, Velocity?, TieKind, Array[Notation], Array[Lyric]) -> Result[ScoreEvent, ScoreError]
+
+pub fn direction_event_checked(EventId, @time.Rational, DirectionKind) -> Result[ScoreEvent, ScoreError]
+
+pub fn ending_bracket_checked(Int, MeasureIndex, MeasureIndex, EndingKind) -> Result[EndingBracket, ScoreError]
+
+pub fn event_id_checked(String) -> Result[EventId, ScoreError]
+
+pub fn lyric_checked(String, Int, LyricSyllableKind) -> Result[Lyric, ScoreError]
+
+pub fn measure_checked(MeasureIndex, MeasureRole, @time.TimeSignature?, KeySignature?, Tempo?, Array[ScoreEvent], Barline?) -> Result[Measure, ScoreError]
+
+pub fn measure_index_checked(Int) -> Result[MeasureIndex, ScoreError]
+
+pub fn midi_channel_checked(Int) -> Result[MidiChannel, ScoreError]
+
+pub fn midi_program_checked(Int) -> Result[MidiProgram, ScoreError]
+
+pub fn notation_checked(NotationKind, NotationPlacement) -> Result[Notation, ScoreError]
+
+pub fn note_event_checked(EventId, @pitch.Pitch, @time.RhythmDuration, Velocity?, TieKind, Array[Notation], Array[Lyric]) -> Result[ScoreEvent, ScoreError]
+
+pub fn part_checked(PartId, String, String, Array[Staff]) -> Result[Part, ScoreError]
+
+pub fn part_id_checked(String) -> Result[PartId, ScoreError]
+
+pub fn ppq_checked(Int) -> Result[PPQ, ScoreError]
+
+pub fn repeat_mark_checked(RepeatKind, MeasureIndex, MeasureIndex?, Int) -> Result[RepeatMark, ScoreError]
+
+pub fn rest_event_checked(EventId, @time.RhythmDuration, Bool) -> Result[ScoreEvent, ScoreError]
+
+pub fn score_id_checked(String) -> Result[ScoreId, ScoreError]
+
+pub fn score_layout_checked(ScoreId, String, String, PPQ, Tempo, @time.TimeSignature, Array[Part], Array[Section], Array[RepeatMark], Array[EndingBracket], Array[CodaMark], Array[SegnoMark], ScoreMetadata) -> Result[ScoreLayout, ScoreError]
+
+pub fn score_metadata_checked(String, String, String, String, Array[String]) -> Result[ScoreMetadata, ScoreError]
+
+pub fn score_path_checked(Int, Int, Int, Int, Int) -> Result[ScorePath, ScoreError]
+
+pub fn section_checked(String, SectionKind, MeasureIndex, MeasureIndex) -> Result[Section, ScoreError]
+
+pub fn simple_chord_checked(Array[@pitch.Pitch], @time.RhythmDuration, Velocity?) -> Result[SimpleEvent, ScoreError]
+
+pub fn simple_note_checked(@pitch.Pitch, @time.RhythmDuration, Velocity?) -> Result[SimpleEvent, ScoreError]
+
+pub fn simple_rest_checked(@time.RhythmDuration) -> Result[SimpleEvent, ScoreError]
+
+pub fn simple_score_checked(Array[SimpleTrack], Tempo, @time.TimeSignature) -> Result[SimpleScore, ScoreError]
+
+pub fn simple_track_checked(Array[SimpleEvent], MidiChannel?, MidiProgram?) -> Result[SimpleTrack, ScoreError]
+
+pub fn spacer_event_checked(EventId, @time.RhythmDuration) -> Result[ScoreEvent, ScoreError]
+
+pub fn staff_checked(StaffId, String, Clef, MidiChannel?, MidiProgram?, Array[Voice]) -> Result[Staff, ScoreError]
+
+pub fn staff_id_checked(String) -> Result[StaffId, ScoreError]
+
+pub fn tempo_checked(Int) -> Result[Tempo, ScoreError]
+
+pub fn velocity_checked(Int) -> Result[Velocity, ScoreError]
+
+pub fn voice_checked(VoiceId, String, Array[Measure]) -> Result[Voice, ScoreError]
+
+pub fn voice_id_checked(String) -> Result[VoiceId, ScoreError]
+
+// Errors
+
+// Types and methods
+pub(all) enum ArticulationKind {
+  Staccato
+  Accent
+  Tenuto
+}
+
+pub(all) enum Barline {
+  RegularBarline
+  DoubleBarline
+  FinalBarline
+  RepeatStartBarline
+  RepeatEndBarline
+  RepeatBothBarline
+}
+
+pub(all) struct ChordEvent {
+  id : EventId
+  pitches : Array[@pitch.Pitch]
+  duration : @time.RhythmDuration
+  velocity : Velocity?
+  tie : TieKind
+  notations : Array[Notation]
+  lyrics : Array[Lyric]
+}
+
+pub(all) enum Clef {
+  Treble
+  Bass
+  Alto
+  Tenor
+  Percussion
+}
+
+pub(all) struct CodaMark {
+  measure : MeasureIndex
+}
+
+pub(all) struct DirectionEvent {
+  id : EventId
+  offset : @time.Rational
+  direction : DirectionKind
+}
+
+pub(all) enum DirectionKind {
+  DynamicsDir
+  TempoDir
+  WordsDir
+  RepeatDir
+}
+
+pub(all) enum DynamicMark {
+  Pianissimo
+  Piano
+  MezzoPiano
+  MezzoForte
+  Forte
+  Fortissimo
+}
+
+pub(all) struct EndingBracket {
+  number : Int
+  start_measure : MeasureIndex
+  end_measure : MeasureIndex
+  kind : EndingKind
+}
+
+pub(all) enum EndingKind {
+  FirstEnding
+  SecondEnding
+  ThirdEnding
+  CustomEnding(Int)
+  OpenEnding
+  ClosedEnding
+}
+
+pub(all) struct EventId {
+  value : String
+}
+
+pub(all) struct KeySignature {
+  fifths : Int
+}
+
+pub(all) struct Lyric {
+  text : String
+  verse : Int
+  syllable : LyricSyllableKind
+}
+
+pub(all) enum LyricSyllableKind {
+  Single
+  Begin
+  Middle
+  End
+  Melisma
+}
+
+pub(all) struct Measure {
+  index : MeasureIndex
+  role : MeasureRole
+  time_signature : @time.TimeSignature?
+  key_signature : KeySignature?
+  tempo : Tempo?
+  events : Array[ScoreEvent]
+  barline : Barline?
+}
+
+pub(all) struct MeasureIndex {
+  value : Int
+}
+
+pub(all) enum MeasureRole {
+  NormalMeasure
+  PickupMeasure
+  FinalMeasure
+  CadenzaMeasure
+  FreeTimeMeasure
+}
+
+pub(all) struct MidiChannel {
+  value : Int
+}
+
+pub(all) struct MidiProgram {
+  value : Int
+}
+
+pub(all) struct Notation {
+  kind : NotationKind
+  placement : NotationPlacement
+}
+
+pub(all) enum NotationKind {
+  Articulation(ArticulationKind)
+  SlurStart
+  SlurStop
+  TieNotationStart
+  TieNotationStop
+  Dynamic(DynamicMark)
+  Fermata
+  Breath
+  TextAnnotation(String)
+}
+
+pub(all) enum NotationPlacement {
+  Above
+  Below
+}
+
+pub(all) struct NoteEvent {
+  id : EventId
+  pitch : @pitch.Pitch
+  duration : @time.RhythmDuration
+  velocity : Velocity?
+  tie : TieKind
+  notations : Array[Notation]
+  lyrics : Array[Lyric]
+}
+
+pub(all) struct PPQ {
+  value : Int
+}
+
+pub(all) struct Part {
+  id : PartId
+  name : String
+  abbreviation : String
+  staves : Array[Staff]
+}
+
+pub(all) struct PartId {
+  value : String
+}
+
+pub(all) enum RepeatJumpKind {
+  DC
+  DCAlFine
+  DCAlCoda
+  DS
+  DSAlFine
+  DSAlCoda
+}
+
+pub(all) enum RepeatKind {
+  RepeatStart
+  RepeatEnd
+  RepeatBoth
+  Fine
+  DaCapo
+  DalSegno
+  ToCoda
+  Coda
+}
+
+pub(all) struct RepeatMark {
+  kind : RepeatKind
+  measure : MeasureIndex
+  target_measure : MeasureIndex?
+  repeat_count : Int
+}
+
+pub(all) struct RestEvent {
+  id : EventId
+  duration : @time.RhythmDuration
+  visible : Bool
+}
+
+pub(all) enum ScoreError {
+  InvalidId(String)
+  InvalidMeasure(String)
+  InvalidPart(String)
+  InvalidStaff(String)
+  InvalidVoice(String)
+  InvalidEvent(String)
+  InvalidSection(String)
+  InvalidRepeat(String)
+  InvalidEnding(String)
+  InvalidTempo(String)
+  InvalidPPQ(String)
+  InvalidVelocity(String)
+  InvalidChannel(String)
+  InvalidProgram(String)
+  InvalidNotation(String)
+  InvalidLyric(String)
+  InvalidClef(String)
+  InvalidBarline(String)
+  InvalidScorePath(String)
+  UnsupportedScoreFeature(String)
+}
+pub fn ScoreError::to_string(Self) -> String
+
+pub(all) enum ScoreEvent {
+  Note(NoteEvent)
+  Rest(RestEvent)
+  Chord(ChordEvent)
+  Direction(DirectionEvent)
+  Spacer(SpacerEvent)
+}
+
+pub(all) struct ScoreId {
+  value : String
+}
+
+pub(all) struct ScoreLayout {
+  id : ScoreId
+  title : String
+  composer : String
+  ppq : PPQ
+  initial_tempo : Tempo
+  initial_signature : @time.TimeSignature
+  parts : Array[Part]
+  sections : Array[Section]
+  repeats : Array[RepeatMark]
+  endings : Array[EndingBracket]
+  codas : Array[CodaMark]
+  segnos : Array[SegnoMark]
+  metadata : ScoreMetadata
+}
+
+pub(all) struct ScoreMetadata {
+  copyright : String
+  lyricist : String
+  arranger : String
+  source : String
+  tags : Array[String]
+}
+
+pub(all) struct ScorePath {
+  part : Int
+  staff : Int
+  voice : Int
+  measure : Int
+  event : Int
+}
+
+pub(all) struct Section {
+  name : String
+  kind : SectionKind
+  start_measure : MeasureIndex
+  end_measure : MeasureIndex
+}
+
+pub(all) enum SectionKind {
+  Intro
+  Verse
+  Chorus
+  Bridge
+  Solo
+  Outro
+  CustomSection
+}
+
+pub(all) struct SegnoMark {
+  measure : MeasureIndex
+}
+
+pub(all) struct SimpleChord {
+  pitches : Array[@pitch.Pitch]
+  duration : @time.RhythmDuration
+  velocity : Velocity
+}
+
+pub(all) enum SimpleEvent {
+  Note(SimpleNote)
+  Rest(SimpleRest)
+  Chord(SimpleChord)
+}
+
+pub(all) struct SimpleNote {
+  pitch : @pitch.Pitch
+  duration : @time.RhythmDuration
+  velocity : Velocity
+}
+
+pub(all) struct SimpleRest {
+  duration : @time.RhythmDuration
+}
+
+pub(all) struct SimpleScore {
+  tempo : Tempo
+  time_signature : @time.TimeSignature
+  tracks : Array[SimpleTrack]
+  master_gain : Double
+}
+
+pub(all) struct SimpleTrack {
+  events : Array[SimpleEvent]
+  channel : MidiChannel?
+  program : MidiProgram?
+  volume : Double
+  pan : Double
+  mute : Bool
+}
+
+pub(all) struct SpacerEvent {
+  id : EventId
+  duration : @time.RhythmDuration
+}
+
+pub(all) struct Staff {
+  id : StaffId
+  name : String
+  clef : Clef
+  channel : MidiChannel?
+  program : MidiProgram?
+  voices : Array[Voice]
+}
+
+pub(all) struct StaffId {
+  value : String
+}
+
+pub(all) struct Tempo {
+  bpm : Int
+}
+
+pub(all) enum TieKind {
+  NoTie
+  TieStart
+  TieContinue
+  TieStop
+  TieStartStop
+}
+
+pub(all) struct Velocity {
+  value : Int
+}
+
+pub(all) struct Voice {
+  id : VoiceId
+  name : String
+  measures : Array[Measure]
+}
+
+pub(all) struct VoiceId {
+  value : String
+}
+
+// Type aliases
+
+// Traits
+

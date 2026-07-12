@@ -1,4 +1,1 @@
-import {
-  "CAIMEOX/midi" @midi,
-  "moonbitlang/core/math" @math,
-}
+// v2 moonsic — packages only, root is empty

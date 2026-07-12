@@ -1,0 +1,65 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/structure"
+
+import {
+  "username/moonsic/packages/pitch",
+  "username/moonsic/packages/scale",
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/time",
+}
+
+// Values
+pub fn arrange_checked(Array[SongSection], @score.Tempo, @time.TimeSignature) -> Result[@score.SimpleScore, StructureError]
+
+pub fn bass_roots_checked(@score.SimpleTrack, @time.RhythmDuration) -> Result[@score.SimpleTrack, StructureError]
+
+pub fn bench_arrange(Int) -> String
+
+pub fn bridge(Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+pub fn chorus(Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+pub fn intro(Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+pub fn layer_checked(Array[@score.SimpleTrack], @score.Tempo, @time.TimeSignature) -> Result[@score.SimpleScore, StructureError]
+
+pub fn melody_degrees_checked(@scale.Key, Array[Int], @time.RhythmDuration) -> Result[@score.SimpleTrack, StructureError]
+
+pub fn melody_degrees_from_tonic_checked(@pitch.Pitch, @scale.ScaleKind, Array[Int], @time.RhythmDuration) -> Result[@score.SimpleTrack, StructureError]
+
+pub fn outro(Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+pub fn section(String, Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+pub fn section_duration_beats(SongSection) -> Double
+
+pub fn simple_track_concat(@score.SimpleTrack, @score.SimpleTrack) -> @score.SimpleTrack
+
+pub fn simple_track_duration_beats(@score.SimpleTrack) -> Double
+
+pub fn simple_track_pad_to_checked(@score.SimpleTrack, Double) -> Result[@score.SimpleTrack, StructureError]
+
+pub fn verse(Array[@score.SimpleTrack]) -> Result[SongSection, StructureError]
+
+// Errors
+
+// Types and methods
+pub(all) struct SongSection {
+  name : String
+  tracks : Array[@score.SimpleTrack]
+}
+
+pub(all) enum StructureError {
+  EmptyStructure(String)
+  InvalidSection(String)
+  InvalidArrangement(String)
+  StructureScoreError(String)
+  StructureTimeError(String)
+  InvalidDegree(String)
+}
+pub fn StructureError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

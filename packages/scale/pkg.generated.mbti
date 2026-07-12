@@ -1,0 +1,63 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/scale"
+
+import {
+  "username/moonsic/packages/pitch",
+}
+
+// Values
+pub fn build_scale(@pitch.PitchClass, ScaleKind) -> Scale
+
+pub fn build_scale_spelled(@pitch.PitchClass, @pitch.Accidental, ScaleKind) -> Scale
+
+pub fn key(@pitch.Pitch, ScaleKind) -> Key
+
+pub fn parse_scale(String) -> Result[Scale, ScaleError]
+
+// Errors
+
+// Types and methods
+pub(all) struct Key {
+  tonic : @pitch.Pitch
+  kind : ScaleKind
+}
+pub fn Key::degree(Self, Int, Int) -> @pitch.Pitch
+pub fn Key::key_degree_checked(Self, Int, Int) -> Result[@pitch.Pitch, ScaleError]
+pub fn Key::scale(Self, Int, Int) -> Array[@pitch.Pitch]
+pub fn Key::scale_kind(Self) -> ScaleKind
+pub fn Key::tonic_pitch(Self) -> @pitch.Pitch
+
+pub(all) struct Scale {
+  root : @pitch.PitchClass
+  root_accidental : @pitch.Accidental
+  scale_type : ScaleKind
+  tones : Array[@pitch.PitchClass]
+  spelled_tones : Array[@pitch.Pitch]
+}
+
+pub(all) enum ScaleError {
+  InvalidScale(String)
+  InvalidDegree(String)
+}
+pub fn ScaleError::to_string(Self) -> String
+
+pub(all) enum ScaleKind {
+  Major
+  NaturalMinor
+  MajorPentatonic
+  MinorPentatonic
+  HarmonicMinor
+  MelodicMinor
+  Dorian
+  Phrygian
+  Lydian
+  Mixolydian
+  Locrian
+  Chromatic
+}
+pub fn ScaleKind::intervals(Self) -> Array[Int]
+
+// Type aliases
+
+// Traits
+

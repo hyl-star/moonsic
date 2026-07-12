@@ -1,0 +1,71 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/web"
+
+import {
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/timeline",
+}
+
+// Values
+pub fn bench_note_events_to_web_events(Int) -> String
+
+pub fn bench_timeline_to_web_events(Int) -> String
+
+pub fn bench_web_event_document_to_json(Int) -> String
+
+pub fn default_web_playback_config() -> WebPlaybackConfig
+
+pub fn note_events_to_web_events(Array[@timeline.NoteEvent], WebPlaybackConfig) -> WebEventDocument
+
+pub fn simple_score_to_web_json_checked(@score.SimpleScore, WebPlaybackConfig) -> Result[String, WebError]
+
+pub fn timeline_to_web_events_checked(@timeline.PlaybackTimeline, WebPlaybackConfig) -> Result[WebEventDocument, WebError]
+
+pub fn web_event_document_to_json(WebEventDocument) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum WebError {
+  InvalidTempo(Int)
+  InvalidPpq(Int)
+  InvalidMidiNote(String)
+  InvalidVelocity(String)
+  InvalidChannel(String)
+  InvalidEvent(String)
+}
+pub fn WebError::to_string(Self) -> String
+
+pub(all) struct WebEventDocument {
+  schema_version : String
+  events : Array[WebPlaybackEvent]
+  total_seconds : Double
+}
+
+pub(all) struct WebPlaybackConfig {
+  tempo_bpm : Int
+  ppq : Int
+  include_note_off : Bool
+  time_unit : WebTimeUnit
+}
+
+pub(all) struct WebPlaybackEvent {
+  time : Double
+  duration : Double
+  midi_note : Int
+  velocity : Int
+  channel : Int
+  event_type : String
+}
+
+pub(all) enum WebTimeUnit {
+  Seconds
+  Ticks
+  Beats
+}
+pub fn WebTimeUnit::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

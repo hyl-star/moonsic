@@ -1,0 +1,254 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/demo"
+
+import {
+  "username/moonsic/packages/game",
+  "username/moonsic/packages/scale",
+  "username/moonsic/packages/score",
+  "username/moonsic/packages/timeline",
+}
+
+// Values
+pub fn append_warning(CompositionAssetBundle, DemoWarning) -> CompositionAssetBundle
+
+pub fn assemble_demo_score_checked(NormalizedCompositionRequest) -> Result[DemoScoreAssembly, DemoError]
+
+pub fn asset_entries_to_json(Array[DemoFileEntry]) -> String
+
+pub fn asset_result_failed(AssetKind, DemoWarning) -> AssetResult
+
+pub fn asset_result_success(AssetKind) -> AssetResult
+
+pub fn bytes_to_hex(Bytes) -> String
+
+pub fn check_midi_header(Bytes) -> Bool
+
+pub fn check_wav_header(Bytes) -> Bool
+
+pub fn collect_assets_from_bundle(CompositionAssetBundle) -> Array[DemoFileEntry]
+
+pub fn composition_asset_bundle_to_json(CompositionAssetBundle) -> String
+
+pub fn composition_asset_pipeline_checked(CompositionRequest) -> Result[CompositionAssetBundle, DemoError]
+
+pub fn composition_asset_pipeline_from_json_checked(String) -> Result[CompositionAssetBundle, DemoError]
+
+pub fn composition_request_checked(String, String, Int, Int, String, Array[String], Int) -> Result[CompositionRequest, DemoError]
+
+pub fn composition_request_from_json_checked(String) -> Result[CompositionRequestParseResult, DemoError]
+
+pub fn composition_request_to_json(CompositionRequest) -> String
+
+pub fn default_composition_request() -> CompositionRequest
+
+pub fn demo_game_asset_checked(@score.SimpleScore, @timeline.PlaybackTimeline, NormalizedCompositionRequest) -> Result[DemoGameAsset, DemoError]
+
+pub fn demo_game_asset_to_json_checked(DemoGameAsset) -> Result[String, DemoError]
+
+pub fn demo_game_project_checked(@timeline.PlaybackTimeline, NormalizedCompositionRequest) -> Result[@game.GameMusicProject, DemoError]
+
+pub fn demo_score_to_json_checked(@score.SimpleScore) -> Result[String, DemoError]
+
+pub fn demo_warning(String, String, String) -> DemoWarning
+
+pub fn demo_warning_fatal(String, String, String) -> DemoWarning
+
+pub fn empty_asset_bundle(String) -> CompositionAssetBundle
+
+pub fn export_all_score_assets(@score.SimpleScore) -> ExportAssetResult
+
+pub fn export_game_asset(@score.SimpleScore, @timeline.PlaybackTimeline) -> Result[String, DemoError]
+
+pub fn export_game_ir_asset_checked(@score.SimpleScore, @timeline.PlaybackTimeline) -> Result[String, DemoError]
+
+pub fn export_midi_asset_checked(@score.SimpleScore, Int) -> Result[Bytes, DemoError]
+
+pub fn export_musicxml_asset_checked(@score.SimpleScore) -> Result[String, DemoError]
+
+pub fn export_timeline_asset_checked(@score.SimpleScore) -> Result[@timeline.PlaybackTimeline, DemoError]
+
+pub fn export_wav_asset_checked(@timeline.PlaybackTimeline) -> Result[Bytes, DemoError]
+
+pub fn export_web_events_asset_checked(@timeline.PlaybackTimeline) -> Result[String, DemoError]
+
+pub fn ffi_composition_assets_json(String) -> String
+
+pub fn normalize_composition_request_checked(CompositionRequest) -> Result[NormalizedCompositionRequest, DemoError]
+
+pub fn normalize_with_warnings_checked(CompositionRequest) -> Result[NormalizeResult, DemoError]
+
+pub fn package_score_as_game_assets_checked(@score.SimpleScore, @timeline.PlaybackTimeline, Int, Int, CompositionStyle) -> Result[DemoGameAsset, DemoError]
+
+pub fn parse_chord_progression_checked(Array[String], @scale.Key) -> ChordProgressionParseResult
+
+pub fn parse_composition_style(String) -> CompositionStyle
+
+pub fn set_game_ir(CompositionAssetBundle, String) -> CompositionAssetBundle
+
+pub fn set_midi_bytes(CompositionAssetBundle, Bytes) -> CompositionAssetBundle
+
+pub fn set_musicxml(CompositionAssetBundle, String) -> CompositionAssetBundle
+
+pub fn set_score_json(CompositionAssetBundle, String) -> CompositionAssetBundle
+
+pub fn set_validation_json(CompositionAssetBundle, String) -> CompositionAssetBundle
+
+pub fn set_wav_bytes(CompositionAssetBundle, Bytes) -> CompositionAssetBundle
+
+pub fn set_web_events(CompositionAssetBundle, String) -> CompositionAssetBundle
+
+pub fn validate_demo_score(@score.SimpleScore) -> DemoValidationSummary
+
+pub fn warnings_to_json(Array[DemoWarning]) -> String
+
+pub fn write_all_assets_summary_json(CompositionAssetBundle, String) -> Result[String, DemoError]
+
+pub fn write_composition_assets_checked(CompositionAssetBundle, String) -> Result[Array[DemoFileEntry], DemoError]
+
+pub fn write_json_file(String, String) -> Result[String, DemoError]
+
+pub fn write_midi_file(Bytes, String) -> Result[Bytes, DemoError]
+
+pub fn write_musicxml_file(String, String) -> Result[String, DemoError]
+
+pub fn write_wav_file(Bytes, String) -> Result[Bytes, DemoError]
+
+// Errors
+
+// Types and methods
+pub(all) enum AssetKind {
+  ScoreJsonAsset
+  MidiAsset
+  MusicXmlAsset
+  WavAsset
+  WebEventsAsset
+  GameIrAsset
+}
+pub fn AssetKind::to_string(Self) -> String
+
+pub(all) struct AssetResult {
+  kind : AssetKind
+  status : AssetStatus
+  warning : DemoWarning?
+}
+
+pub(all) enum AssetStatus {
+  AssetGenerated
+  AssetSkipped
+  AssetFailed
+}
+
+pub(all) struct ChordProgressionParseResult {
+  degrees : Array[Int]
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct CompositionAssetBundle {
+  request_id : String
+  score_json : String?
+  midi_bytes : Bytes?
+  musicxml : String?
+  wav_bytes : Bytes?
+  web_events_json : String?
+  game_ir_json : String?
+  validation_json : String?
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct CompositionRequest {
+  key : String
+  scale : String
+  tempo : Int
+  bars : Int
+  style : String
+  chord_progression : Array[String]
+  seed : Int
+}
+
+pub(all) struct CompositionRequestParseResult {
+  request : CompositionRequest
+  warnings : Array[DemoWarning]
+}
+
+pub(all) enum CompositionStyle {
+  StylePop
+  StyleAmbient
+  StyleGame
+  StyleCinematic
+  StyleStudy
+  StyleCustom(String)
+}
+pub fn CompositionStyle::to_string(Self) -> String
+
+pub(all) enum DemoError {
+  InvalidRequest(String)
+  GenerationFailed(String)
+  NoUsableAsset(String)
+  SerializationFailed(String)
+}
+pub fn DemoError::to_string(Self) -> String
+
+pub(all) struct DemoFileEntry {
+  filename : String
+  content_type : String
+  string_content : String?
+  bytes_content : Bytes?
+}
+
+pub(all) struct DemoGameAsset {
+  project : @game.GameMusicProject
+  export_json : String
+  browser_events_json : String
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct DemoScoreAssembly {
+  score : @score.SimpleScore
+  score_json : String
+  validation_json : String
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct DemoValidationSummary {
+  error_count : Int
+  warning_count : Int
+  info_count : Int
+  json : String
+}
+
+pub(all) struct DemoWarning {
+  stage : String
+  code : String
+  message : String
+  recoverable : Bool
+}
+
+pub(all) struct ExportAssetResult {
+  midi_bytes : Bytes?
+  musicxml : String?
+  timeline : @timeline.PlaybackTimeline?
+  wav_bytes : Bytes?
+  web_events_json : String?
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct NormalizeResult {
+  request : NormalizedCompositionRequest
+  warnings : Array[DemoWarning]
+}
+
+pub(all) struct NormalizedCompositionRequest {
+  key_name : String
+  scale_kind : @scale.ScaleKind
+  key_obj : @scale.Key
+  tempo : @score.Tempo
+  bars : Int
+  style : CompositionStyle
+  chord_degrees : Array[Int]
+  seed : Int
+}
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,70 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/timeline"
+
+import {
+  "username/moonsic/packages/score",
+}
+
+// Values
+pub fn bench_sort_note_events(Int) -> String
+
+pub fn note_events_last_end(Array[NoteEvent]) -> Double
+
+pub fn note_events_to_browser_js(Array[NoteEvent]) -> String
+
+pub fn score_layout_to_note_events_checked(@score.ScoreLayout) -> Result[Array[NoteEvent], TimelineError]
+
+pub fn simple_score_to_note_events_checked(@score.SimpleScore) -> Result[Array[NoteEvent], TimelineError]
+
+pub fn simple_track_to_note_events_checked(@score.SimpleTrack, Int) -> Result[Array[NoteEvent], TimelineError]
+
+pub fn sort_note_events(Array[NoteEvent]) -> Array[NoteEvent]
+
+pub fn timeline_from_events_checked(Array[NoteEvent], Int, Double) -> Result[PlaybackTimeline, TimelineError]
+
+pub fn timeline_from_score_layout_checked(@score.ScoreLayout) -> Result[PlaybackTimeline, TimelineError]
+
+pub fn timeline_from_simple_score_checked(@score.SimpleScore) -> Result[PlaybackTimeline, TimelineError]
+
+// Errors
+
+// Types and methods
+pub(all) struct NoteEvent {
+  start : Double
+  duration : Double
+  midi_note : Int
+  velocity : Int
+  channel : Int
+}
+pub fn NoteEvent::duration_seconds(Self, Int) -> Double
+pub fn NoteEvent::duration_ticks(Self, Int) -> Int
+pub fn NoteEvent::end(Self) -> Double
+pub fn NoteEvent::start_seconds(Self, Int) -> Double
+pub fn NoteEvent::start_ticks(Self, Int) -> Int
+pub fn NoteEvent::to_string(Self) -> String
+
+pub(all) struct PlaybackTimeline {
+  events : Array[NoteEvent]
+  total_seconds : Double
+}
+pub fn PlaybackTimeline::at_second(Self, Double) -> Array[NoteEvent]
+pub fn PlaybackTimeline::at_second_channel(Self, Double, Int) -> Array[NoteEvent]
+pub fn PlaybackTimeline::duration(Self) -> Double
+pub fn PlaybackTimeline::event_count(Self) -> Int
+pub fn PlaybackTimeline::events_between(Self, Double, Double) -> Array[NoteEvent]
+pub fn PlaybackTimeline::is_empty(Self) -> Bool
+pub fn PlaybackTimeline::last_end(Self) -> Double
+
+pub(all) enum TimelineError {
+  InvalidBpm(Int)
+  InvalidPpq(Int)
+  InvalidPitch(String)
+  InvalidDuration(String)
+  InvalidTimeline(String)
+}
+pub fn TimelineError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+

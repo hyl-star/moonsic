@@ -1,0 +1,9 @@
+{
+  "key": "C",
+  "scale": "major",
+  "tempo": 120,
+  "bars": 8,
+  "style": "pop",
+  "chord_progression": ["I", "V", "vi", "IV"],
+  "seed": 1
+}

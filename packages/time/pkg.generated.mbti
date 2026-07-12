@@ -1,0 +1,174 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/time"
+
+// Values
+pub fn add_sig_change(TimeMap, TimeSigChange) -> TimeMap
+
+pub fn add_tempo_change(TimeMap, TempoChange) -> TimeMap
+
+pub fn bar_length_ticks(TimeSignature, Int) -> Result[Int, TimeError]
+
+pub fn bpm_to_microseconds_per_quarter(Double) -> Result[Int, TimeError]
+
+pub fn ffi_bar_length_json(String) -> String
+
+pub fn ffi_duration_ticks_json(String) -> String
+
+pub fn ffi_parse_tempo(String) -> String
+
+pub fn ffi_parse_time_sig(String) -> String
+
+pub fn ffi_ticks_to_seconds_json(String) -> String
+
+pub fn four_four() -> TimeSignature
+
+pub fn is_valid_time_signature(Int, Int) -> Bool
+
+pub fn make_time_map(Int, TimeSignature, Double) -> Result[TimeMap, TimeError]
+
+pub fn parse_dur_unit(String) -> Result[RhythmDuration, TimeError]
+
+pub fn parse_tempo(String) -> Result[Double, TimeError]
+
+pub fn parse_time_sig(String) -> Result[TimeSignature, TimeError]
+
+pub fn position_to_ticks(BarPosition, TimeSignature, Int) -> Result[Int, TimeError]
+
+pub fn rational(Int, Int) -> Result[Rational, TimeError]
+
+pub fn rational_add(Rational, Rational) -> Rational
+
+pub fn rational_div(Rational, Rational) -> Result[Rational, TimeError]
+
+pub fn rational_is_integer(Rational) -> Bool
+
+pub fn rational_mul(Rational, Rational) -> Rational
+
+pub fn rational_sub(Rational, Rational) -> Rational
+
+pub fn rational_to_double(Rational) -> Double
+
+pub fn rational_to_int(Rational) -> Result[Int, TimeError]
+
+pub fn rhythm_duration(DurUnit, Int, TupletRatio?) -> RhythmDuration
+
+pub fn rhythm_duration_to_fraction(RhythmDuration) -> Rational
+
+pub fn rhythm_duration_to_fraction_checked(RhythmDuration) -> Result[Rational, TimeError]
+
+pub fn rhythm_duration_to_ticks(RhythmDuration, Int) -> Result[Int, TimeError]
+
+pub fn seconds_to_ticks(Double, Double, Int) -> Int
+
+pub fn seconds_to_ticks_checked(Double, Double, Int) -> Result[Int, TimeError]
+
+pub fn signature_at_bar(TimeMap, Int) -> (Int, Int)
+
+pub fn tempo_at_tick(TimeMap, Int) -> Double
+
+pub fn ticks_to_position(Int, TimeSignature, Int) -> Result[BarPosition, TimeError]
+
+pub fn ticks_to_quarter_beats(Int, Int) -> Rational
+
+pub fn ticks_to_seconds(Int, Double, Int) -> Result[Double, TimeError]
+
+pub fn ticks_to_seconds_timemap(Int, TimeMap) -> Result[Double, TimeError]
+
+pub fn time_signature(Int, Int) -> TimeSignature
+
+// Errors
+
+// Types and methods
+pub(all) struct BarPosition {
+  bar : Int
+  beat : Rational
+  offset : Rational
+}
+
+pub(all) enum DurUnit {
+  DurWhole
+  DurHalf
+  DurQuarter
+  DurEighth
+  DurSixteenth
+  ThirtySecond
+  SixtyFourth
+  OneTwentyEighth
+}
+pub fn DurUnit::to_string(Self) -> String
+
+pub(all) struct Rational {
+  numerator : Int
+  denominator : Int
+}
+pub fn Rational::to_string(Self) -> String
+
+pub(all) struct RhythmDuration {
+  unit : DurUnit
+  dots : Int
+  tuplet : TupletRatio?
+}
+
+pub(all) enum RhythmicKind {
+  NoteKind
+  RestKind
+}
+
+pub(all) struct RhythmicValue {
+  duration : RhythmDuration
+  kind : RhythmicKind
+}
+
+pub(all) struct TempoChange {
+  at_tick : Int
+  tempo_bpm : Double
+}
+
+pub(all) struct TickPosition {
+  ticks : Int
+}
+
+pub(all) enum TimeError {
+  InvalidRational(String)
+  InvalidTimeSignature(String)
+  InvalidDuration(String)
+  InvalidTempo(String)
+  InvalidPPQ(String)
+  InvalidTick(String)
+  TimeParseError(String)
+  NonIntegralTick(String)
+  TimeUnsupported(String)
+}
+pub fn TimeError::to_string(Self) -> String
+
+pub(all) struct TimeMap {
+  ppq : Int
+  sig_num : Int
+  sig_den : Int
+  tempo_bpm : Double
+  tempo_changes : Array[TempoChange]
+  sig_changes : Array[TimeSigChange]
+}
+
+pub(all) struct TimeSigChange {
+  at_bar : Int
+  sig_num : Int
+  sig_den : Int
+}
+
+pub(all) struct TimeSignature {
+  numerator : Int
+  denominator : Int
+}
+pub fn TimeSignature::measure_beats(Self) -> Double
+pub fn TimeSignature::to_string(Self) -> String
+
+pub(all) struct TupletRatio {
+  actual : Int
+  normal : Int
+}
+
+// Type aliases
+
+// Traits
+

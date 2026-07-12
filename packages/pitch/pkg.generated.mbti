@@ -1,0 +1,134 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/moonsic/packages/pitch"
+
+// Values
+pub const A4_FREQ : Double = 440.0
+
+pub const A4_MIDI : Int = 69
+
+pub const MAX_MIDI_NOTE : Int = 127
+
+pub const MIN_MIDI_NOTE : Int = 0
+
+pub fn a(Int) -> Pitch
+
+pub fn ab(Int) -> Pitch
+
+pub fn b(Int) -> Pitch
+
+pub fn bb(Int) -> Pitch
+
+pub fn c(Int) -> Pitch
+
+pub fn class_from_index(Int) -> PitchClass
+
+pub fn class_index(PitchClass) -> Int
+
+pub fn cs(Int) -> Pitch
+
+pub fn d(Int) -> Pitch
+
+pub fn db(Int) -> Pitch
+
+pub fn ds(Int) -> Pitch
+
+pub fn e(Int) -> Pitch
+
+pub fn eb(Int) -> Pitch
+
+pub fn enharmonic_equal(Pitch, Pitch) -> Bool
+
+pub fn f(Int) -> Pitch
+
+pub fn frequency_to_nearest_midi_checked(Double) -> Result[Int, PitchError]
+
+pub fn fs(Int) -> Pitch
+
+pub fn g(Int) -> Pitch
+
+pub fn gb(Int) -> Pitch
+
+pub fn gs(Int) -> Pitch
+
+pub fn is_valid_midi_note(Int) -> Bool
+
+pub fn midi_note_compare(Int, Int) -> Int
+
+pub fn midi_to_frequency(Int) -> Double
+
+pub fn midi_to_pitch(Int) -> Pitch
+
+pub fn midi_to_pitch_checked(Int) -> Result[Pitch, PitchError]
+
+pub fn natural(PitchClass, Int) -> Pitch
+
+pub fn natural_pitch(PitchClass, Int) -> Pitch
+
+pub fn parse_pitch(String) -> Result[Pitch, PitchError]
+
+pub fn parse_pitch_class(String) -> Result[PitchClass, PitchError]
+
+pub fn pitch(PitchClass, Accidental, Int) -> Pitch
+
+pub fn pitch_compare(Pitch, Pitch) -> Int
+
+pub fn pitch_equal(Pitch, Pitch) -> Bool
+
+pub fn pitch_to_frequency_checked(Pitch) -> Result[Double, PitchError]
+
+pub fn pitch_to_midi(Pitch) -> Result[Int, PitchError]
+
+pub fn transpose_pitch(Pitch, Int) -> Result[Pitch, PitchError]
+
+// Errors
+
+// Types and methods
+pub(all) enum Accidental {
+  DoubleFlat
+  Flat
+  Natural
+  Sharp
+  DoubleSharp
+}
+pub fn Accidental::semitone_offset(Self) -> Int
+pub fn Accidental::to_string(Self) -> String
+
+pub(all) struct Pitch {
+  class : PitchClass
+  accidental : Accidental
+  octave : Int
+}
+pub fn Pitch::accidental(Self) -> Accidental
+pub fn Pitch::frequency(Self) -> Double
+pub fn Pitch::is_valid_midi(Self) -> Bool
+pub fn Pitch::octave(Self) -> Int
+pub fn Pitch::pitch_class(Self) -> PitchClass
+pub fn Pitch::to_midi(Self) -> Int
+pub fn Pitch::to_midi_checked(Self) -> Result[Int, PitchError]
+pub fn Pitch::to_string(Self) -> String
+pub fn Pitch::transpose(Self, Int) -> Self
+pub fn Pitch::transpose_checked(Self, Int) -> Result[Self, PitchError]
+
+pub(all) enum PitchClass {
+  C
+  D
+  E
+  F
+  G
+  A
+  B
+}
+pub fn PitchClass::base_semitone(Self) -> Int
+pub fn PitchClass::to_string(Self) -> String
+
+pub(all) enum PitchError {
+  InvalidPitch(String)
+  MidiOutOfRange(Int)
+  InvalidFrequency(Double)
+}
+pub fn PitchError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits
+
